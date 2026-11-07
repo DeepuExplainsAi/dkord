@@ -65,6 +65,7 @@ import app.dkord.core.BrowseItem
 import app.dkord.core.ItemKind
 import app.dkord.core.Shelf
 import app.dkord.core.Track
+import app.dkord.ui.search.searchResultSupportingText
 import coil3.compose.AsyncImage
 import org.koin.compose.koinInject
 
@@ -162,12 +163,13 @@ fun ShelfRow(shelf: Shelf, onItem: (BrowseItem) -> Unit, onPlay: ((List<app.dkor
 /** A BrowseItem as a list row (search results). */
 @Composable
 fun BrowseRow(item: BrowseItem, onClick: () -> Unit, onMenu: (() -> Unit)? = null) {
+    val supporting = remember(item) { searchResultSupportingText(item) }
     ListItem(
         modifier = Modifier.softClickable(onClick),
         colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         leadingContent = { Cover(item.thumbnail, 52.dp, round = item.kind == ItemKind.ARTIST) },
-        headlineContent = { Text(item.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = { if (item.subtitle.isNotBlank()) Text(item.subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        headlineContent = { Text(item.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        supportingContent = { if (supporting.isNotBlank()) Text(supporting, maxLines = 2, overflow = TextOverflow.Ellipsis) },
         trailingContent = onMenu?.let { { IconButton(it) { Icon(Icons.Default.MoreVert, stringResource(R.string.more)) } } },
     )
 }

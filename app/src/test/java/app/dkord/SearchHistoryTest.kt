@@ -115,6 +115,12 @@ class SearchHistoryTest {
         assertFalse(normalized.endsWith(" "))
     }
 
+    @Test fun every_new_and_existing_scope_round_trips_without_a_history_migration() {
+        val saved = SearchFilter.entries.map { SavedSearch("Same query", it, it == SearchFilter.ALL) }
+        assertEquals(saved, SearchHistoryCodec.decode(SearchHistoryCodec.encode(saved)))
+        assertEquals(saved.size, saved.map { it.key }.distinct().size)
+    }
+
     @Test fun input_limits_do_not_split_an_emoji_surrogate_pair() {
         val text = "a".repeat(MAX_SEARCH_LENGTH - 1) + "🎵"
         val limited = limitSearchInput(text)

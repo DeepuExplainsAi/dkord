@@ -153,7 +153,69 @@ class AppContractsTest(unittest.TestCase):
         self.assertIn("onPlay(songs, songs.indexOfFirst", ui)
         self.assertIn("else onItem(item)", ui)
         self.assertIn("vm.loadMore(retry = true)", ui)
-        self.assertIn("results == null -> LazyColumn", ui)
+        self.assertIn("results == null -> SearchSuggestions", ui)
+
+    def test_manual_search_is_broad_by_default_and_never_hardcodes_the_reported_query(self):
+        backend = read("app/src/main/java/app/dkord/data/yt/MusicRepository.kt")
+        controller = read("app/src/main/java/app/dkord/ui/search/SearchController.kt")
+        ui = read("app/src/main/java/app/dkord/ui/screens/Search.kt")
+        for route in ("ALL(F.ALL)", "VIDEOS(F.VIDEOS)", "MUSIC_VIDEOS(F.MUSIC_VIDEOS)", "SONGS(F.MUSIC_SONGS)"):
+            self.assertIn(route, backend)
+        self.assertIn("mutableFilter = MutableStateFlow(SearchFilter.ALL)", controller)
+        self.assertIn('fromQuery(query, listOf(filter.id), "")', backend)
+        self.assertIn('fromQuery(cursor.query, listOf(cursor.filter.id), "")', backend)
+        self.assertIn("SearchFilter.ALL -> R.string.search_all", ui)
+        self.assertIn("vm.setFilter(SearchFilter.ALL)", ui)
+        for source in (backend, controller, ui):
+            for query in ("mashup sad love 1 hour", "Teri meri kahani", "instumental", "Instagram version"):
+                self.assertNotIn(query, source)
+
+    def test_the_broad_upload_route_is_available_outside_empty_or_failed_results(self):
+        ui = read("app/src/main/java/app/dkord/ui/screens/Search.kt")
+        placement = ui.index("        SearchScopeHint(filter, onSearchAll =")
+        content = ui.index("        Box(Modifier.fillMaxWidth().weight(1f))", placement)
+        self.assertLess(placement, content)
+        self.assertEqual(1, ui.count("vm.setFilter(SearchFilter.ALL)"))
+        hint = ui[ui.index("private fun SearchScopeHint("):ui.index("private fun SearchSuggestions(")]
+        self.assertIn("if (filter != SearchFilter.ALL) TextButton(onSearchAll)", hint)
+        self.assertIn("search_scope_uploads", hint)
+        self.assertIn("search_scope_music_catalogue", hint)
+
+    def test_creator_versions_keep_identity_and_search_rows_show_more_than_the_song_name(self):
+        controller = read("app/src/main/java/app/dkord/ui/search/SearchController.kt")
+        row = read("app/src/main/java/app/dkord/ui/common/Components.kt")
+        row = row[row.index("fun BrowseRow("):row.index("fun TextInputDialog(")]
+        self.assertEqual(2, controller.count("distinctBy { it.kind to it.id }"))
+        self.assertIn("searchResultSupportingText(item)", row)
+        self.assertIn("Text(item.title, maxLines = 2", row)
+        presentation = read("app/src/main/java/app/dkord/ui/search/SearchResultPresentation.kt")
+        self.assertIn("item.subtitle", presentation)
+        self.assertIn("item.track?.durationSec", presentation)
+        self.assertNotIn("item.title", presentation)
+
+    def test_suggestion_recovery_and_provider_corrections_are_visible_not_fake_recommendations(self):
+        backend = read("app/src/main/java/app/dkord/data/yt/MusicRepository.kt")
+        ui = read("app/src/main/java/app/dkord/ui/screens/Search.kt")
+        controller = read("app/src/main/java/app/dkord/ui/search/SearchController.kt")
+        self.assertIn("ServiceList.YouTube.suggestionExtractor.suggestionList(query)", backend)
+        self.assertIn("info.searchSuggestion.orEmpty(), info.isCorrectedSearch", backend)
+        for value in ("search_youtube_suggestions", "search_suggestions_failed", "search_suggestions_loading", "search_did_you_mean", "search_showing_results_for", "vm::retrySuggestions"):
+            self.assertIn(value, ui)
+        self.assertIn("fun retrySuggestions()", controller)
+        self.assertIn("value.copy(query = suggested)", controller)
+        self.assertIn("results.value != null || suggestionsLoading.value", controller)
+
+    def test_radio_duration_rules_are_not_applied_to_user_search_results(self):
+        backend = read("app/src/main/java/app/dkord/data/yt/MusicRepository.kt")
+        mapper = read("app/src/main/java/app/dkord/data/yt/SearchItems.kt")
+        radio = backend[backend.index("suspend fun related("):backend.index("// ---- Browse:")]
+        self.assertIn("it.durationSec in 60..720", radio)
+        self.assertIn("SearchFilter.SONGS", radio)
+        self.assertIn("is StreamInfoItem", mapper)
+        self.assertIn("i.duration", mapper)
+        mapping = mapper[:mapper.index("internal fun searchVideoId(")]
+        self.assertNotRegex(mapping, r"\b(?:filter|filterNot)\s*\{|duration\s+(?:in|[<>])")
+        self.assertIn("YoutubeStreamLinkHandlerFactory.getInstance().getId(", mapper)
 
     def test_all_junit_annotations_have_function_declarations(self):
         for path in (ROOT / "app/src/test").rglob("*.kt"):

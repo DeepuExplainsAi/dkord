@@ -5,7 +5,7 @@
     <string name="tab_library">लाइब्रेरी</string>
     <string name="tab_downloads">डाउनलोड</string>
     <string name="settings">सेटिंग्स</string>
-    <string name="search_hint">गाने, एल्बम, कलाकार खोजें</string>
+    <string name="search_hint">YouTube पर गाने, मिक्स, कलाकार खोजें</string>
     <string name="songs">गाने</string>
     <string name="albums">एल्बम</string>
     <string name="artists">कलाकार</string>
@@ -247,4 +247,16 @@
     <string name="search_history_write_failed">खोज का इतिहास अपडेट नहीं हो सका। फिर कोशिश करें।</string>
     <string name="search_more_failed">और नतीजे लोड नहीं हो सके।</string>
     <string name="search_load_more">और नतीजे दिखाएँ</string>
+    <string name="search_videos">वीडियो</string>
+    <string name="search_music_videos">म्यूज़िक वीडियो</string>
+    <string name="search_all_youtube">पूरे YouTube पर खोजें</string>
+    <string name="search_youtube_suggestions">YouTube के सुझाव</string>
+    <string name="search_suggestions_loading">YouTube के सुझाव लोड हो रहे हैं…</string>
+    <string name="search_suggestions_failed">YouTube के सुझाव लोड नहीं हो सके। आप फिर भी खोज सकते हैं।</string>
+    <string name="search_suggestions_hint">सभी नतीजे देखने के लिए खोजें दबाएँ।</string>
+    <string name="search_showing_results_for">%1$s के नतीजे दिखाए जा रहे हैं</string>
+    <string name="search_did_you_mean">क्या आपका मतलब %1$s था?</string>
+    <string name="search_all">पूरा YouTube</string>
+    <string name="search_scope_uploads">कवर, वाद्य संगीत और अन्य YouTube अपलोड।</string>
+    <string name="search_scope_music_catalogue">YouTube Music का कैटलॉग</string>
 </resources>
