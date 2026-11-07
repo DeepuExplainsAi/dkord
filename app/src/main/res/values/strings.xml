@@ -256,5 +256,7 @@
     <string name="search_suggestions_hint">Press Search to see all results.</string>
     <string name="search_showing_results_for">Showing results for %1$s</string>
     <string name="search_did_you_mean">Did you mean %1$s?</string>
-    <string name="search_all">All</string>
+    <string name="search_all">All YouTube</string>
+    <string name="search_scope_uploads">YouTube uploads: covers, instrumentals and more.</string>
+    <string name="search_scope_music_catalogue">YouTube Music catalogue</string>
 </resources>

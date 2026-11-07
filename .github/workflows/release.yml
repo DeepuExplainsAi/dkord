@@ -108,6 +108,8 @@ jobs:
           - Clear separation between saved queries and real YouTube suggestions, with loading / Retry states and preserved provider suggestion order.
           - Provider Did you mean / Showing results for corrections, without silently replacing the user's typed query or search history.
           - A Search all YouTube shortcut for narrow empty/error states, and support for watch / short / Shorts / live / embed video identities including playlist-context watch links.
+          - Creator covers, instrumentals, karaoke, piano/no-vocals, Instagram/reel-style and other version queries use the broad YouTube path; no fixed category whitelist or local spelling rewrite. Same-title uploads remain separate by video ID.
+          - Clear All YouTube catalogue label and always-visible broad-search escape from narrow filters, even with existing results; two-line result titles and creator + known duration help identify versions.
           - Persistent recents/pins, English / Hindi text, full-list playback and pagination retry retained. Existing music-only autoplay, downloads, rooms and updates are unchanged.
 
           Search is anonymous, so exact personalized YouTube ordering is not promised. Provider availability, regional, age and playable-format restrictions still apply. Part 2 custom mashup editing/export is not included in this release.

@@ -256,5 +256,7 @@
     <string name="search_suggestions_hint">सभी नतीजे देखने के लिए खोजें दबाएँ।</string>
     <string name="search_showing_results_for">%1$s के नतीजे दिखाए जा रहे हैं</string>
     <string name="search_did_you_mean">क्या आपका मतलब %1$s था?</string>
-    <string name="search_all">सभी</string>
+    <string name="search_all">पूरा YouTube</string>
+    <string name="search_scope_uploads">कवर, वाद्य संगीत और अन्य YouTube अपलोड।</string>
+    <string name="search_scope_music_catalogue">YouTube Music का कैटलॉग</string>
 </resources>

@@ -289,7 +289,9 @@ class SearchControllerTest {
     @Test fun new_searches_default_to_all_and_arbitrary_queries_are_not_rewritten() = runTest {
         val f = fixture()
         assertEquals(SearchFilter.ALL, f.controller.filter.value)
-        for (query in listOf("mashup sad love 1 hour", "Tamil cover unplugged", "भजन nonstop 3 hours", "podcast live remix")) {
+        for (query in listOf("mashup sad love 1 hour", "Tamil cover unplugged", "भजन nonstop 3 hours", "podcast live remix",
+            "Teri meri kahani instrumental", "Teri meri kahani instumental", "Teri meri kahani Instagram version",
+            "Teri meri kahani cover by another creator", "karaoke no vocals piano", "slowed reverb 8D remix")) {
             f.controller.search(query); runCurrent()
             assertEquals(query to SearchFilter.ALL, f.source.searches.last())
             assertEquals(listOf(query), f.controller.ids())
@@ -432,6 +434,78 @@ class SearchControllerTest {
         assertEquals("new correction", f.controller.correction.value?.query)
         advanceTimeBy(90); runCurrent()
         assertEquals("new correction", f.controller.correction.value?.query)
+    }
+
+    @Test fun same_title_versions_are_deduplicated_by_video_identity_not_title_or_creator_across_pages() = runTest {
+        val f = fixture()
+        fun version(id: String, creator: String, duration: Long) = BrowseItem(
+            ItemKind.SONG, id, "Teri meri kahani", creator,
+            track = Track(id, "Teri meri kahani", creator, durationSec = duration),
+        )
+        val original = version("original", "Original artist", 240)
+        val cover = version("cover-one", "Cover creator", 200)
+        val instrumental = version("instrumental", "Piano creator", 3600)
+        val otherCover = version("cover-two", "Cover creator", 180)
+        val reelVersion = version("reel-version", "Reel creator", 20)
+        f.source.find = { _, _ -> SearchPage(listOf(original, cover, instrumental), Token("versions")) }
+        f.source.next = { SearchPage(listOf(cover, otherCover, reelVersion)) }
+        f.controller.search("Teri meri kahani"); runCurrent()
+        f.controller.loadMore(); runCurrent()
+        assertEquals(listOf(original, cover, instrumental, otherCover, reelVersion), (f.controller.results.value as Load.Ok).value)
+        assertEquals(1, f.storage.writes)
+    }
+
+    @Test fun an_old_pinned_songs_search_with_some_results_can_still_broaden_to_creator_uploads() = runTest {
+        val query = "Teri meri kahani instumental"
+        val pinned = SavedSearch(query, SearchFilter.SONGS, pinned = true)
+        val f = fixture(listOf(pinned))
+        f.source.find = { _, filter -> SearchPage(listOf(song(if (filter == SearchFilter.ALL) "creator-version" else "catalogue-song"))) }
+        f.controller.repeat(pinned); runCurrent()
+        assertEquals(listOf("catalogue-song"), f.controller.ids())
+        f.controller.setFilter(SearchFilter.ALL); runCurrent()
+        assertEquals(listOf(query to SearchFilter.SONGS, query to SearchFilter.ALL), f.source.searches)
+        assertEquals(listOf("creator-version"), f.controller.ids())
+        assertEquals(pinned, f.history.state.value.entries.single { it.filter == SearchFilter.SONGS })
+        assertEquals(SavedSearch(query, SearchFilter.ALL), f.history.state.value.entries.first())
+    }
+
+    @Test fun broadening_while_editing_keeps_spelling_and_fetches_suggestions_without_submitting() = runTest {
+        val f = fixture()
+        val query = "Teri meri kahani instumental"
+        f.controller.edit(SavedSearch(query, SearchFilter.SONGS)); runCurrent(); advanceTimeBy(100)
+        f.controller.setFilter(SearchFilter.ALL); runCurrent(); advanceTimeBy(250); runCurrent()
+        assertEquals(query, f.controller.query.value)
+        assertEquals(SearchFilter.ALL, f.controller.filter.value)
+        assertEquals(listOf(query), f.source.suggested)
+        assertNull(f.controller.results.value)
+        assertTrue(f.source.searches.isEmpty())
+        assertEquals(0, f.storage.writes)
+    }
+
+    @Test fun misspelled_instrumental_query_is_not_locally_replaced_or_recorded_as_the_provider_correction() = runTest {
+        val f = fixture()
+        val typed = "Teri meri kahani instumental"
+        val suggested = "Teri meri kahani instrumental"
+        f.source.find = { _, _ -> SearchPage(listOf(song("instrumental-upload")), correction = SearchCorrection(suggested)) }
+        f.controller.search(typed); runCurrent()
+        assertEquals(typed, f.controller.query.value)
+        assertEquals(typed to SearchFilter.ALL, f.source.searches.single())
+        assertEquals(listOf(SavedSearch(typed, SearchFilter.ALL)), f.history.state.value.entries)
+        assertEquals(SearchCorrection(suggested), f.controller.correction.value)
+        f.controller.search(suggested); runCurrent()
+        assertEquals(suggested to SearchFilter.ALL, f.source.searches.last())
+        assertEquals(listOf(suggested, typed), f.history.state.value.entries.map { it.query })
+    }
+
+    @Test fun an_empty_provider_response_never_invents_instrumental_cover_or_reel_suggestions() = runTest {
+        val f = fixture()
+        f.source.suggest = { emptyList() }
+        f.controller.typed("any song"); runCurrent(); advanceTimeBy(250); runCurrent()
+        assertTrue(f.controller.suggestions.value.isEmpty())
+        assertFalse(f.controller.suggestionsFailed.value)
+        assertFalse(f.controller.suggestionsLoading.value)
+        assertTrue(f.source.searches.isEmpty())
+        assertEquals(0, f.storage.writes)
     }
 
     @Test fun blank_searches_are_ignored_and_long_input_is_bounded_before_network_and_storage() = runTest {

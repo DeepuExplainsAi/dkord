@@ -18,12 +18,15 @@ import org.schabi.newpipe.extractor.localization.Localization
 
 /** Exercise the real NewPipe suggestion parser behind a deterministic, non-network downloader. */
 class SearchSuggestionProviderTest {
-    private class Provider(var contentType: String = "application/json") : Downloader() {
+    private class Provider(
+        val contentType: String = "application/json",
+        val responseBody: String = """["query",[["sad love mashup 1 hour",0],["sad love mix",0],["अरिजीत मिक्स",0]]]""",
+    ) : Downloader() {
         val requests = mutableListOf<Request>()
         override fun execute(request: Request): Response {
             requests += request
             return Response(200, "OK", mapOf("Content-Type" to listOf(contentType)),
-                """["query",[["sad love mashup 1 hour",0],["sad love mix",0],["अरिजीत मिक्स",0]]]""", request.url())
+                responseBody, request.url())
         }
     }
     private val repository get() = MusicRepository(InnerTubeClient(
@@ -58,6 +61,23 @@ class SearchSuggestionProviderTest {
         runBlocking {
             try { repository.suggestions("any query"); fail("HTML suggestions accepted") }
             catch (_: ExtractionException) { }
+        }
+    }
+
+    @Test fun the_real_parser_accepts_provider_spelling_and_version_suggestions_without_client_keyword_expansion() {
+        val provider = Provider(responseBody = """["query",[["teri meri kahani instrumental",0],["teri meri kahani instagram version",0],["teri meri kahani cover",0],["तेरी मेरी कहानी पियानो",0]]]""")
+        withProvider(provider) {
+            runBlocking {
+                assertEquals(listOf("teri meri kahani instrumental", "teri meri kahani instagram version", "teri meri kahani cover", "तेरी मेरी कहानी पियानो"),
+                    repository.suggestions("Teri meri kahani instumental"))
+            }
+            assertEquals("Teri meri kahani instumental", provider.requests.single().url().toHttpUrl().queryParameter("q"))
+        }
+    }
+
+    @Test fun a_genuine_empty_provider_response_does_not_get_fabricated_version_suggestions() {
+        withProvider(Provider(responseBody = """["query",[]]""")) {
+            runBlocking { assertTrue(repository.suggestions("any music query").isEmpty()) }
         }
     }
 

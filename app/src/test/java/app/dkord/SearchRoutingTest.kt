@@ -1,6 +1,7 @@
 package app.dkord
 
 import app.dkord.data.yt.SearchFilter
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.*
 import org.junit.After
 import org.junit.Before
@@ -58,9 +59,12 @@ class SearchRoutingTest {
     }
 
     @Test fun queries_are_passed_through_without_music_suffixes_genre_whitelists_or_duration_changes() {
-        for (query in listOf("mashup sad love 1 hour", "தமிழ் cover 2 hours", "भजन + ग़ज़ल live", "acoustic remix 90s nonstop", "science podcast")) {
+        for (query in listOf("mashup sad love 1 hour", "தமிழ் cover 2 hours", "भजन + ग़ज़ल live", "acoustic remix 90s nonstop", "science podcast",
+            "Teri meri kahani instrumental", "Teri meri kahani instumental", "Teri meri kahani Instagram version",
+            "Teri meri kahani cover by another creator", "piano karaoke no vocals", "slowed + reverb 8D reel version")) {
             val handler = ServiceList.YouTube.searchQHFactory.fromQuery(query, listOf(SearchFilter.ALL.id), "")
             assertEquals(query, handler.searchString)
+            assertEquals(query, handler.url.toHttpUrl().queryParameter("search_query"))
             assertEquals(listOf(F.ALL), handler.contentFilters)
         }
     }

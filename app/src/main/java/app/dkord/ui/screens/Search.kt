@@ -200,6 +200,7 @@ fun SearchScreen(
                 }, { Text(stringResource(filterLabel(value))) })
             }
         }
+        SearchScopeHint(filter, onSearchAll = { vm.setFilter(SearchFilter.ALL) })
         Box(Modifier.fillMaxWidth().weight(1f)) {
             when {
                 query.isBlank() -> SavedSearches(history, { confirmClear = true }, saved::reload, ::repeat, ::edit, saved::togglePinned, saved::remove)
@@ -211,10 +212,7 @@ fun SearchScreen(
                 )
                 else -> when (val result = results) {
                     Load.Loading -> Loading()
-                    is Load.Failed -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        ErrorBox(result.error, { vm.search() }, Modifier.weight(1f))
-                        if (filter != SearchFilter.ALL) TextButton({ vm.setFilter(SearchFilter.ALL) }) { Text(stringResource(R.string.search_all_youtube)) }
-                    }
+                    is Load.Failed -> ErrorBox(result.error, { vm.search() })
                     is Load.Ok -> {
                         val listState = rememberLazyListState()
                         val prefixRows = if (correction == null) 0 else 1
@@ -238,7 +236,6 @@ fun SearchScreen(
                             if (result.value.isEmpty()) item("none") {
                                 Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(stringResource(R.string.no_results))
-                                    if (filter != SearchFilter.ALL) TextButton({ vm.setFilter(SearchFilter.ALL) }) { Text(stringResource(R.string.search_all_youtube)) }
                                 }
                             }
                             item("pagination") {
@@ -265,6 +262,21 @@ fun SearchScreen(
         confirmButton = { TextButton({ confirmClear = false; saved.clearAll() }) { Text(stringResource(R.string.search_clear_all)) } },
         dismissButton = { TextButton({ confirmClear = false }) { Text(stringResource(R.string.cancel)) } },
     )
+}
+
+/** Keep the broad-upload route visible even when an old/narrow search returns some results. */
+@Composable
+private fun SearchScopeHint(filter: SearchFilter, onSearchAll: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            stringResource(if (filter == SearchFilter.ALL || filter == SearchFilter.VIDEOS)
+                R.string.search_scope_uploads else R.string.search_scope_music_catalogue),
+            Modifier.weight(1f), style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis,
+        )
+        if (filter != SearchFilter.ALL) TextButton(onSearchAll) { Text(stringResource(R.string.search_all_youtube)) }
+    }
 }
 
 @Composable

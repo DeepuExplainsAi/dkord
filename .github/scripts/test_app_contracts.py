@@ -167,7 +167,31 @@ class AppContractsTest(unittest.TestCase):
         self.assertIn("SearchFilter.ALL -> R.string.search_all", ui)
         self.assertIn("vm.setFilter(SearchFilter.ALL)", ui)
         for source in (backend, controller, ui):
-            self.assertNotIn("mashup sad love 1 hour", source)
+            for query in ("mashup sad love 1 hour", "Teri meri kahani", "instumental", "Instagram version"):
+                self.assertNotIn(query, source)
+
+    def test_the_broad_upload_route_is_available_outside_empty_or_failed_results(self):
+        ui = read("app/src/main/java/app/dkord/ui/screens/Search.kt")
+        placement = ui.index("        SearchScopeHint(filter, onSearchAll =")
+        content = ui.index("        Box(Modifier.fillMaxWidth().weight(1f))", placement)
+        self.assertLess(placement, content)
+        self.assertEqual(1, ui.count("vm.setFilter(SearchFilter.ALL)"))
+        hint = ui[ui.index("private fun SearchScopeHint("):ui.index("private fun SearchSuggestions(")]
+        self.assertIn("if (filter != SearchFilter.ALL) TextButton(onSearchAll)", hint)
+        self.assertIn("search_scope_uploads", hint)
+        self.assertIn("search_scope_music_catalogue", hint)
+
+    def test_creator_versions_keep_identity_and_search_rows_show_more_than_the_song_name(self):
+        controller = read("app/src/main/java/app/dkord/ui/search/SearchController.kt")
+        row = read("app/src/main/java/app/dkord/ui/common/Components.kt")
+        row = row[row.index("fun BrowseRow("):row.index("fun TextInputDialog(")]
+        self.assertEqual(2, controller.count("distinctBy { it.kind to it.id }"))
+        self.assertIn("searchResultSupportingText(item)", row)
+        self.assertIn("Text(item.title, maxLines = 2", row)
+        presentation = read("app/src/main/java/app/dkord/ui/search/SearchResultPresentation.kt")
+        self.assertIn("item.subtitle", presentation)
+        self.assertIn("item.track?.durationSec", presentation)
+        self.assertNotIn("item.title", presentation)
 
     def test_suggestion_recovery_and_provider_corrections_are_visible_not_fake_recommendations(self):
         backend = read("app/src/main/java/app/dkord/data/yt/MusicRepository.kt")

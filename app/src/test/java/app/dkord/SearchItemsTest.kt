@@ -45,6 +45,21 @@ class SearchItemsTest {
         }
     }
 
+    @Test fun same_title_covers_and_instrumentals_from_different_creators_keep_distinct_video_ids() {
+        val creators = listOf("Original artist - Topic", "Independent cover creator", "Instrumental channel")
+        val ids = listOf("Cover000001", "Cover000002", "Inst0000001")
+        val items = ids.mapIndexed { index, videoId ->
+            StreamInfoItem(0, "https://www.youtube.com/watch?v=$videoId", "Teri meri kahani", StreamType.VIDEO_STREAM).apply {
+                uploaderName = creators[index]
+                duration = 200L + index
+            }
+        }.mapNotNull(::mapItem)
+        assertEquals(ids, items.map { it.id })
+        assertEquals(listOf("Original artist", "Independent cover creator", "Instrumental channel"), items.map { it.subtitle })
+        assertEquals(ids, items.map { it.track?.id })
+        assertEquals(listOf(200L, 201L, 202L), items.map { it.track?.durationSec })
+    }
+
     @Test fun existing_uploader_and_track_mapping_are_preserved() {
         val mapped = checkNotNull(mapItem(video("Song title", 200)))
         assertEquals("Creator", mapped.subtitle)
