@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag matching app versionName (for example v0.6.0)'
+        description: 'Release tag matching app versionName (for example v0.7.0)'
         required: true
         type: string
 
@@ -102,15 +102,14 @@ jobs:
         run: |
           printf 'Dkord %s\n\n' "$TAG" > "$RUNNER_TEMP/release-notes.md"
           cat >> "$RUNNER_TEMP/release-notes.md" <<'NOTES'
-          - Compact, non-modal Home update notice with Update / Later, direct latest-version downloads, and live downloaded / total / remaining MB in Settings.
-          - English interface by default on every phone; choose English or Hindi explicitly in Settings.
-          - Verified update downloads and the Android system installer; no uninstall or signing-key change.
-          - Collapsed-by-default New Releases with category filters and Last 24 hours / 7 days / 10 days windows, album discovery and publication-date metadata checks.
-          - Short screen, tab, panel and press animations while preserving tab state and the existing playback queue.
-          - Share songs from the full player or track menu with a YouTube Music link.
-          - Choliwood - Popular and Choliwood - Latest shelves on Home.
-          - Listen Together: numbered create / share / join / sync instructions, code copy/share, multiple friends, reconnects and optional Follow host controls. Technical transport/privacy details are in the repository README.
-          - Music-only anonymous YouTube Music Radio autoplay with songs-search fallback.
+          - Recent searches now persist locally with their original Songs / Albums / Artists / Playlists filter. Only submitted searches are saved.
+          - Tap a saved query to search again, or use the pencil to edit it without submitting.
+          - Pin / Unpin frequent searches, remove individual entries, or confirm Clear all to remove both recent and pinned searches. Keeps up to 50 saved searches including 10 pins.
+          - Instant matching saved-query suggestions work offline alongside deduplicated, debounced YouTube suggestions.
+          - Stale search and suggestion completions no longer replace newer input; pagination failures retain existing results with Retry and a Load more fallback.
+          - Complete English / Hindi text while preserving existing whole-result-list playback, music-only radio, downloads, rooms and app updates.
+
+          Search history is stored privately on this device; normal search/suggestion requests still use the existing YouTube service. Searches made before this feature cannot be recovered.
 
           Install the APK over your existing Dkord app to keep playlists, likes, downloads and settings (same package and signing key).
           NOTES
