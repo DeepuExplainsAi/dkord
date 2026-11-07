@@ -2,14 +2,40 @@ package app.dkord
 
 import app.dkord.data.yt.SearchFilter
 import org.junit.Assert.*
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
+import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.downloader.Downloader
+import org.schabi.newpipe.extractor.downloader.Request
+import org.schabi.newpipe.extractor.downloader.Response
+import org.schabi.newpipe.extractor.localization.ContentCountry
+import org.schabi.newpipe.extractor.localization.Localization
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeMusicSearchExtractor
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeSearchExtractor
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory as F
 
 /** Real bundled NewPipe query handlers/extractor selection, no network or Android dependency. */
 class SearchRoutingTest {
+    private var previousDownloader: Downloader? = null
+    private lateinit var previousLocale: Localization
+    private lateinit var previousCountry: ContentCountry
+
+    @Before fun install_no_network_downloader() {
+        previousDownloader = NewPipe.getDownloader()
+        previousLocale = NewPipe.getPreferredLocalization()
+        previousCountry = NewPipe.getPreferredContentCountry()
+        // Even constructing an Extractor requires an initialized downloader. Never rely on test order.
+        NewPipe.init(object : Downloader() {
+            override fun execute(request: Request): Response = error("Routing tests must never fetch pages")
+        }, previousLocale, previousCountry)
+    }
+
+    @After fun restore_extractor_state() {
+        NewPipe.init(previousDownloader, previousLocale, previousCountry)
+    }
+
     @Test fun all_and_video_filters_use_normal_youtube_not_the_music_songs_catalogue() {
         for (filter in listOf(SearchFilter.ALL, SearchFilter.VIDEOS)) {
             val handler = ServiceList.YouTube.searchQHFactory.fromQuery("mashup sad love 1 hour", listOf(filter.id), "")

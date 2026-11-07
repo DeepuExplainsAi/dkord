@@ -1,7 +1,6 @@
 package app.dkord
 
 import app.dkord.data.auth.CookieSource
-import app.dkord.data.net.NewPipeDownloader
 import app.dkord.data.yt.InnerTubeClient
 import app.dkord.data.yt.MusicRepository
 import kotlinx.coroutines.runBlocking
@@ -32,12 +31,12 @@ class SearchSuggestionProviderTest {
         OkHttpClient.Builder().addInterceptor { error("Suggestions must not call the music browse API") }.build(),
     ))
     private fun <T> withProvider(provider: Provider, action: () -> T): T {
-        val previous = runCatching { NewPipe.getDownloader() }.getOrNull()
+        val previous = NewPipe.getDownloader()
         val locale = NewPipe.getPreferredLocalization()
         val country = NewPipe.getPreferredContentCountry()
         NewPipe.init(provider, Localization("en", "IN"), ContentCountry("IN"))
         try { return action() }
-        finally { NewPipe.init(previous ?: NewPipeDownloader(), locale, country) }
+        finally { NewPipe.init(previous, locale, country) }
     }
 
     @Test fun actual_youtube_provider_keeps_its_order_and_receives_the_exact_query_and_region() = withProvider(Provider()) {
