@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag matching app versionName (for example v0.7.0)'
+        description: 'Release tag matching app versionName (for example v0.8.0)'
         required: true
         type: string
 
@@ -102,14 +102,15 @@ jobs:
         run: |
           printf 'Dkord %s\n\n' "$TAG" > "$RUNNER_TEMP/release-notes.md"
           cat >> "$RUNNER_TEMP/release-notes.md" <<'NOTES'
-          - Recent searches now persist locally with their original Songs / Albums / Artists / Playlists filter. Only submitted searches are saved.
-          - Tap a saved query to search again, or use the pencil to edit it without submitting.
-          - Pin / Unpin frequent searches, remove individual entries, or confirm Clear all to remove both recent and pinned searches. Keeps up to 50 saved searches including 10 pins.
-          - Instant matching saved-query suggestions work offline alongside deduplicated, debounced YouTube suggestions.
-          - Stale search and suggestion completions no longer replace newer input; pagination failures retain existing results with Retry and a Load more fallback.
-          - Complete English / Hindi text while preserving existing whole-result-list playback, music-only radio, downloads, rooms and app updates.
+          - Part 1: broader search. New searches default to All on normal YouTube, rather than the music-songs-only catalogue.
+          - Separate Videos and Music videos filters, plus the existing Songs / Albums / Artists / Playlists options.
+          - Queries are passed through without keyword, genre or duration whitelists. Long mixes, mashups, covers, remixes and other provider results can appear in their original order.
+          - Clear separation between saved queries and real YouTube suggestions, with loading / Retry states and preserved provider suggestion order.
+          - Provider Did you mean / Showing results for corrections, without silently replacing the user's typed query or search history.
+          - A Search all YouTube shortcut for narrow empty/error states, and support for watch / short / Shorts / live / embed video identities including playlist-context watch links.
+          - Persistent recents/pins, English / Hindi text, full-list playback and pagination retry retained. Existing music-only autoplay, downloads, rooms and updates are unchanged.
 
-          Search history is stored privately on this device; normal search/suggestion requests still use the existing YouTube service. Searches made before this feature cannot be recovered.
+          Search is anonymous, so exact personalized YouTube ordering is not promised. Provider availability, regional, age and playable-format restrictions still apply. Part 2 custom mashup editing/export is not included in this release.
 
           Install the APK over your existing Dkord app to keep playlists, likes, downloads and settings (same package and signing key).
           NOTES

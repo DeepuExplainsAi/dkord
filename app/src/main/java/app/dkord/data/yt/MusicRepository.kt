@@ -1,27 +1,28 @@
 package app.dkord.data.yt
 
 import app.dkord.core.BrowseItem
-import app.dkord.core.ItemKind
 import app.dkord.core.Page
 import app.dkord.core.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.schabi.newpipe.extractor.InfoItem
 import org.schabi.newpipe.extractor.ServiceList
-import org.schabi.newpipe.extractor.channel.ChannelInfoItem
-import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem
 import org.schabi.newpipe.extractor.search.SearchInfo
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory as F
-import org.schabi.newpipe.extractor.stream.StreamInfoItem
 
 enum class SearchFilter(internal val id: String) {
-    SONGS(F.MUSIC_SONGS), ALBUMS(F.MUSIC_ALBUMS), ARTISTS(F.MUSIC_ARTISTS), PLAYLISTS(F.MUSIC_PLAYLISTS)
+    ALL(F.ALL), VIDEOS(F.VIDEOS), SONGS(F.MUSIC_SONGS), MUSIC_VIDEOS(F.MUSIC_VIDEOS),
+    ALBUMS(F.MUSIC_ALBUMS), ARTISTS(F.MUSIC_ARTISTS), PLAYLISTS(F.MUSIC_PLAYLISTS)
 }
 
 /** Opaque handle for the next search page. */
 class SearchCursor internal constructor(internal val query: String, internal val filter: SearchFilter, internal val page: org.schabi.newpipe.extractor.Page)
 
-class SearchResult(val items: List<BrowseItem>, val next: SearchCursor?)
+class SearchResult(
+    val items: List<BrowseItem>,
+    val next: SearchCursor?,
+    val suggestedQuery: String = "",
+    val corrected: Boolean = false,
+)
 
 class MusicRepository(private val client: InnerTubeClient) {
 
@@ -34,7 +35,8 @@ class MusicRepository(private val client: InnerTubeClient) {
     suspend fun search(query: String, filter: SearchFilter): SearchResult = withContext(Dispatchers.IO) {
         val yt = ServiceList.YouTube
         val info = SearchInfo.getInfo(yt, yt.searchQHFactory.fromQuery(query, listOf(filter.id), ""))
-        SearchResult(info.relatedItems.mapNotNull(::mapItem), info.nextPage?.let { SearchCursor(query, filter, it) })
+        SearchResult(info.relatedItems.mapNotNull(::mapItem), info.nextPage?.let { SearchCursor(query, filter, it) },
+            info.searchSuggestion.orEmpty(), info.isCorrectedSearch)
     }
 
     suspend fun searchMore(cursor: SearchCursor): SearchResult = withContext(Dispatchers.IO) {
@@ -94,25 +96,4 @@ class MusicRepository(private val client: InnerTubeClient) {
         return name to h.at("accountPhoto").lastThumbnail()
     }
 
-    // ---- NewPipe -> app models ----
-
-    private fun mapItem(i: InfoItem): BrowseItem? {
-        val thumb = i.thumbnails.maxByOrNull { it.height }?.url
-        return when (i) {
-            is StreamInfoItem -> {
-                val id = videoId(i.url) ?: return null
-                val artist = i.uploaderName.orEmpty().removeSuffix(" - Topic")
-                BrowseItem(ItemKind.SONG, id, i.name, artist, thumb, track = Track(id, i.name, artist, null, i.duration, thumb))
-            }
-            is PlaylistInfoItem -> {
-                val list = Regex("[?&]list=([^&]+)").find(i.url)?.groupValues?.get(1) ?: return null
-                val kind = if (list.startsWith("OLAK5uy")) ItemKind.ALBUM else ItemKind.PLAYLIST
-                BrowseItem(kind, "VL$list", i.name, i.uploaderName.orEmpty(), thumb)
-            }
-            is ChannelInfoItem -> BrowseItem(ItemKind.ARTIST, i.url.substringAfterLast('/'), i.name, "", thumb)
-            else -> null
-        }
-    }
-
-    private fun videoId(url: String) = Regex("[?&]v=([\\w-]{11})").find(url)?.groupValues?.get(1)
 }

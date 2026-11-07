@@ -2,6 +2,7 @@ package app.dkord.ui.search
 
 import app.dkord.core.BrowseItem
 import app.dkord.data.search.SavedSearch
+import app.dkord.data.search.SearchCorrection
 import app.dkord.data.search.SearchHistoryRepository
 import app.dkord.data.search.SearchPageToken
 import app.dkord.data.search.SearchSource
@@ -20,16 +21,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** Screen-lifetime requests, app-lifetime saved queries. Late work cannot replace a newer query. */
+const val MAX_REMOTE_SUGGESTIONS = 20
+
+/** UI-dispatcher mutations; screen-lifetime requests and app-lifetime saved queries. */
 class SearchController(
     private val source: SearchSource,
     private val history: SearchHistoryRepository,
     private val scope: CoroutineScope,
 ) {
     private val mutableQuery = MutableStateFlow("")
-    private val mutableFilter = MutableStateFlow(SearchFilter.SONGS)
+    private val mutableFilter = MutableStateFlow(SearchFilter.ALL)
     private val mutableResults = MutableStateFlow<Load<List<BrowseItem>>?>(null)
     private val mutableSuggestions = MutableStateFlow<List<String>>(emptyList())
+    private val mutableSuggestionLoading = MutableStateFlow(false)
+    private val mutableSuggestionFailed = MutableStateFlow(false)
+    private val mutableCorrection = MutableStateFlow<SearchCorrection?>(null)
     private val mutableHasMore = MutableStateFlow(false)
     private val mutableMore = MutableStateFlow(false)
     private val mutableMoreFailed = MutableStateFlow(false)
@@ -37,6 +43,9 @@ class SearchController(
     val filter = mutableFilter.asStateFlow()
     val results = mutableResults.asStateFlow()
     val suggestions = mutableSuggestions.asStateFlow()
+    val suggestionsLoading = mutableSuggestionLoading.asStateFlow()
+    val suggestionsFailed = mutableSuggestionFailed.asStateFlow()
+    val correction = mutableCorrection.asStateFlow()
     val hasMore = mutableHasMore.asStateFlow()
     val loadingMore = mutableMore.asStateFlow()
     val moreFailed = mutableMoreFailed.asStateFlow()
@@ -61,20 +70,39 @@ class SearchController(
         mutableFilter.value = selected
         mutableResults.value = null
         val normalized = normalizeSearchQuery(text)
+        if (normalized.isNotBlank()) requestSuggestions(normalized, debounce = true)
+    }
+
+    fun retrySuggestions() {
+        if (results.value != null || suggestionsLoading.value) return
+        val normalized = normalizeSearchQuery(query.value)
         if (normalized.isBlank()) return
+        suggestJob?.cancel()
+        suggestionRequest++
+        requestSuggestions(normalized, debounce = false)
+    }
+
+    private fun requestSuggestions(normalized: String, debounce: Boolean) {
         val id = suggestionRequest
+        mutableSuggestionLoading.value = true
+        mutableSuggestionFailed.value = false
         suggestJob = scope.launch {
-            delay(250)
             try {
+                if (debounce) delay(250)
                 val values = source.suggestions(normalized).map(::normalizeSearchQuery).filter { it.isNotBlank() }
-                    .distinctBy(::searchIdentity).take(8)
+                    .distinctBy(::searchIdentity).take(MAX_REMOTE_SUGGESTIONS)
                 currentCoroutineContext().ensureActive()
                 if (id == suggestionRequest && results.value == null) mutableSuggestions.value = values
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
                 currentCoroutineContext().ensureActive()
-                if (id == suggestionRequest) mutableSuggestions.value = emptyList()
+                if (id == suggestionRequest && results.value == null) {
+                    mutableSuggestions.value = emptyList()
+                    mutableSuggestionFailed.value = true
+                }
+            } finally {
+                if (id == suggestionRequest) mutableSuggestionLoading.value = false
             }
         }
     }
@@ -103,6 +131,10 @@ class SearchController(
                 currentCoroutineContext().ensureActive()
                 if (id == request) {
                     setCursor(result.next)
+                    mutableCorrection.value = result.correction?.let { value ->
+                        val suggested = normalizeSearchQuery(value.query)
+                        value.copy(query = suggested).takeIf { suggested.isNotBlank() && searchIdentity(suggested) != searchIdentity(normalized) }
+                    }
                     mutableResults.value = Load.Ok(result.items.distinctBy { it.kind to it.id })
                 }
             } catch (e: CancellationException) {
@@ -143,6 +175,7 @@ class SearchController(
     fun clear() {
         invalidate()
         mutableQuery.value = ""
+        mutableFilter.value = SearchFilter.ALL
         mutableResults.value = null
     }
 
@@ -158,5 +191,8 @@ class SearchController(
         mutableMore.value = false
         mutableMoreFailed.value = false
         mutableSuggestions.value = emptyList()
+        mutableSuggestionLoading.value = false
+        mutableSuggestionFailed.value = false
+        mutableCorrection.value = null
     }
 }

@@ -6,10 +6,11 @@ import app.dkord.data.yt.SearchCursor
 import app.dkord.data.yt.SearchFilter
 import app.dkord.data.yt.SearchResult
 
-/** Tokens stay opaque to the screen/controller; the existing NewPipe search backend is untouched. */
+/** Tokens retain the original query/filter through pagination, including broad YouTube search. */
 interface SearchPageToken
 
-data class SearchPage(val items: List<BrowseItem>, val next: SearchPageToken? = null)
+data class SearchCorrection(val query: String, val corrected: Boolean = false)
+data class SearchPage(val items: List<BrowseItem>, val next: SearchPageToken? = null, val correction: SearchCorrection? = null)
 
 interface SearchSource {
     suspend fun suggestions(query: String): List<String>
@@ -19,7 +20,8 @@ interface SearchSource {
 
 class MusicSearchSource(private val music: MusicRepository) : SearchSource {
     private class Token(val cursor: SearchCursor) : SearchPageToken
-    private fun page(result: SearchResult) = SearchPage(result.items, result.next?.let(::Token))
+    private fun page(result: SearchResult) = SearchPage(result.items, result.next?.let(::Token),
+        result.suggestedQuery.takeIf { it.isNotBlank() }?.let { SearchCorrection(it, result.corrected) })
     override suspend fun suggestions(query: String) = music.suggestions(query)
     override suspend fun search(query: String, filter: SearchFilter) = page(music.search(query, filter))
     override suspend fun more(token: SearchPageToken) = page(music.searchMore((token as Token).cursor))

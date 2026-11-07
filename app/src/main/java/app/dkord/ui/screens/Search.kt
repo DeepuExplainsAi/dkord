@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -56,6 +58,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
@@ -94,6 +98,9 @@ class SearchViewModel(repo: MusicRepository, history: SearchHistoryRepository) :
     val filter = controller.filter
     val results = controller.results
     val suggestions = controller.suggestions
+    val suggestionsLoading = controller.suggestionsLoading
+    val suggestionsFailed = controller.suggestionsFailed
+    val correction = controller.correction
     val hasMore = controller.hasMore
     val loadingMore = controller.loadingMore
     val moreFailed = controller.moreFailed
@@ -103,6 +110,7 @@ class SearchViewModel(repo: MusicRepository, history: SearchHistoryRepository) :
     fun repeat(entry: SavedSearch) = controller.repeat(entry)
     fun edit(entry: SavedSearch) = controller.edit(entry)
     fun loadMore(retry: Boolean = false) = controller.loadMore(retry)
+    fun retrySuggestions() = controller.retrySuggestions()
     fun clear() = controller.clear()
 }
 
@@ -121,6 +129,9 @@ fun SearchScreen(
     val filter by vm.filter.collectAsState()
     val results by vm.results.collectAsState()
     val suggestions by vm.suggestions.collectAsState()
+    val suggestionsLoading by vm.suggestionsLoading.collectAsState()
+    val suggestionsFailed by vm.suggestionsFailed.collectAsState()
+    val correction by vm.correction.collectAsState()
     val history by saved.state.collectAsState()
     val hasMore by vm.hasMore.collectAsState()
     val loadingMore by vm.loadingMore.collectAsState()
@@ -192,40 +203,44 @@ fun SearchScreen(
         Box(Modifier.fillMaxWidth().weight(1f)) {
             when {
                 query.isBlank() -> SavedSearches(history, { confirmClear = true }, saved::reload, ::repeat, ::edit, saved::togglePinned, saved::remove)
-                results == null -> LazyColumn(Modifier.fillMaxSize()) {
-                    items(localSuggestions, key = { "local:${it.key}" }) { entry ->
-                        SavedSearchRow(entry, { repeat(entry) }, { edit(entry) }, { saved.togglePinned(entry) }, { saved.remove(entry) })
-                    }
-                    items(remoteSuggestions, key = { "suggestion:${searchIdentity(it)}" }) { suggestion ->
-                        ListItem(
-                            modifier = Modifier.softClickable({ submitted { vm.search(suggestion) } }),
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            leadingContent = { Icon(Icons.Default.Search, null) },
-                            headlineContent = { Text(suggestion, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                            trailingContent = { IconButton({ edit(SavedSearch(suggestion, filter)) }) {
-                                Icon(Icons.Default.Edit, stringResource(R.string.search_edit_query))
-                            } },
-                        )
-                    }
-                }
+                results == null -> SearchSuggestions(
+                    local = localSuggestions, remote = remoteSuggestions, loading = suggestionsLoading, failed = suggestionsFailed,
+                    onRepeat = ::repeat, onEdit = ::edit, onPin = saved::togglePinned, onRemove = saved::remove,
+                    onSuggestion = { suggestion -> submitted { vm.search(suggestion) } },
+                    onEditSuggestion = { suggestion -> edit(SavedSearch(suggestion, filter)) }, onRetry = vm::retrySuggestions,
+                )
                 else -> when (val result = results) {
                     Load.Loading -> Loading()
-                    is Load.Failed -> ErrorBox(result.error, { vm.search() })
+                    is Load.Failed -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        ErrorBox(result.error, { vm.search() }, Modifier.weight(1f))
+                        if (filter != SearchFilter.ALL) TextButton({ vm.setFilter(SearchFilter.ALL) }) { Text(stringResource(R.string.search_all_youtube)) }
+                    }
                     is Load.Ok -> {
                         val listState = rememberLazyListState()
-                        LaunchedEffect(listState, result.value.size) {
+                        val prefixRows = if (correction == null) 0 else 1
+                        LaunchedEffect(listState, result.value.size, prefixRows) {
                             snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
-                                .collect { if (it >= result.value.size - 4) vm.loadMore() }
+                                .collect { if (it >= result.value.size + prefixRows - 4) vm.loadMore() }
                         }
                         val songs = remember(result.value) { result.value.mapNotNull { it.track } }
                         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                            correction?.let { suggestion -> item("correction") {
+                                TextButton({ submitted { vm.search(suggestion.query) } }, Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                                    Text(stringResource(if (suggestion.corrected) R.string.search_showing_results_for else R.string.search_did_you_mean, suggestion.query), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                }
+                            } }
                             items(result.value, key = { "${it.kind.name}:${it.id}" }) { item ->
                                 BrowseRow(item, onClick = {
                                     if (item.kind == ItemKind.SONG) onPlay(songs, songs.indexOfFirst { it.id == item.id }.coerceAtLeast(0))
                                     else onItem(item)
                                 }, onMenu = item.track?.let { track -> { onMenu(track) } })
                             }
-                            if (result.value.isEmpty()) item("none") { Text(stringResource(R.string.no_results), Modifier.padding(32.dp)) }
+                            if (result.value.isEmpty()) item("none") {
+                                Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(stringResource(R.string.no_results))
+                                    if (filter != SearchFilter.ALL) TextButton({ vm.setFilter(SearchFilter.ALL) }) { Text(stringResource(R.string.search_all_youtube)) }
+                                }
+                            }
                             item("pagination") {
                                 Column(Modifier.fillMaxWidth().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                     if (loadingMore) CircularProgressIndicator(Modifier.padding(8.dp).size(24.dp))
@@ -250,6 +265,51 @@ fun SearchScreen(
         confirmButton = { TextButton({ confirmClear = false; saved.clearAll() }) { Text(stringResource(R.string.search_clear_all)) } },
         dismissButton = { TextButton({ confirmClear = false }) { Text(stringResource(R.string.cancel)) } },
     )
+}
+
+@Composable
+private fun SearchSuggestions(
+    local: List<SavedSearch>, remote: List<String>, loading: Boolean, failed: Boolean,
+    onRepeat: (SavedSearch) -> Unit, onEdit: (SavedSearch) -> Unit, onPin: (SavedSearch) -> Unit, onRemove: (SavedSearch) -> Unit,
+    onSuggestion: (String) -> Unit, onEditSuggestion: (String) -> Unit, onRetry: () -> Unit,
+) {
+    LazyColumn(Modifier.fillMaxSize()) {
+        if (local.isNotEmpty()) item("local-heading") { SuggestionHeading(stringResource(R.string.search_history_title)) }
+        items(local, key = { "local:${it.key}" }) { entry ->
+            SavedSearchRow(entry, { onRepeat(entry) }, { onEdit(entry) }, { onPin(entry) }, { onRemove(entry) })
+        }
+        if (remote.isNotEmpty() || loading || failed) item("remote-heading") { SuggestionHeading(stringResource(R.string.search_youtube_suggestions)) }
+        items(remote, key = { "suggestion:${searchIdentity(it)}" }) { suggestion ->
+            ListItem(
+                modifier = Modifier.softClickable({ onSuggestion(suggestion) }),
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                leadingContent = { Icon(Icons.Default.Search, null) },
+                headlineContent = { Text(suggestion, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                trailingContent = { IconButton({ onEditSuggestion(suggestion) }) { Icon(Icons.Default.Edit, stringResource(R.string.search_edit_query)) } },
+            )
+        }
+        item("suggestion-status") {
+            when {
+                loading -> Row(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(18.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text(stringResource(R.string.search_suggestions_loading), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                failed -> Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    Text(stringResource(R.string.search_suggestions_failed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onRetry) { Text(stringResource(R.string.retry)) }
+                }
+                remote.isEmpty() -> Text(stringResource(R.string.search_suggestions_hint), Modifier.padding(20.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                else -> Unit
+            }
+        }
+    }
+}
+
+@Composable
+private fun SuggestionHeading(text: String) {
+    Text(text, Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).semantics { heading() },
+        style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
@@ -318,6 +378,9 @@ private fun SavedSearchRow(entry: SavedSearch, onRepeat: () -> Unit, onEdit: () 
 }
 
 private fun filterLabel(filter: SearchFilter) = when (filter) {
+    SearchFilter.ALL -> R.string.search_all
+    SearchFilter.VIDEOS -> R.string.search_videos
+    SearchFilter.MUSIC_VIDEOS -> R.string.search_music_videos
     SearchFilter.SONGS -> R.string.songs
     SearchFilter.ALBUMS -> R.string.albums
     SearchFilter.ARTISTS -> R.string.artists

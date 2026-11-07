@@ -111,7 +111,7 @@
     <string name="resume_all">Resume all</string>
     <string name="retry">Retry</string>
     <string name="save">Save</string>
-    <string name="search_hint">Search songs, albums, artists</string>
+    <string name="search_hint">Search YouTube: songs, mixes, artists</string>
     <string name="settings">Settings</string>
     <string name="share">Share</string>
     <string name="shuffle">Shuffle</string>
@@ -247,4 +247,14 @@
     <string name="search_history_write_failed">Could not update search history. Try again.</string>
     <string name="search_more_failed">Could not load more results.</string>
     <string name="search_load_more">Load more</string>
+    <string name="search_videos">Videos</string>
+    <string name="search_music_videos">Music videos</string>
+    <string name="search_all_youtube">Search all YouTube</string>
+    <string name="search_youtube_suggestions">YouTube suggestions</string>
+    <string name="search_suggestions_loading">Loading YouTube suggestions…</string>
+    <string name="search_suggestions_failed">Could not load YouTube suggestions. You can still search.</string>
+    <string name="search_suggestions_hint">Press Search to see all results.</string>
+    <string name="search_showing_results_for">Showing results for %1$s</string>
+    <string name="search_did_you_mean">Did you mean %1$s?</string>
+    <string name="search_all">All</string>
 </resources>
