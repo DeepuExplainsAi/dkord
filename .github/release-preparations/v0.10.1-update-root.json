@@ -1,0 +1,6 @@
+{
+  "purpose": "verify-existing-public-update-root",
+  "version": "0.10.1",
+  "branch": "arena/a6a6bbda-dkord",
+  "preparedHead": "bb0fbb23fad9d04c665d32a019dba506ccae48d3"
+}
