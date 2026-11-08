@@ -73,12 +73,11 @@ internal suspend fun musicRadioRecommendations(
     suspend fun select(pool: List<Track>, scopedSearch: Boolean): List<Track> = coroutineScope {
         // Do not consume song identities before semantic filtering: a rejected English rendition
         // must not suppress a compatible Hindi rendition in a later pool.
-        val eligible = pool.distinctBy { it.id }.filter(filter::accepts).take(18)
+        val eligible = pool.distinctBy { it.id }.filter(filter::accepts).take(minOf(18, 24 - profiled))
         val ranked = eligible.mapIndexed { index, track ->
-            val inspect = profiled < 24
-            if (inspect) profiled++
+            profiled++
             async {
-                val score = context.score(track, if (inspect) facts(track) else RadioFacts(), scopedSearch, index)
+                val score = context.score(track, facts(track), scopedSearch, index)
                 score?.let { track to it }
             }
         }.awaitAll().filterNotNull().sortedByDescending { it.second }.map { it.first }
@@ -87,6 +86,7 @@ internal suspend fun musicRadioRecommendations(
     val radio = select(radioCandidates(fetchRadio), scopedSearch = false)
     if (radio.isNotEmpty()) return radio
     for (query in context.fallbackQueries()) {
+        if (profiled >= 24) break // Never fill from uninspected candidates after exhausting the budget.
         val selected = select(radioCandidates { searchSongs(query) }, scopedSearch = true)
         if (selected.isNotEmpty()) return selected
     }

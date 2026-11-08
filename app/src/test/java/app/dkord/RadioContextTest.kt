@@ -57,7 +57,7 @@ class RadioContextTest {
     }
 
     @Test fun party_does_not_become_sad_and_devotional_or_instrumental_intent_is_respected() {
-        for ((hint, wrong) in listOf("hindi party" to "sad", "hindi devotional" to "party", "hindi instrumental" to "party")) {
+        for ((hint, wrong) in listOf("hindi party" to "sad", "hindi devotional" to "party", "hindi chill instrumental" to "party")) {
             val p = policy(RadioFacts(), hint)
             assertNull(p.score(song("other"), RadioFacts("hi", listOf(wrong)), true, 0))
         }
@@ -69,15 +69,16 @@ class RadioContextTest {
         assertNotNull(score(RadioFacts(), scoped = true)) // Hindi/sad SONGS query is additional provider evidence.
     }
 
-    @Test fun a_same_artist_unknown_profile_does_not_override_a_known_conflict() {
+    @Test fun the_same_artist_does_not_prove_language_or_override_a_known_conflict() {
         val p = policy()
-        assertNotNull(p.score(song("same", artist = seed.artist), RadioFacts(), false, 0))
+        assertNull(p.score(song("same", artist = seed.artist), RadioFacts(), false, 0))
+        assertNotNull(p.score(song("same", artist = seed.artist), RadioFacts(), true, 0))
         assertNull(p.score(song("same", artist = seed.artist), RadioFacts("en", listOf("party")), false, 0))
     }
 
     @Test fun contemporary_selection_rejects_explicit_retro_and_distant_known_song_years() {
-        assertNull(score(RadioFacts("hi", listOf("sad", "old classics"))))
         val p = policy(RadioFacts("hi", listOf("sad"), yearHint = 2021))
+        assertNull(p.score(song("retro"), RadioFacts("hi", listOf("sad", "old classics")), false, 0))
         assertNull(p.score(song("old"), RadioFacts("hi", listOf("sad"), yearHint = 1965), false, 0))
         assertNotNull(p.score(song("near"), RadioFacts("hi", listOf("sad"), yearHint = 2019), false, 0))
     }
@@ -91,7 +92,7 @@ class RadioContextTest {
 
     @Test fun remaster_year_is_not_claimed_as_original_song_release_year() {
         assertNull(radioTraits(song("id", "A Song Remastered 2025")).year)
-        assertEquals(2019, radioTraits(song("id", "A Song 2019")).year)
+        assertEquals(2019, radioTraits(song("id", "A Song (2019)")).year)
     }
 
     @Test fun relevant_real_view_counts_rank_popular_songs_after_semantic_compatibility() = runTest {
@@ -173,4 +174,78 @@ class RadioContextTest {
         assertEquals(15, result.size)
         assertTrue(profiled <= 25)
     }
+
+    @Test fun unknown_era_is_not_labeled_modern_or_hard_filtered_as_if_it_were_known() {
+        val target = radioTraits(seed, RadioFacts("hi", listOf("sad")))
+        assertFalse(target.classic); assertFalse(target.contemporary); assertNull(target.year)
+        val p = RadioContextPolicy(seed, target)
+        val retro = p.score(song("retro"), RadioFacts("hi", listOf("sad", "classic"), 100_000_000), false, 0)
+        val compatible = p.score(song("other"), RadioFacts("hi", listOf("sad"), 100), false, 0)
+        assertNotNull(retro) // Native radio can legitimately belong to a classic seed with sparse facts.
+        assertTrue(retro!! < compatible!!) // Still avoid an unexpected retro detour when alternatives exist.
+    }
+
+    @Test fun explicit_latest_intent_rejects_known_classics_even_inside_scoped_fallback() {
+        val p = policy(RadioFacts("hi", listOf("sad")), "latest hindi sad songs")
+        for (scoped in listOf(false, true)) assertNull(p.score(song("old"), RadioFacts("hi", listOf("sad", "classic")), scoped, 0))
+        assertTrue(p.fallbackQueries().all { "latest" in it })
+    }
+
+    @Test fun actual_classic_evidence_overrides_a_conflicting_new_music_query_and_its_year() {
+        val traits = radioTraits(seed, RadioFacts("hi", listOf("sad", "classic")), "latest hindi sad songs 2025")
+        assertTrue(traits.classic); assertFalse(traits.contemporary); assertNull(traits.year)
+        val p = RadioContextPolicy(seed, traits, "latest hindi sad songs 2025")
+        assertTrue(p.fallbackQueries().all { "classic" in it && "latest" !in it && "2025" !in it })
+        assertNotNull(p.score(song("classic"), RadioFacts("hi", listOf("sad", "classic"), yearHint = 1968), true, 0))
+    }
+
+    @Test fun numeric_song_album_names_and_bare_numeric_queries_are_not_release_years() {
+        val traits = radioTraits(seed.copy(title = "1979", album = "1989"), hint = "1989")
+        assertNull(traits.year); assertFalse(traits.classic); assertFalse(traits.contemporary)
+        assertNull(radioTraits(seed.copy(album = "1989")).year)
+    }
+
+    @Test fun an_explicit_music_year_query_is_intent_rather_than_a_provider_upload_date() {
+        val traits = radioTraits(seed, hint = "hindi sad songs 2021")
+        assertEquals(2021, traits.year)
+        assertTrue(traits.contemporary)
+        assertNull(radioTraits(seed).year)
+    }
+
+    @Test fun opposing_known_mood_families_cannot_slip_through_a_scoped_music_query() {
+        for ((hint, wrong) in listOf("hindi sad" to "devotional", "hindi chill" to "party", "hindi romantic" to "workout",
+            "hindi party" to "chill", "hindi devotional" to "sad romantic")) {
+            assertNull(policy(RadioFacts(), hint).score(song("wrong"), RadioFacts("hi", listOf(wrong)), true, 0))
+        }
+    }
+
+    @Test fun absence_of_instrumental_tag_is_not_invented_as_proof_of_vocals() {
+        val p = policy(RadioFacts("hi", listOf("instrumental")))
+        assertTrue(p.fallbackQueries().all { "instrumental" in it })
+        assertNotNull(p.score(song("sparse"), RadioFacts("hi", listOf("sad")), true, 0))
+        val matched = p.score(song("matched"), RadioFacts("hi", listOf("instrumental")), true, 0)!!
+        val sparse = p.score(song("sparse"), RadioFacts("hi", listOf("sad"), Long.MAX_VALUE), true, 0)!!
+        assertTrue(matched > sparse)
+    }
+
+    @Test fun the_word_old_inside_a_song_name_does_not_claim_a_classic_release() {
+        assertFalse(radioTraits(song("id", "Old Town Road")).classic)
+        assertFalse(radioTraits(song("id", "Good Old Days")).classic)
+    }
+
+
+    @Test fun exhausted_metadata_budget_does_not_fill_the_queue_with_uninspected_candidates() = runTest {
+        var inspections = 0
+        var searches = 0
+        val result = musicRadioRecommendations(seed, emptyList(), { (1..18).map { song("radio-$it") } },
+            { searches++; (1..100).map { song("fallback-$it") } }, hint = "hindi sad",
+            factsSource = RadioFactsSource { track ->
+                inspections++
+                if (track.id == seed.id) RadioFacts("hi", listOf("sad")) else RadioFacts("en", listOf("sad"))
+            })
+        assertTrue(result.isEmpty())
+        assertEquals(25, inspections) //24 candidates + original seed; no blind filler beyond that limit.
+        assertEquals(1, searches)
+    }
+
 }

@@ -10,7 +10,7 @@ internal data class RadioFacts(
     val language: String? = null,
     val tags: List<String> = emptyList(),
     val views: Long = 0,
-    /** Only an explicit title/album year hint; never equate a re-upload date with release year. */
+    /** Explicit music-year evidence if supplied; never equate a re-upload date with release year. */
     val yearHint: Int? = null,
 )
 
@@ -23,6 +23,7 @@ internal data class RadioTraits(
     val language: String? = null,
     val moods: Set<RadioMood> = emptySet(),
     val classic: Boolean = false,
+    val contemporary: Boolean = false,
     val year: Int? = null,
     val terms: Set<String> = emptySet(),
 )
@@ -50,6 +51,7 @@ private val moodWords = mapOf(
 )
 private val genericTerms = setOf("music", "song", "songs", "video", "audio", "official", "new", "latest", "youtube", "subscribe", "channel", "full", "hd", "lyrics", "lyrical", "hit", "hits", "best", "popular", "trending", "गाना", "गाने", "the", "and", "for", "you", "with", "feat", "from")
 private val classicWords = listOf("old hindi", "old songs", "old song", "old is gold", "oldies", "classic", "classics", "retro", "evergreen", "पुराने गाने", "पुराना गाना", "पुराने हिंदी", "सदाबहार")
+private val contemporaryWords = listOf("latest", "new releases", "modern", "contemporary", "नए गाने", "नया गाना", "ताज़ा")
 
 private fun contextText(text: String) = Normalizer.normalize(text, Normalizer.Form.NFKC).lowercase(Locale.ROOT)
     .replace(Regex("[^\\p{L}\\p{M}\\p{N}]+"), " ").trim()
@@ -69,13 +71,24 @@ internal fun radioTraits(track: Track, facts: RadioFacts = RadioFacts(), hint: S
         values.size > 2 || (RadioMood.SAD in values && values.any { it == RadioMood.PARTY || it == RadioMood.WORKOUT })
     }.orEmpty()
     val selectedMoods = moods(title).ifEmpty { metadataMoods }.ifEmpty { moods(intent) }
-    fun readYear(text: String): Int? = if ("remaster" in text) null else
-        Regex("(?:^| )((?:19|20)\\d{2})(?= |$)").find(text)?.groupValues?.get(1)?.toIntOrNull()
-    val year = facts.yearHint ?: readYear(title) ?: readYear(intent)
-    val descriptors = (languageWords.values.flatten() + moodWords.values.flatten() + classicWords)
+    // Numeric song/album names are not release years. Only explicit annotations/era intent count.
+    val annotatedYear = if ("remaster" in title) null else Regex("""(?:[(\[]|\b(?:released?|year)[:\s-]+)((?:19|20)\d{2})(?:[)\]]|\s*$)""",
+        RegexOption.IGNORE_CASE).find(track.title)?.groupValues?.get(1)?.toIntOrNull()
+    val intentYear = if (mentions(intent, listOf("songs", "song", "music", "hits", "गाने", "गाना")))
+        Regex("""(?:^| )((?:19|20)\d{2})(?= |$)""").find(intent)?.groupValues?.get(1)?.toIntOrNull() else null
+    val metadataYear = facts.yearHint ?: annotatedYear
+    fun modern(text: String) = mentions(text, contemporaryWords) || Regex("""(?:^| )new(?: [\p{L}\p{M}]+){0,2} songs?(?= |$)""").containsMatchIn(text)
+    val mainClassic = mentions(title, classicWords) || mentions(metadata, classicWords) || metadataYear?.let { it < 1990 } == true
+    val mainContemporary = modern(title) || modern(metadata) || metadataYear?.let { it >= 2000 } == true
+    val classic = mainClassic || (!mainContemporary && (mentions(intent, classicWords) || intentYear?.let { it < 1990 } == true))
+    val contemporary = !classic && (mainContemporary || modern(intent) || intentYear?.let { it >= 2000 } == true)
+    val conflictingIntentYear = (mainClassic && intentYear?.let { it >= 2000 } == true) ||
+        (mainContemporary && intentYear?.let { it < 1990 } == true)
+    val year = metadataYear ?: intentYear.takeUnless { conflictingIntentYear }
+    val descriptors = (languageWords.values.flatten() + moodWords.values.flatten() + classicWords + contemporaryWords)
         .flatMap { contextText(it).split(' ') }.toSet()
     val terms = metadata.split(' ').filter { it.length >= 3 && it !in genericTerms && it !in descriptors && it.any(Char::isLetter) }.take(48).toSet()
-    return RadioTraits(lang, selectedMoods, mentions(title, classicWords) || mentions(intent, classicWords) || mentions(metadata, classicWords), year, terms)
+    return RadioTraits(language = lang, moods = selectedMoods, classic = classic, contemporary = contemporary, year = year, terms = terms)
 }
 
 /** Session context is private in-memory intent; it is never added to Track/room payloads. */
@@ -84,23 +97,28 @@ internal class RadioContextPolicy(
     private val target: RadioTraits,
     private val hint: String = "",
 ) {
-    val constrained = target.language != null || target.moods.isNotEmpty() || target.classic || target.year != null || target.terms.isNotEmpty()
+    val constrained = target.language != null || target.moods.isNotEmpty() || target.classic || target.contemporary || target.year != null || target.terms.isNotEmpty()
 
     fun score(track: Track, facts: RadioFacts, scopedSearch: Boolean, providerIndex: Int): Double? {
         val candidate = radioTraits(track, facts)
         if (target.language != null && candidate.language != null && target.language != candidate.language) return null
         val sameArtist = contextText(seed.artist).isNotBlank() && contextText(seed.artist) == contextText(track.artist)
         // Unknown language is not silently guessed from Latin title spelling.
-        if (target.language != null && candidate.language == null && !scopedSearch && !sameArtist) return null
-        if (!target.classic && candidate.classic) return null
-        if (target.classic && !candidate.classic && !scopedSearch && candidate.year == null) return null
+        if (target.language != null && candidate.language == null && !scopedSearch) return null
+        if (target.contemporary && candidate.classic) return null
+        if (target.classic && candidate.contemporary && !candidate.classic) return null
         if (target.year != null && candidate.year != null && kotlin.math.abs(target.year - candidate.year) > 20) return null
         val overlap = target.moods.intersect(candidate.moods)
         val energetic = setOf(RadioMood.PARTY, RadioMood.WORKOUT)
         if (RadioMood.SAD in target.moods && candidate.moods.any { it in energetic } && RadioMood.SAD !in candidate.moods) return null
         if (target.moods.any { it in energetic } && RadioMood.SAD in candidate.moods && candidate.moods.none { it in energetic }) return null
+        val calm = setOf(RadioMood.CHILL, RadioMood.ROMANTIC)
+        if (target.moods.any { it in calm } && candidate.moods.any { it in energetic } && overlap.isEmpty()) return null
+        if (target.moods.any { it in energetic } && candidate.moods.any { it in calm } && overlap.isEmpty()) return null
         if (RadioMood.DEVOTIONAL in target.moods && candidate.moods.isNotEmpty() && RadioMood.DEVOTIONAL !in candidate.moods) return null
-        if (RadioMood.INSTRUMENTAL in target.moods && candidate.moods.isNotEmpty() && RadioMood.INSTRUMENTAL !in candidate.moods) return null
+        if (RadioMood.DEVOTIONAL in candidate.moods && target.moods.isNotEmpty() && RadioMood.DEVOTIONAL !in target.moods) return null
+        // A sad/party label alone says nothing about vocals. Instrumental-only search remains scoped;
+        // never invent a vocal-vs-instrumental fact just because a style tag is absent.
         val sharedTerms = target.terms.intersect(candidate.terms).size
         if (target.moods.isNotEmpty() && overlap.isEmpty() && !scopedSearch && !sameArtist && sharedTerms < 2 &&
             !(candidate.moods.isEmpty() && target.language != null && target.language == candidate.language)) return null
@@ -109,18 +127,24 @@ internal class RadioContextPolicy(
         val mood = overlap.size * 35.0
         val artist = if (sameArtist) 4.0 else 0.0
         val popularity = if (facts.views > 0) ln(1.0 + facts.views.toDouble()).coerceAtMost(24.0) * 0.15 else 0.0
-        return language + mood + artist + sharedTerms.coerceAtMost(5) * 8.0 + popularity - providerIndex * 0.25
+        val era = when {
+            target.classic && candidate.classic -> 12.0
+            target.contemporary && candidate.contemporary -> 12.0
+            !target.classic && !target.contemporary && candidate.classic -> -12.0 // Avoid surprise retro filler, without pretending the seed is known modern.
+            else -> 0.0
+        }
+        return language + mood + artist + era + sharedTerms.coerceAtMost(5) * 8.0 + popularity - providerIndex * 0.25
     }
 
     fun fallbackQueries(): List<String> {
         val language = target.language?.let { languageWords[it]?.firstOrNull() ?: Locale.forLanguageTag(it).getDisplayLanguage(Locale.ENGLISH).ifBlank { it } }.orEmpty()
         val mood = target.moods.joinToString(" ") { it.query }
-        val era = if (target.classic) "classic" else target.year?.let { "$it" }.orEmpty()
+        val era = if (target.classic) "classic" else target.year?.let { "$it" } ?: if (target.contemporary) "latest" else ""
         // Retain arbitrary provider shelf/search style intent, not a list of supported genres.
         val requested = radioTraits(seed.copy(title = "", album = null), hint = hint)
         val conflicts = (target.language != null && requested.language != null && target.language != requested.language) ||
             (target.moods.isNotEmpty() && requested.moods.isNotEmpty() && target.moods.intersect(requested.moods).isEmpty()) ||
-            (!target.classic && requested.classic)
+            (target.contemporary && requested.classic) || (target.classic && requested.contemporary)
         val styleIntent = if (conflicts) "" else contextText(hint.take(200)).take(120)
         val context = listOf(language, mood, era, styleIntent).filter { it.isNotBlank() }.distinct().joinToString(" ")
         if (context.isBlank()) {

@@ -127,7 +127,7 @@ class MusicRadioRepositoryTest {
         }.build()
         val repo = MusicRepository(InnerTubeClient(CookieSource { error("No cookie/session reads") }, http))
         val seed = Track(seedId, "Selected melody", "Singer", durationSec = 180)
-        val result = repo.related(seed, listOf(seed), "hindi sad")
+        val result = repo.related(seed, listOf(seed), "latest hindi sad songs")
         check(result.map { it.id } == listOf("hindihit001", "hindiniche1"))
         check(metadataCalls.get() == 6)
     }
