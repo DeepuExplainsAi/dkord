@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=78"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dkord-desktop"
+version = "0.10.0"
+description = "Dkord desktop: music, a private offline library and a native audio Mashup Studio"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "GPL-3.0-only"
+authors = [{name = "DeepuGupta"}]
+dynamic = ["dependencies"]
+
+[project.gui-scripts]
+dkord = "dkord_desktop.__main__:main"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+include = ["dkord_desktop*"]

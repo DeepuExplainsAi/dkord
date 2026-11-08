@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit
 /** Public relay, without end-to-end encryption: anyone with the code can read/publish. */
 class NtfyRoomTransport(
     client: OkHttpClient = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).build(),
-) : RoomTransport {
+) : RoomTransport, RoomControlTransport {
     private val http = client.newBuilder().cookieJar(CookieJar.NO_COOKIES).authenticator(Authenticator.NONE)
         .followRedirects(false).followSslRedirects(false).build()
     private val streaming = http.newBuilder().readTimeout(0, TimeUnit.SECONDS).build()
@@ -62,9 +62,31 @@ class NtfyRoomTransport(
                 currentCoroutineContext().ensureActive()
                 RoomCodec.decodeRelayLine(source.readUtf8LineStrict(16_384))?.let { emit(it) }
             }
-            throw RoomTransportException(false, "Room relay stream disconnected")
+            // Complete normally on EOF so flowOn cannot cancel the final in-flight frame.
+            // RoomController owns reconnect/backoff after collection finishes.
         }
     }.flowOn(Dispatchers.IO).buffer(0)
+
+    override suspend fun publishControl(code: String, message: RoomControlMessage) = withContext(Dispatchers.IO) {
+        require(message.room == code)
+        val body = RoomControlCodec.encode(message).toRequestBody("text/plain; charset=utf-8".toMediaType())
+        execute(http, Request.Builder().url(controlUrl(code)).post(body).build()) { Unit }
+    }
+
+    override fun subscribeControls(code: String, after: String?): Flow<RoomControlEvent> = flow {
+        // Short cached bootstrap handles subscribe/publish races; all signatures/counters are rechecked.
+        val url = controlUrl(code).newBuilder().addPathSegment("json").addQueryParameter("since", after ?: "30s").build()
+        execute(streaming, Request.Builder().url(url).build()) { response ->
+            val source = response.body.source()
+            while (!source.exhausted()) {
+                currentCoroutineContext().ensureActive()
+                RoomControlCodec.decodeRelayLine(source.readUtf8LineStrict(16_384))?.let { emit(it) }
+            }
+            // RoomSharing reconnects after normal completion, after the last frame is delivered.
+        }
+    }.flowOn(Dispatchers.IO).buffer(0)
+
+    private fun controlUrl(code: String) = base.newBuilder().addPathSegment(RoomCode.topic(code) + "-controls").build()
 
     private fun topicUrl(code: String) = base.newBuilder().addPathSegment(RoomCode.topic(code)).build()
 

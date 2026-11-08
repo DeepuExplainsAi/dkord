@@ -37,8 +37,11 @@ def summarize(root, required):
                     counted[category] += 1
                     if marker != 'skipped':
                         error = errors[0]
-                        detail = (error.get('message') or error.text or '').splitlines()[:1]
-                        failures.append(f"{classname}.{case.get('name')}: {' '.join(detail)[:600]}")
+                        # AGP often sets message to only java.lang.AssertionError; the XML
+                        # body holds the assertion and source line. Keep both, bounded, so
+                        # read-only Checks can diagnose a failure without Azure log access.
+                        detail = '\n'.join(filter(None, (error.get('message'), '\n'.join((error.text or '').splitlines()[:15]))))
+                        failures.append(f"{classname}.{case.get('name')}: {detail[:2400]}")
         for key in totals:
             reported = int(suite.get(key, counted[key]))
             if reported != counted[key]:

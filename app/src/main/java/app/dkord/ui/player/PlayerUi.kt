@@ -210,9 +210,7 @@ fun FullPlayer(state: PlayerUiState, onClose: () -> Unit, onAddToPlaylist: (Trac
                     Text(track.title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(track.artist, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                val ctx = LocalContext.current
-                val savedMsg = stringResource(R.string.download_started)
-                if (!isLocalAudioId(track.id)) IconButton({ actions.download(listOf(track)); Toast.makeText(ctx, savedMsg, Toast.LENGTH_SHORT).show() }) {
+                if (!isLocalAudioId(track.id)) IconButton({ actions.download(listOf(track)) }) {
                     Icon(Icons.Default.Download, stringResource(R.string.download))
                 }
                 val liked = track.id in likedIds

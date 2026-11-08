@@ -56,8 +56,10 @@ internal class StudioRepository(private val context: Context) {
                 json.decodeFromString<StudioCatalog>(catalog.readFully().decodeToString()) else StudioCatalog()
             require(stored.version == 1 && stored.projects.map { it.id }.distinct().size == stored.projects.size)
             stored.projects.forEach { it.validate() }
+            // Readiness includes recovery/GC. Publishing first lets a ready observer race
+            // abandoned-file cleanup (and report a half-recovered library after restart).
+            cleanFinishedRequests(stored.projects)
             mutable.value = StudioLibrary(loading = false, projects = stored.projects)
-            cleanFinishedRequests()
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { mutable.value = mutable.value.copy(loading = false, failed = true) }
     } } }
@@ -128,6 +130,17 @@ internal class StudioRepository(private val context: Context) {
             }
         } finally { if (!committed) file.delete(); pendingImports.remove(file.name) }
     }
+    /** Explicit online source preparation: temporary bytes, no Downloads row/public file/URL persistence. */
+    suspend fun importPreparedAudio(projectId: String, title: String, prepare: suspend (File) -> Unit) = withContext(Dispatchers.IO) {
+        val file = File(temporary, "${studioId()}.online")
+        pendingImports.add(file.name)
+        try {
+            prepare(file)
+            currentCoroutineContext().ensureActive()
+            importAudio(projectId, Uri.fromFile(file), title)
+        } finally { file.delete(); pendingImports.remove(file.name) }
+    }
+
     suspend fun copyAudio(source: Uri, destination: Uri) = withContext(Dispatchers.IO) {
         require(source != destination)
         // A SAF URI can alias a MediaStore file. Read fully before opening the destination for
@@ -197,25 +210,29 @@ internal class StudioRepository(private val context: Context) {
     suspend fun finishRequest(id: String) = withContext(Dispatchers.IO) { mutex.withLock {
         AtomicFile(requestFile(id)).delete(); cleanUnreferencedSources()
     } }
-    private fun cleanFinishedRequests() {
+    private fun cleanFinishedRequests(projects: List<StudioProject>) {
         requests.listFiles()?.filter { it.extension == "json" }?.forEach { file ->
             val id = file.nameWithoutExtension
             val info = work.getWorkInfoById(UUID.fromString(id)).get()
             if (info == null || info.state.isFinished) { AtomicFile(file).delete(); File(temporary, "$id.m4a").delete() }
         }
         temporary.listFiles()?.filter {
-            (it.extension == "import" && it.name !in pendingImports) || (it.extension == "copy" && it.name !in pendingCopies)
+            (it.extension in setOf("import", "online") && it.name !in pendingImports) || (it.extension == "copy" && it.name !in pendingCopies)
         }?.forEach(File::delete)
-        cleanUnreferencedSources()
+        cleanUnreferencedSources(projects)
     }
     private fun cleanUnreferencedSources() {
-        // Unknown/corrupt catalog != empty library. Never garbage-collect potentially recoverable audio.
+        // Unknown/corrupt catalog != empty library. Never collect potentially recoverable audio.
         if (mutable.value.loading || mutable.value.failed) return
+        cleanUnreferencedSources(mutable.value.projects)
+    }
+    private fun cleanUnreferencedSources(validatedProjects: List<StudioProject>) {
+        // Startup calls this overload only after decoding/validating the entire catalog.
         // Render snapshots pin their inputs even if a project is changed/deleted while encoding.
         val pinned = requests.listFiles()?.filter { it.extension == "json" }?.flatMap {
             json.decodeFromString<StudioRenderRequest>(AtomicFile(it).readFully().decodeToString()).project.sources.map(StudioSource::fileName)
         }.orEmpty()
-        val referenced = (mutable.value.projects.flatMap { it.sources.map(StudioSource::fileName) } + pinned).toSet()
+        val referenced = (validatedProjects.flatMap { it.sources.map(StudioSource::fileName) } + pinned).toSet()
         sources.listFiles()?.filter { it.name !in referenced }?.forEach(File::delete)
     }
     companion object { const val WORK_NAME = "dkord-studio-export"; const val WORK_TAG = "dkord-studio" }

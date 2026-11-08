@@ -12,8 +12,7 @@ import java.io.File
 import java.io.IOException
 
 /**
- * Where finished files live: the app's own music folder by default (no permission needed), or a
- * folder the user picked with the system folder picker (a SAF tree uri).
+ * Separate private offline storage and explicit public/SAF exports. Legacy URIs remain readable.
  */
 class DownloadStorage(private val context: Context) {
     private val resolver get() = context.contentResolver
@@ -26,7 +25,40 @@ class DownloadStorage(private val context: Context) {
     private val defaultDir: File
         get() = File(context.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: File(context.filesDir, "music"), "Dkord").apply { mkdirs() }
 
-    /** Moves [file] to the final location and returns the uri to store. [file] is deleted. */
+    private val privateDir: File get() = File(context.filesDir, "offline").apply { mkdirs() }
+
+    fun isPrivate(uri: String): Boolean = runCatching {
+        val parsed = uri.toUri()
+        parsed.scheme == "file" && File(requireNotNull(parsed.path)).canonicalFile.parentFile == privateDir.canonicalFile
+    }.getOrDefault(false)
+
+    /** No MediaStore, external directory or SAF access on this path. */
+    fun publishPrivate(file: File, name: String): String {
+        val target = uniqueFile(privateDir, name)
+        try {
+            if (!file.renameTo(target)) {
+                file.inputStream().use { input -> target.outputStream().use { input.copyTo(it) } }
+                check(file.delete())
+            }
+        } catch (e: Exception) { target.delete(); throw e }
+        return Uri.fromFile(target).toString()
+    }
+
+    fun stageCopy(uri: String, file: File) {
+        resolver.openInputStream(uri.toUri()).use { input ->
+            requireNotNull(input) { "Audio is inaccessible" }
+            file.outputStream().use { input.copyTo(it) }
+        }
+    }
+
+    /** Strict explicit device export; input is retained on failure, never private-fallback success. */
+    fun publishToDevice(file: File, name: String, mime: String, tree: String?): String = when {
+        tree != null -> publishToTree(file, name, mime, tree.toUri())
+        Build.VERSION.SDK_INT >= 29 -> publishToMediaStore(file, name, mime)
+        else -> throw IOException("Choose a device folder in Settings before saving to device")
+    }
+
+    /** Legacy queued downloads retain their previous publication behavior. */
     fun publish(file: File, displayName: String, mime: String, tree: String?): String {
         if (tree != null) runCatching { return publishToTree(file, displayName, mime, tree.toUri()) }
         if (Build.VERSION.SDK_INT >= 29) runCatching { return publishToMediaStore(file, displayName, mime) }
@@ -94,11 +126,8 @@ class DownloadStorage(private val context: Context) {
     }
 
     companion object {
-        /** Removes characters Android file systems reject and keeps names a sane length. */
-        fun safeName(artist: String, title: String, ext: String): String {
-            val base = "$artist - $title".replace(Regex("[\\\\/:*?\"<>|\\p{Cntrl}]"), "").replace(Regex("\\s+"), " ").trim().take(120).trim('.', ' ', '-')
-            return "${base.ifBlank { "track" }}.$ext"
-        }
+        /** UTF-8 byte bounded too: Hindi/emoji character counts alone can exceed the filesystem limit. */
+        fun safeName(artist: String, title: String, ext: String): String = downloadFileName(artist, title, ext)
 
         fun uniqueFile(dir: File, name: String): File {
             var f = File(dir, name)

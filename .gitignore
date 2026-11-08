@@ -9,3 +9,14 @@ captures/
 *.keystore
 .externalNativeBuild/
 .cxx/
+
+# Desktop source dependencies, private state and native packaging outputs (never ship in Git).
+desktop/.venv/
+desktop/.deps/
+desktop/.cache/
+desktop/.pytest_cache/
+desktop/.runtime/
+desktop/.artifacts/
+desktop/*.egg-info/
+__pycache__/
+*.pyc

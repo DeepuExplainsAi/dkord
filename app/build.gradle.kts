@@ -14,8 +14,8 @@ android {
         minSdk = 26
         targetSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 13
-        versionName = "0.9.1"
+        versionCode = 14
+        versionName = "0.10.0"
     }
 
     // One stable key for every build, so a new APK installs over the old one and keeps user data.

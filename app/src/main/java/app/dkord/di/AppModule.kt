@@ -41,6 +41,9 @@ val appModule = module {
     single { InnerTubeClient(get<AuthStore>()) }
     single { MusicRepository(get()) }
     single { app.dkord.data.studio.StudioRepository(androidContext()) }
+    single { app.dkord.data.download.DownloadSelectionStorage(androidContext()) }
+    single { app.dkord.data.download.TrackDownloader(get<StreamResolver>(), app.dkord.data.net.Http.client, get<StreamModule>()::invalidate) }
+    single { app.dkord.data.studio.StudioOnlineImporter(get(), get()) { get<SettingsRepository>().settings.value.quality } }
     single { SearchHistoryRepository(PreferencesSearchHistoryStorage(androidContext())) }
     single { NewReleasesRepository.fromMusic(get()) }
     single { SettingsRepository(androidContext()) }

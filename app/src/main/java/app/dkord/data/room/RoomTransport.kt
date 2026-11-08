@@ -11,3 +11,9 @@ interface RoomTransport {
 }
 
 class RoomTransportException(val rateLimited: Boolean, message: String) : IOException(message)
+
+/** Separate topic: proposals/presence must never look like playback state to legacy listeners. */
+interface RoomControlTransport {
+    suspend fun publishControl(code: String, message: RoomControlMessage)
+    fun subscribeControls(code: String, after: String? = null): Flow<RoomControlEvent>
+}

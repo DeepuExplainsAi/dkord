@@ -63,6 +63,7 @@ class SettingsRepository(context: Context) {
     fun setDynamicColor(v: Boolean) = edit { it[kDynamic] = if (v) "1" else "0" }
     fun setAutoplay(v: Boolean) = edit { it[kAutoplay] = if (v) "1" else "0" }
     fun setCacheMb(v: Int) = edit { it[kCache] = v }
+    suspend fun saveDownloadTree(uri: String) { store.edit { it[kTree] = uri } }
     fun setDownloadTree(uri: String?) = edit { if (uri == null) it.remove(kTree) else it[kTree] = uri }
 
     private fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {

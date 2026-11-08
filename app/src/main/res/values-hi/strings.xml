@@ -94,7 +94,7 @@
     <string name="video_none">इस ट्रैक के लिए कोई चलने योग्य वीडियो नहीं मिला। ऑडियो चलता रहेगा।</string>
     <string name="video_restricted">इस ट्रैक का वीडियो ब्लॉक या प्रतिबंधित है।</string>
     <string name="video_failed">वीडियो नहीं चल सका।</string>
-    <string name="download_started">डाउनलोड शुरू। फ़ाइल Music/Dkord में दिखेगी।</string>
+    <string name="download_started">डाउनलोड कतार में है। प्रगति Downloads में देखें।</string>
     <string name="app_update">ऐप अपडेट</string>
     <string name="app_version">वर्शन %s</string>
     <string name="update_checking">जाँच हो रही है…</string>
@@ -182,7 +182,7 @@
     <string name="app_name">Dkord</string>
     <string name="app_title">Dkord by DeepuGupta</string>
     <string name="youtube_music">YouTube Music</string>
-    <string name="about_text">मुफ़्त, ओपन-सोर्स YouTube Music क्लाइंट, जो फ़ोन पर चलता है। GPL-3.0।</string>
+    <string name="about_text">आपका संगीत। आपका मिक्स। आपकी अपनी जगह। DeepuGupta का Dkord एक ओपन-सोर्स म्यूज़िक प्लेयर है, जिसमें निजी ऑफ़लाइन लाइब्रेरी और असली Mashup Studio है। प्लेबैक और एडिटिंग आपके डिवाइस पर होते हैं; वैकल्पिक Listen Together रूम सार्वजनिक रिले इस्तेमाल करते हैं। GPL-3.0.</string>
     <string name="applies_on_restart">ऐप फिर शुरू करने पर लागू होगा</string>
     <string name="channel_playback">प्लेबैक</string>
     <string name="choose_folder">फ़ोल्डर चुनें</string>
@@ -207,7 +207,7 @@
     <string name="extractor_bundled">ऐप में मौजूद: %s</string>
     <string name="extractor_current">आपके पास नवीनतम वर्शन है</string>
     <string name="extractor_versions">ऐप में %1$s, नवीनतम %2$s</string>
-    <string name="folder_hint">डाउनलोड किए गानों के लिए फ़ोल्डर चुनें, या ऐप का म्यूज़िक फ़ोल्डर इस्तेमाल करें।</string>
+    <string name="folder_hint">डिवाइस कॉपियाँ Music/Dkord या चुने हुए फ़ोल्डर में जाती हैं। निजी ऑफ़लाइन ऑडियो Dkord के अंदर रहता है।</string>
     <string name="import_failed">वह फ़ाइल पढ़ी नहीं जा सकी</string>
     <string name="import_playlists">प्लेलिस्ट इम्पोर्ट करें</string>
     <string name="imported_n">%d प्लेलिस्ट इम्पोर्ट हुईं</string>
@@ -268,7 +268,7 @@
     <string name="studio_delete">प्रोजेक्ट मिटाएँ?</string>
     <string name="studio_delete_hint">यह प्रोजेक्ट और इसकी आयात की गई प्रतियाँ मिटाएँ? सेव की गई ऑडियो डाउनलोड में रहेगी। मूल फ़ाइलें नहीं बदलेंगी।</string>
     <string name="studio_choose_project">%1$s जोड़ने के लिए प्रोजेक्ट चुनें या बनाएँ।</string>
-    <string name="studio_sources_hint">फ़ोन या Dkord डाउनलोड से उपलब्ध, DRM-मुक्त ऑडियो जोड़ें। ऑनलाइन गाने पहले डाउनलोड करें।</string>
+    <string name="studio_sources_hint">ऑनलाइन गाना, फ़ोन का ऑडियो या Dkord का पूरा डाउनलोड चुनें। ऑनलाइन ऑडियो इस प्रोजेक्ट के लिए निजी रूप से तैयार होगा।</string>
     <string name="studio_device_audio">फ़ोन का ऑडियो</string>
     <string name="studio_downloads">Dkord डाउनलोड</string>
     <string name="studio_no_downloads">कोई पूरा डाउनलोड नहीं है। पहले गाना डाउनलोड करें, फिर यहाँ लौटें।</string>
@@ -338,4 +338,40 @@
     <!-- Home song taps start related radio; whole-shelf playback is explicit. -->
     <string name="shelf_play_all">सभी चलाएँ</string>
     <string name="shelf_play_all_description">%1$s के सभी गाने चलाएँ</string>
+    <string name="download_destination">डाउनलोड के विकल्प</string>
+    <string name="download_in_dkord">Dkord में डाउनलोड करें</string>
+    <string name="download_in_dkord_hint">निजी ऑफ़लाइन ऑडियो। सार्वजनिक Music फ़ोल्डर में नहीं जुड़ेगा।</string>
+    <string name="download_to_device">डिवाइस पर डाउनलोड करें</string>
+    <string name="download_to_device_hint">Music/Dkord या अपने चुने हुए डिवाइस फ़ोल्डर में भी एक कॉपी सहेजें।</string>
+    <string name="download_existing_copies">डिवाइस की पुरानी कॉपियाँ नहीं हटेंगी। निजी ऑडियो भी डिवाइस की स्टोरेज लेता है।</string>
+    <string name="download_destination_failed">इस स्थान पर डाउनलोड नहीं हो सका। फ़ोल्डर की अनुमति जाँचकर दोबारा कोशिश करें।</string>
+    <string name="download_private_label">Dkord में</string>
+    <string name="download_device_label">Dkord में + डिवाइस कॉपी</string>
+    <string name="download_legacy_label">पुराना डाउनलोड</string>
+    <string name="studio_online_search">ऑनलाइन गाने खोजें</string>
+    <string name="studio_use_online">ऑनलाइन गाना इस्तेमाल करें</string>
+    <string name="studio_online_hint">पहले डाउनलोड किए बिना गाना चुनें। इस प्रोजेक्ट के लिए ऑडियो निजी रूप से तैयार होगा; Downloads या सार्वजनिक Music में नहीं जुड़ेगा।</string>
+    <string name="studio_preparing_online">ऑनलाइन ऑडियो तैयार हो रहा है…</string>
+    <string name="studio_search_empty">कोई गाना नहीं मिला। दूसरा नाम खोजें।</string>
+    <string name="studio_source_add">प्रोजेक्ट में जोड़ें</string>
+    <string name="room_display_name">कमरे में आपका नाम (वैकल्पिक)</string>
+    <string name="room_cohost">आप सह-होस्ट हैं</string>
+    <string name="room_cohost_controls">ऐप के प्लेयर से गाना चलाएँ, रोकें, बदलें या आगे-पीछे करें। कमरे को फ़ॉलो करने वाले सभी सदस्यों पर यह लागू होगा। अनुमति केवल कमरा बनाने वाला बदल सकता है।</string>
+    <string name="room_cohost_player">प्लेयर खोलें · सह-होस्ट कंट्रोल</string>
+    <string name="room_controls_title">प्लेबैक कंट्रोल की अनुमति</string>
+    <string name="room_controls_host_only">सिर्फ़ मैं · कमरा बनाने वाला</string>
+    <string name="room_controls_selected">चुने हुए सदस्य</string>
+    <string name="room_controls_everyone">सभी · नए सदस्य भी</string>
+    <string name="room_controls_hint">एक, दो या अधिक सह-होस्ट चुनें या सभी को अनुमति दें। कमरा बनाने का आपका अधिकार हमेशा बना रहेगा।</string>
+    <string name="room_controls_members">नए Dkord का उपयोग करने वाले सदस्य</string>
+    <string name="room_controls_empty">कनेक्ट होने पर जुड़े सदस्य यहाँ दिखेंगे। सही व्यक्ति चुनने के लिए नाम और छोटा ID देखें।</string>
+    <string name="room_controls_your_id">आपका सदस्य ID: %1$s</string>
+    <string name="room_controls_listen_only">आप सुन सकते हैं। कमरा बनाने वाले ने आपको साझा प्लेबैक कंट्रोल नहीं दिया है।</string>
+    <string name="room_controls_pending">सह-होस्ट कंट्रोल के लिए होस्ट और सदस्यों का Dkord अपडेट होना चाहिए। पुराने कमरों में अभी भी सिंक और फ़ॉलो काम करते हैं।</string>
+    <string name="room_controls_consent">अनुमति देने या हटाने से ऑडियो अपने आप शुरू नहीं होता। सुनने वाले अभी भी सिंक करके चलाएँ और होस्ट को फ़ॉलो करें चुनते हैं।</string>
+    <string name="room_controls_privacy">कमरे के नाम और प्लेबैक मेटाडेटा सार्वजनिक रिले का उपयोग करते हैं। कोड केवल भरोसेमंद लोगों से साझा करें; ऑडियो फ़ाइलें अपलोड नहीं होतीं।</string>
+    <string name="room_controls_network">प्लेबैक कंट्रोल का कनेक्शन टूट गया। दोबारा जुड़ रहा है; आप अपने डिवाइस पर अभी भी सुन सकते हैं।</string>
+    <string name="room_controls_rate_limit">सार्वजनिक रिले व्यस्त है। और कंट्रोल साझा करने से पहले थोड़ा इंतज़ार करें।</string>
+    <string name="room_controls_local_audio">लोकल Studio ऑडियो इसी डिवाइस पर रहता है। कमरे को कंट्रोल करने के लिए ऑनलाइन सूची का गाना चुनें।</string>
+    <string name="room_controls_owner_offline">कमरा बनाने वाले से संपर्क नहीं हो पा रहा है। दोबारा जुड़ने तक साझा कंट्रोल रुका हुआ है।</string>
 </resources>

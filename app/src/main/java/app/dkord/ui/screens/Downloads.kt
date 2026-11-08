@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import app.dkord.R
 import app.dkord.core.Track
 import app.dkord.data.db.DownloadState
+import app.dkord.data.db.DownloadLocation
 import app.dkord.data.db.DownloadWithTrack
 import app.dkord.data.db.toTrack
 import app.dkord.ui.common.Actions
@@ -68,7 +69,11 @@ fun DownloadsScreen(onPlay: (List<Track>, Int) -> Unit, onMenu: (Track) -> Unit,
                 TrackRow(
                     d.track.toTrack(),
                     playing = now.current?.id == d.download.trackId,
-                    supporting = listOf(d.track.artist, formatSize(d.download.total)).joinToString(" • "),
+                    supporting = listOf(d.track.artist, formatSize(d.download.total), stringResource(when (d.download.location) {
+                        DownloadLocation.APP -> R.string.download_private_label
+                        DownloadLocation.DEVICE -> R.string.download_device_label
+                        DownloadLocation.LEGACY -> R.string.download_legacy_label
+                    })).joinToString(" • "),
                     onClick = { onPlay(doneTracks, i) },
                     onMenu = { onMenu(d.track.toTrack()) },
                     trailing = {

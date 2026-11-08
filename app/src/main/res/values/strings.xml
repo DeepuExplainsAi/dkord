@@ -18,7 +18,7 @@
     <string name="channel_downloads">Downloads</string>
     <string name="downloading">Downloading music</string>
     <string name="about">About</string>
-    <string name="about_text">Free, open-source, on-device YouTube Music client. GPL-3.0.</string>
+    <string name="about_text">Your music. Your mix. Your space. Dkord by DeepuGupta is an open-source music player with a private offline library and real Mashup Studio. Playback and editing run on your device; optional Listen Together rooms use a public relay. GPL-3.0.</string>
     <string name="account">Account</string>
     <string name="add_to_playlist">Add to playlist</string>
     <string name="add_to_queue">Add to queue</string>
@@ -60,7 +60,7 @@
     <string name="extractor_current">You have the latest version</string>
     <string name="extractor_versions">Bundled %1$s, latest %2$s</string>
     <string name="failed">Failed</string>
-    <string name="folder_hint">Pick a folder for downloaded songs, or use the app\'s own music folder.</string>
+    <string name="folder_hint">Device copies use Music/Dkord or your selected folder. Private offline audio stays inside Dkord.</string>
     <string name="import_failed">Could not read that file</string>
     <string name="import_playlists">Import playlists</string>
     <string name="imported_n">Imported %d playlists</string>
@@ -145,7 +145,7 @@
     <string name="video_none">No playable video stream was found for this track. Audio still works.</string>
     <string name="video_restricted">Video is blocked or restricted for this track.</string>
     <string name="video_failed">The video could not be played.</string>
-    <string name="download_started">Download started. File will appear in Music/Dkord.</string>
+    <string name="download_started">Download queued. Follow progress in Downloads.</string>
     <string name="app_update">App update</string>
     <string name="app_version">Version %s</string>
     <string name="update_checking">Checking…</string>
@@ -268,7 +268,7 @@
     <string name="studio_delete">Delete project?</string>
     <string name="studio_delete_hint">Delete this project and its imported copies? Saved exports stay in Downloads. Original source files are unchanged.</string>
     <string name="studio_choose_project">Choose or create a project to add %1$s.</string>
-    <string name="studio_sources_hint">Import readable, non-DRM audio from your phone or completed Dkord downloads. Online songs must finish downloading first.</string>
+    <string name="studio_sources_hint">Use an online song, phone audio or a completed Dkord download. Online audio is prepared privately for this project.</string>
     <string name="studio_device_audio">Phone audio</string>
     <string name="studio_downloads">Dkord downloads</string>
     <string name="studio_no_downloads">No completed audio files. Download a song first, then return here.</string>
@@ -338,4 +338,40 @@
     <!-- Home song taps start related radio; whole-shelf playback is explicit. -->
     <string name="shelf_play_all">Play all</string>
     <string name="shelf_play_all_description">Play all songs from %1$s</string>
+    <string name="download_destination">Download options</string>
+    <string name="download_in_dkord">Download in Dkord</string>
+    <string name="download_in_dkord_hint">Private offline audio. Not added to the public Music folder.</string>
+    <string name="download_to_device">Download to device</string>
+    <string name="download_to_device_hint">Also save a copy in Music/Dkord or your selected device folder.</string>
+    <string name="download_existing_copies">Existing device copies are not removed. Private audio still uses device storage.</string>
+    <string name="download_destination_failed">Could not queue this destination. Check folder access and try again.</string>
+    <string name="download_private_label">In Dkord</string>
+    <string name="download_device_label">In Dkord + device copy</string>
+    <string name="download_legacy_label">Existing download</string>
+    <string name="studio_online_search">Search online songs</string>
+    <string name="studio_use_online">Use online song</string>
+    <string name="studio_online_hint">Choose a song without downloading it first. Audio is prepared privately for this project, not added to Downloads or public Music.</string>
+    <string name="studio_preparing_online">Preparing online audio…</string>
+    <string name="studio_search_empty">No songs returned. Try another search.</string>
+    <string name="studio_source_add">Add to project</string>
+    <string name="room_display_name">Your room name (optional)</string>
+    <string name="room_cohost">You are a co-host</string>
+    <string name="room_cohost_controls">Use the app player to play, pause, change songs or seek for everyone following this room. Only the creator manages permissions.</string>
+    <string name="room_cohost_player">Open player · co-host controls</string>
+    <string name="room_controls_title">Playback control access</string>
+    <string name="room_controls_host_only">Only me · room creator</string>
+    <string name="room_controls_selected">Selected members</string>
+    <string name="room_controls_everyone">Everyone · including new members</string>
+    <string name="room_controls_hint">Choose one, two or more co-hosts, or allow everyone. You always keep creator control.</string>
+    <string name="room_controls_members">Members using current Dkord</string>
+    <string name="room_controls_empty">Joined members appear here after they connect. Use their name and short ID to choose the right person.</string>
+    <string name="room_controls_your_id">Your member ID: %1$s</string>
+    <string name="room_controls_listen_only">You can listen. The creator has not given you shared playback controls.</string>
+    <string name="room_controls_pending">Co-host controls need an updated host and members. Older rooms can still use Sync &amp; follow.</string>
+    <string name="room_controls_consent">Granting or removing access does not start audio. Listeners still choose Sync &amp; play and Follow host.</string>
+    <string name="room_controls_privacy">Room names and playback metadata use the public relay. Share the code only with people you trust; audio files are not uploaded.</string>
+    <string name="room_controls_network">Playback control connection interrupted. Reconnecting; local listening is still available.</string>
+    <string name="room_controls_rate_limit">The public relay is busy. Please wait before sharing more controls.</string>
+    <string name="room_controls_local_audio">Local Studio audio stays on this device. Choose an online catalogue song to control the room.</string>
+    <string name="room_controls_owner_offline">The creator is not reachable. Shared control is paused until the room reconnects.</string>
 </resources>

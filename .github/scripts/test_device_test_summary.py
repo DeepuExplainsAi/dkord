@@ -39,3 +39,9 @@ class DeviceTestSummaryTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             Path(root, 'TEST-device.xml').write_text('<testsuites tests="1" failures="0"><testsuite name="Required"><testcase name="broken"><failure/></testcase></testsuite></testsuites>')
             self.assertFalse(summary.summarize(root, ['Required'])[3])
+
+    def test_generic_agp_message_does_not_hide_assertion_source_stack(self):
+        with tempfile.TemporaryDirectory() as root:
+            Path(root, 'TEST-device.xml').write_text('<testsuite tests="1" failures="1"><testcase classname="Required" name="broken"><failure message="java.lang.AssertionError">java.lang.AssertionError\nat app.dkord.OnlineStudioAndStorageTest.method(OnlineStudioAndStorageTest.kt:157)</failure></testcase></testsuite>')
+            result = summary.summarize(root, ['Required'])
+            self.assertFalse(result[3]); self.assertIn('OnlineStudioAndStorageTest.kt:157', result[1][0])

@@ -72,6 +72,7 @@ fun ListenTogetherScreen(onBack: () -> Unit, onOpenPlayer: () -> Unit, onMessage
     val state by rooms.state.collectAsState()
     val context = LocalContext.current
     var input by rememberSaveable { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
     Scaffold(topBar = {
         TopAppBar(title = { Text(stringResource(R.string.listen_together), maxLines = 1, overflow = TextOverflow.Ellipsis) }, navigationIcon = {
             IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
@@ -81,7 +82,9 @@ fun ListenTogetherScreen(onBack: () -> Unit, onOpenPlayer: () -> Unit, onMessage
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (state.role == null) {
                 RoomInstructions()
-                Button(rooms::create, Modifier.fillMaxWidth()) { Text(stringResource(R.string.room_create)) }
+                OutlinedTextField(name, { name = it.take(48) }, Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.room_display_name)) }, singleLine = true)
+                Button({ rooms.create(name) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.room_create)) }
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(stringResource(R.string.room_join), style = MaterialTheme.typography.titleMedium)
@@ -91,9 +94,9 @@ fun ListenTogetherScreen(onBack: () -> Unit, onOpenPlayer: () -> Unit, onMessage
                             singleLine = true, modifier = Modifier.fillMaxWidth(),
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters,
                                 autoCorrectEnabled = false, keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = { if (input.isNotBlank()) rooms.join(input) }),
+                            keyboardActions = KeyboardActions(onDone = { if (input.isNotBlank()) rooms.join(input, name) }),
                             isError = state.error == RoomError.INVALID_CODE)
-                        OutlinedButton({ rooms.join(input) }, Modifier.fillMaxWidth(), enabled = input.isNotBlank()) {
+                        OutlinedButton({ rooms.join(input, name) }, Modifier.fillMaxWidth(), enabled = input.isNotBlank()) {
                             Text(stringResource(R.string.room_join))
                         }
                     }
@@ -115,7 +118,7 @@ fun ListenTogetherScreen(onBack: () -> Unit, onOpenPlayer: () -> Unit, onMessage
                 Card(Modifier.fillMaxWidth().animateContentSize(tween(DkordMotion.CONTENT))) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(stringResource(if (isHost) R.string.room_host else R.string.room_guest), style = MaterialTheme.typography.labelLarge)
+                            Text(stringResource(if (isHost) R.string.room_host else if (state.access.canControl) R.string.room_cohost else R.string.room_guest), style = MaterialTheme.typography.labelLarge)
                             Text(stringResource(status), style = MaterialTheme.typography.labelMedium,
                                 color = if (state.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(start = 12.dp).weight(1f))
@@ -155,6 +158,10 @@ fun ListenTogetherScreen(onBack: () -> Unit, onOpenPlayer: () -> Unit, onMessage
                     Text(stringResource(R.string.room_host_controls), style = MaterialTheme.typography.bodyMedium)
                     Button(onOpenPlayer, Modifier.fillMaxWidth()) { Text(stringResource(R.string.room_open_player)) }
                 } else {
+                    if (state.access.canControl) {
+                        Text(stringResource(R.string.room_cohost_controls))
+                        Button(onOpenPlayer, Modifier.fillMaxWidth()) { Text(stringResource(R.string.room_cohost_player)) }
+                    }
                     if (!state.hasSynced) Text(stringResource(R.string.room_guest_start), style = MaterialTheme.typography.bodyMedium)
                     Button(rooms::syncNow, Modifier.fillMaxWidth(), enabled = host != null && !state.syncing && !state.connecting) {
                         Text(stringResource(if (state.syncing) R.string.room_syncing else R.string.room_sync_play))
@@ -166,6 +173,7 @@ fun ListenTogetherScreen(onBack: () -> Unit, onOpenPlayer: () -> Unit, onMessage
                         }
                     }
                 }
+                RoomControlsPanel(state.access, isHost, rooms::controlMode, rooms::memberControl)
                 state.error?.let { error ->
                     val message = when (error) {
                         RoomError.INVALID_CODE -> R.string.room_invalid_code

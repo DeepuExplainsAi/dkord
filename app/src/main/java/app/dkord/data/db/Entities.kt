@@ -1,5 +1,6 @@
 package app.dkord.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -58,6 +59,9 @@ data class HistoryEntity(@PrimaryKey val trackId: String, val playedAt: Long)
 
 enum class DownloadState { QUEUED, RUNNING, PAUSED, DONE, FAILED }
 
+/** LEGACY is read-only upgrade provenance, never offered as a new destination. */
+enum class DownloadLocation { APP, DEVICE, LEGACY }
+
 @Entity(
     tableName = "downloads",
     foreignKeys = [ForeignKey(TrackEntity::class, ["id"], ["trackId"], onDelete = ForeignKey.CASCADE)],
@@ -75,6 +79,11 @@ data class DownloadEntity(
     val error: String? = null,
     val createdAt: Long,
     val updatedAt: Long,
+    @ColumnInfo(defaultValue = "'LEGACY'") val location: DownloadLocation = DownloadLocation.APP,
+    /** An explicit device export is independent of the app's private offline copy. */
+    val deviceUri: String? = null,
+    /** User-selected destination is captured when enqueued, not read from later settings. */
+    val deviceTree: String? = null,
 ) {
     val fraction: Float get() = if (total > 0) (bytes.toFloat() / total).coerceIn(0f, 1f) else 0f
 }
