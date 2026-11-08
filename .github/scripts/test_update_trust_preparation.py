@@ -28,9 +28,9 @@ class PublicUpdateTrustPreparationTest(unittest.TestCase):
     def test_workflow_is_read_only_and_exports_no_private_key_or_new_credentials(self):
         flow=(ROOT/'.github/workflows/prepare-update-trust.yml').read_text()
         self.assertIn('contents: read',flow);self.assertIn('validate_update_trust_preparation.py',flow)
-        self.assertIn('public-output/',flow);self.assertNotIn('contents: write',flow)
+        self.assertIn('public-output/',flow);self.assertNotIn('contents: write',flow);self.assertNotIn('secrets.',flow)
         for forbidden in ('gh release create','gh secret set','-genkeypair','continue-on-error','workflow_dispatch:'):
             self.assertNotIn(forbidden,flow)
         source=(ROOT/'.github/scripts/export_existing_update_trust.py').read_text()
-        self.assertIn('certificates(apksigner, apk)',source);self.assertIn("'-exportcert'",source)
+        self.assertIn('certificates(apksigner, apk)',source);self.assertIn('apk_certificates(apk_bytes)',source)
         self.assertIn("'privateKeyExported': False",source);self.assertNotIn('load_key_and_certificates',source)

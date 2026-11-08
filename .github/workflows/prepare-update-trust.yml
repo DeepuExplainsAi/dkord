@@ -30,27 +30,23 @@ jobs:
       - name: Verify the existing identity against the actual immutable published APK
         env:
           GH_TOKEN: ${{ github.token }}
-          KS: ${{ secrets.DKORD_KEYSTORE_B64 }}
-          DKORD_KEYSTORE_PASS: ${{ secrets.DKORD_KEYSTORE_PASS }}
         run: |
-          test -n "$KS" && test -n "$DKORD_KEYSTORE_PASS"
-          umask 077
-          keystore="$RUNNER_TEMP/existing-dkord.p12"
-          trap 'rm -f "$keystore"' EXIT
-          printf '%s' "$KS" | base64 --decode > "$keystore"
-          test -s "$keystore"
           mkdir -p "$RUNNER_TEMP/public-input" "$RUNNER_TEMP/public-output"
-          gh release download v0.10.0 --repo "$GITHUB_REPOSITORY" --pattern Dkord-v0.10.0.apk --dir "$RUNNER_TEMP/public-input"
+          gh release download v0.10.0 --repo "$GITHUB_REPOSITORY" --pattern Dkord-v0.10.0.apk --dir "$RUNNER_TEMP/public-input" || {
+            echo '::error::Could not read the existing public APK; no update root is accepted.'; exit 1;
+          }
           signer=$(python3 - <<'PY'
           import os,re
           from pathlib import Path
           sdk=Path(os.environ.get('ANDROID_HOME') or os.environ['ANDROID_SDK_ROOT'])
           paths=list((sdk/'build-tools').glob('*/apksigner'))
-          if not paths:raise SystemExit('Android signature verification tools are required')
+          if not paths:
+              print('::error::Android signature verification tools are required')
+              raise SystemExit(1)
           print(max(paths,key=lambda p:tuple(map(int,re.findall(r'\d+',p.parent.name)))))
           PY
           )
-          python3 -B .github/scripts/export_existing_update_trust.py --keystore "$keystore" \
+          python3 -B .github/scripts/export_existing_update_trust.py \
             --apk "$RUNNER_TEMP/public-input/Dkord-v0.10.0.apk" --apksigner "$signer" \
             --output "$RUNNER_TEMP/public-output/existing-update-root.json"
       - name: Preserve only the verified PUBLIC root receipt

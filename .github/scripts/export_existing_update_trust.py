@@ -1,8 +1,8 @@
-"""Export ONLY the existing APK identity's public update-verification root.
+"""Export ONLY the public identity from the actual immutable published APK.
 
-Runs on an explicitly requested trusted-branch preparation push. No private key
-is loaded into Python, printed, uploaded or changed. Public certificate must match
-the actual immutable v0.10.0 APK after apksigner verification and pinned APK hash.
+No signing secret, keystore or private key is read. apksigner first verifies the
+APK; a bounded reader's public leaf certificate hashes must equal its signer
+report and the APK bytes must match the previously verified published SHA-256.
 """
 from __future__ import annotations
 import base64
@@ -10,28 +10,27 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import subprocess
 
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
 
 from verify_apk_update import certificates
+from apk_public_identity import apk_certificates
 
 APK_SHA256 = 'd2a354903e3eda3707aab77721a391ee0eee3134010284e7ffd1a3e28f2deed9'
 
 
-def export(keystore: Path, apk: Path, apksigner: Path, output: Path):
-    if hashlib.sha256(apk.read_bytes()).hexdigest() != APK_SHA256:
+def export(apk: Path, apksigner: Path, output: Path):
+    apk_bytes = apk.read_bytes()
+    if hashlib.sha256(apk_bytes).hexdigest() != APK_SHA256:
         raise ValueError('Published APK differs from the previously verified immutable release')
-    certificate = output.parent / 'dkord-public-certificate.der'
-    subprocess.run(['keytool', '-exportcert', '-storetype', 'pkcs12', '-keystore', str(keystore),
-                    '-alias', 'dkord', '-storepass:env', 'DKORD_KEYSTORE_PASS', '-file', str(certificate)], check=True,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    data = certificate.read_bytes()
-    digest = hashlib.sha256(data).hexdigest()
-    if set(certificates(apksigner, apk)) != {digest}:
-        raise ValueError('Public root does not match the existing published APK signing identity')
+    verified = set(certificates(apksigner, apk))
+    candidates = apk_certificates(apk_bytes)
+    found = {hashlib.sha256(data).hexdigest(): data for data in candidates}
+    if len(verified) != 1 or set(found) != verified:
+        raise ValueError('Public root does not match the verified existing APK signing identity')
+    digest = next(iter(verified)); data = found[digest]
     public = x509.load_der_x509509_certificate(data).public_key()
     if isinstance(public, rsa.RSAPublicKey) and public.key_size >= 2048:
         algorithm = 'rsa-pkcs1-sha256'
@@ -54,9 +53,12 @@ def export(keystore: Path, apk: Path, apksigner: Path, output: Path):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--keystore', type=Path, required=True)
     parser.add_argument('--apk', type=Path, required=True)
     parser.add_argument('--apksigner', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    export(args.keystore, args.apk, args.apksigner, args.output)
+    try:
+        export(args.apk, args.apksigner, args.output)
+    except Exception as error:
+        print('::error title=Public update identity::Public APK identity verification failed ('+type(error).__name__+'). No signing material was read or changed.')
+        raise SystemExit(1)
