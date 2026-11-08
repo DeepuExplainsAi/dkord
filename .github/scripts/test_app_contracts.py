@@ -231,6 +231,19 @@ class AppContractsTest(unittest.TestCase):
         self.assertLess(field.index("keyboardActions ="), field.index("FilledIconButton("))
         self.assertIn("Modifier.weight(1f).focusRequester", field)
 
+    def test_keyboard_has_one_shell_owner_and_nested_scaffolds_consume_padding(self):
+        search = read("app/src/main/java/app/dkord/ui/screens/Search.kt")
+        shell = read("app/src/main/java/app/dkord/ui/common/KeyboardAwareScaffold.kt")
+        app = read("app/src/main/java/app/dkord/ui/App.kt")
+        self.assertNotIn("imePadding", search)
+        self.assertEqual(1, shell.count(".imePadding()"))
+        self.assertIn("if (!keyboardVisible) bottomBar()", shell)
+        self.assertEqual(2, app.count(".consumeWindowInsets(pad)"))
+        self.assertIn("KeyboardAwareScaffold(", app)
+        manifest = ET.parse(MAIN / "AndroidManifest.xml").getroot()
+        activity = manifest.find("application/activity")
+        self.assertEqual("adjustResize", activity.attrib[ANDROID + "windowSoftInputMode"])
+
     def test_player_secondary_controls_wrap_as_buttons_not_letter_by_letter(self):
         ui = read("app/src/main/java/app/dkord/ui/player/PlayerUi.kt")
         footer = ui[ui.index("            FlowRow("):ui.index('    if (sheet == "speed")')]

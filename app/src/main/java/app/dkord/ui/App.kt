@@ -12,6 +12,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -54,6 +56,7 @@ import app.dkord.core.Track
 import app.dkord.player.PlaybackEvents
 import app.dkord.player.PlaybackProblem
 import app.dkord.ui.common.Actions
+import app.dkord.ui.common.KeyboardAwareScaffold
 import app.dkord.ui.common.HomeUpdateNotice
 import app.dkord.ui.common.ObserveAppUpdates
 import app.dkord.ui.common.DkordMotion
@@ -120,7 +123,7 @@ fun App() {
     }
 
     Box(Modifier.fillMaxSize()) {
-        Scaffold(
+        KeyboardAwareScaffold(
             snackbarHost = { SnackbarHost(snack) },
             bottomBar = {
                 if (top == null || top is Dest.Detail || top is Dest.Playlist || top is Dest.Liked || top is Dest.Recent) Column {
@@ -136,7 +139,7 @@ fun App() {
             AnimatedContent(
                 targetState = stack,
                 contentKey = { it.size to it.lastOrNull() },
-                modifier = Modifier.fillMaxSize().padding(pad),
+                modifier = Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad),
                 transitionSpec = {
                     when (navigationDirection(initialState.size, targetState.size)) {
                         NavigationDirection.FORWARD ->
@@ -197,6 +200,7 @@ private fun TabContent(
     onMenu: (Track) -> Unit,
 ) {
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             Column {
                 TopAppBar(
@@ -214,7 +218,7 @@ private fun TabContent(
     ) { pad ->
         AnimatedContent(
             targetState = tab,
-            modifier = Modifier.fillMaxSize().padding(pad),
+            modifier = Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad),
             transitionSpec = { fadeIn(tween(DkordMotion.CONTENT)) togetherWith fadeOut(tween(DkordMotion.QUICK)) },
             label = "tab",
         ) { selected ->
