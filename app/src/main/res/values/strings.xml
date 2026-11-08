@@ -18,7 +18,7 @@
     <string name="channel_downloads">Downloads</string>
     <string name="downloading">Downloading music</string>
     <string name="about">About</string>
-    <string name="about_text">Free, open-source, on-device YouTube Music client. GPL-3.0.</string>
+    <string name="about_text">Your music. Your mix. Your space. Dkord by DeepuGupta is an open-source music player with a private offline library and real Mashup Studio. Playback and editing run on your device; optional Listen Together rooms use a public relay. GPL-3.0.</string>
     <string name="account">Account</string>
     <string name="add_to_playlist">Add to playlist</string>
     <string name="add_to_queue">Add to queue</string>

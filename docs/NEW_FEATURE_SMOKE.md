@@ -25,7 +25,7 @@ v0.9.1/code13 is [published](https://github.com/DeepuExplainsAi/dkord/releases/t
 - Empty history offers real Search; local read/write failure offers Retry/error without clearing storage or fabricating recent tracks. Playback/source errors must never be misreported as successful listening.
 
 ## Real Mashup Studio
-- Open Library → Mashup Studio, or a song menu → Use in Mashup Studio. Online sources use normal Dkord download first; choose only completed/readable sources.
+- **Stable0.9.1:** open Library → Mashup Studio or a song menu → Use in Mashup Studio. Its online songs require a completed/readable download first. **New unpublished0.10.0 source:** choose an ordinary online song directly; preparation is private and must not add a Downloads/public Music entry. See [new-platform/storage acceptance](PLATFORM_ACCEPTANCE.md) for explicit destinations, migration, cancellation and desktop/update checks.
 - Import multiple accessible phone/downloaded formats, plus a deliberately unsupported/unreadable source. Originals must not be edited/deleted. Errors must preserve previously committed projects/sources.
 - Choose different millisecond start/end or start/duration ranges, including multiple occurrences from one song. Test boundaries, zero/reversed/past-end/overflow rejection, long valid durations, reorder/remove and preview of both clip and arrangement. No silent fixed 15/30-second preset limit.
 - Preview pauses normal audio, stops on leaving/backgrounding, and uses the selected ranges/order. Large-font Hindi fields remain scrollable with a visible Save action while the real IME is open.

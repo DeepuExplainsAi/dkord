@@ -891,7 +891,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(label("Dkord", "brand"));layout.addWidget(label("YOUR MUSIC. YOUR MIX. YOUR SPACE.","eyebrow"))
         layout.addWidget(label("An open-source music player and audio Mashup Studio by DeepuGupta. Search the real music catalogue, keep a private offline library and turn your selected audio into precise, playable mixes."))
         layout.addWidget(label(f"Desktop {__version__} preview · GPL-3.0-only · native Qt multimedia + FFmpeg", "muted"))
-        layout.addWidget(label("This is a desktop preview, not a finished Android-parity release. Account sign-in, Listen Together, enhanced Android radio ranking, synchronized lyric highlighting and all native signing/notarization remain acceptance gaps. Android v0.9.1 stays the official stable release."))
+        layout.addWidget(label("This is a desktop preview, not a finished Android-parity release. Listen Together, optional in-app video, enhanced Android radio ranking, synchronized lyric highlighting and all native signing/notarization remain acceptance gaps. Android v0.9.1 stays the official stable release."))
         layout.addWidget(label("No cloud media synchronization or automatic phone-download transfer is included. Ordinary updates keep this device's user-data folder; JSON can transfer playlists/likes, not audio bytes."))
         layout.addWidget(label("Public providers: YouTube / YouTube Music and LRCLIB. Guest/provider restrictions are not bypassed. Only download, import or edit audio you have permission to use. No demo songs, invented search statistics or custom paid backend."))
         layout.addStretch();layout.addWidget(button("Close",dialog.accept));dialog.exec()

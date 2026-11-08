@@ -2,6 +2,10 @@
 import json
 from pathlib import Path
 import re
+import os
+import subprocess
+import sys
+import tempfile
 import unittest
 ROOT=Path(__file__).resolve().parents[2]
 def read(path):return (ROOT/path).read_text()
@@ -9,7 +13,7 @@ class DesktopContractsTest(unittest.TestCase):
     def test_native_validation_covers_all_os_and_cpu_builds_without_publication_or_secrets(self):
         flow=read('.github/workflows/validate-desktop.yml')
         for target in ('windows-x64','macos-x64','macos-arm64','linux-x64','linux-arm64'):self.assertIn('target: '+target,flow)
-        for required in ('contents: read','--self-test','packaging/build.py','no failures/errors/skips','assert len(cases) >= 26'):
+        for required in ('contents: read','--self-test','packaging/build.py','no failures/errors/skips','assert len(cases) >= 26','include-hidden-files: true','packaging/ci_run.py','PYTHONUTF8: 1'):
             self.assertIn(required,flow)
         for forbidden in ('secrets.','contents: write','gh release','continue-on-error'):self.assertNotIn(forbidden,flow)
     def test_desktop_has_real_native_widgets_codec_renderer_and_no_mock_browser(self):
@@ -37,4 +41,18 @@ class DesktopContractsTest(unittest.TestCase):
         self.assertEqual(re.search(r'versionName = "([^"]+)"',gradle)[1],re.search(r'__version__ = "([^"]+)"',desktop)[1])
         self.assertIn('branches: [arena/59a2f745-dkord]',read('.github/workflows/release.yml'))
         self.assertNotIn('release',read('desktop/packaging/windows.iss').split('[Files]')[1].split('[Icons]')[0].lower())
+    def test_android_studio_readiness_includes_recovery_before_observers_can_import(self):
+        source=read('app/src/main/java/app/dkord/data/studio/StudioRepository.kt')
+        reload=source.split('fun reload()')[1].split('private fun write(')[0]
+        self.assertLess(reload.index('cleanFinishedRequests(stored.projects)'),reload.index('mutable.value = StudioLibrary(loading = false'))
+        self.assertIn('private fun cleanUnreferencedSources(validatedProjects: List<StudioProject>)',source)
+        self.assertIn('if (mutable.value.loading || mutable.value.failed) return',source)
+    def test_ci_diagnostics_preserve_command_failure_and_unicode_without_retry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for code in (0,7):
+                result=subprocess.run([sys.executable,str(ROOT/'desktop/packaging/ci_run.py'),'tests',sys.executable,'-c',f"print('native हिन्दी');raise SystemExit({code})"],capture_output=True,text=True,encoding='utf-8',env={**os.environ,'RUNNER_TEMP':tmp,'PYTHONUTF8':'1'})
+                self.assertEqual(code,result.returncode)
+                self.assertIn('native हिन्दी',result.stdout)
+                self.assertEqual(code!=0,'::error title=Desktop tests failed' in result.stdout)
+                self.assertTrue((Path(tmp)/'dkord-desktop-tests.log').is_file())
 if __name__=='__main__':unittest.main()

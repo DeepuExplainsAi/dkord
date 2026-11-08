@@ -153,7 +153,7 @@ class OnlineStudioAndStorageTest {
             assertTrue(repo.state.value.projects.single().sources.isEmpty()); assertTrue(repo.temporary.listFiles().orEmpty().isEmpty())
             val abandoned = File(repo.temporary, "${studioId()}.online").apply { writeText("interrupted process") }
             val reopened = StudioRepository(isolated(dir)); ready(reopened)
-            assertFalse(abandoned.exists()); assertEquals(id, reopened.state.value.projects.single().id)
+            assertFalse("Ready library still contains abandoned staging: ${abandoned.name}", abandoned.exists()); assertEquals(id, reopened.state.value.projects.single().id)
         } finally { dir.deleteRecursively() }
     }
     @Test fun completed_private_source_reuses_bytes_and_keeps_explicit_device_intent_through_pause_and_worker_recovery() = runBlocking {

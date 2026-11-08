@@ -56,8 +56,10 @@ internal class StudioRepository(private val context: Context) {
                 json.decodeFromString<StudioCatalog>(catalog.readFully().decodeToString()) else StudioCatalog()
             require(stored.version == 1 && stored.projects.map { it.id }.distinct().size == stored.projects.size)
             stored.projects.forEach { it.validate() }
+            // Readiness includes recovery/GC. Publishing first lets a ready observer race
+            // abandoned-file cleanup (and report a half-recovered library after restart).
+            cleanFinishedRequests(stored.projects)
             mutable.value = StudioLibrary(loading = false, projects = stored.projects)
-            cleanFinishedRequests()
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { mutable.value = mutable.value.copy(loading = false, failed = true) }
     } } }
@@ -208,7 +210,7 @@ internal class StudioRepository(private val context: Context) {
     suspend fun finishRequest(id: String) = withContext(Dispatchers.IO) { mutex.withLock {
         AtomicFile(requestFile(id)).delete(); cleanUnreferencedSources()
     } }
-    private fun cleanFinishedRequests() {
+    private fun cleanFinishedRequests(projects: List<StudioProject>) {
         requests.listFiles()?.filter { it.extension == "json" }?.forEach { file ->
             val id = file.nameWithoutExtension
             val info = work.getWorkInfoById(UUID.fromString(id)).get()
@@ -217,16 +219,20 @@ internal class StudioRepository(private val context: Context) {
         temporary.listFiles()?.filter {
             (it.extension in setOf("import", "online") && it.name !in pendingImports) || (it.extension == "copy" && it.name !in pendingCopies)
         }?.forEach(File::delete)
-        cleanUnreferencedSources()
+        cleanUnreferencedSources(projects)
     }
     private fun cleanUnreferencedSources() {
-        // Unknown/corrupt catalog != empty library. Never garbage-collect potentially recoverable audio.
+        // Unknown/corrupt catalog != empty library. Never collect potentially recoverable audio.
         if (mutable.value.loading || mutable.value.failed) return
+        cleanUnreferencedSources(mutable.value.projects)
+    }
+    private fun cleanUnreferencedSources(validatedProjects: List<StudioProject>) {
+        // Startup calls this overload only after decoding/validating the entire catalog.
         // Render snapshots pin their inputs even if a project is changed/deleted while encoding.
         val pinned = requests.listFiles()?.filter { it.extension == "json" }?.flatMap {
             json.decodeFromString<StudioRenderRequest>(AtomicFile(it).readFully().decodeToString()).project.sources.map(StudioSource::fileName)
         }.orEmpty()
-        val referenced = (mutable.value.projects.flatMap { it.sources.map(StudioSource::fileName) } + pinned).toSet()
+        val referenced = (validatedProjects.flatMap { it.sources.map(StudioSource::fileName) } + pinned).toSet()
         sources.listFiles()?.filter { it.name !in referenced }?.forEach(File::delete)
     }
     companion object { const val WORK_NAME = "dkord-studio-export"; const val WORK_TAG = "dkord-studio" }

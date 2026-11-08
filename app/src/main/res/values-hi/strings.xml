@@ -182,7 +182,7 @@
     <string name="app_name">Dkord</string>
     <string name="app_title">Dkord by DeepuGupta</string>
     <string name="youtube_music">YouTube Music</string>
-    <string name="about_text">मुफ़्त, ओपन-सोर्स YouTube Music क्लाइंट, जो फ़ोन पर चलता है। GPL-3.0।</string>
+    <string name="about_text">आपका संगीत। आपका मिक्स। आपकी अपनी जगह। DeepuGupta का Dkord एक ओपन-सोर्स म्यूज़िक प्लेयर है, जिसमें निजी ऑफ़लाइन लाइब्रेरी और असली Mashup Studio है। प्लेबैक और एडिटिंग आपके डिवाइस पर होते हैं; वैकल्पिक Listen Together रूम सार्वजनिक रिले इस्तेमाल करते हैं। GPL-3.0.</string>
     <string name="applies_on_restart">ऐप फिर शुरू करने पर लागू होगा</string>
     <string name="channel_playback">प्लेबैक</string>
     <string name="choose_folder">फ़ोल्डर चुनें</string>

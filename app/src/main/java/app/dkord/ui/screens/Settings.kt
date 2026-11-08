@@ -166,7 +166,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogs: () -> Unit, onMessage: (String) -
             onDismissRequest = { dialog = "" },
             title = { Text(stringResource(R.string.update_extractor)) },
             text = { Text(stringResource(R.string.update_text, ExtractorHealth.BUNDLED_VERSION, latest.orEmpty())) },
-            confirmButton = { TextButton({ dialog = ""; ctx.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/DeepuExplainsAi/best-best/releases".toUri())) }) { Text(stringResource(R.string.open_releases)) } },
+            confirmButton = { TextButton({ dialog = ""; ctx.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/DeepuExplainsAi/dkord/releases".toUri())) }) { Text(stringResource(R.string.open_releases)) } },
             dismissButton = { TextButton({ dialog = "" }) { Text(stringResource(R.string.cancel)) } },
         )
     }
