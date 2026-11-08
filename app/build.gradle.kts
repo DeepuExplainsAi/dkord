@@ -13,8 +13,8 @@ android {
         applicationId = "app.dkord"
         minSdk = 26
         targetSdk = 37
-        versionCode = 9
-        versionName = "0.8.0"
+        versionCode = 10
+        versionName = "0.8.1"
     }
 
     // One stable key for every build, so a new APK installs over the old one and keeps user data.
