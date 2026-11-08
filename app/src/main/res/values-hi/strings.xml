@@ -365,7 +365,7 @@
     <string name="room_controls_hint">एक, दो या अधिक सह-होस्ट चुनें या सभी को अनुमति दें। कमरा बनाने का आपका अधिकार हमेशा बना रहेगा।</string>
     <string name="room_controls_members">नए Dkord का उपयोग करने वाले सदस्य</string>
     <string name="room_controls_empty">कनेक्ट होने पर जुड़े सदस्य यहाँ दिखेंगे। सही व्यक्ति चुनने के लिए नाम और छोटा ID देखें।</string>
-    <string name="room_controls_your_id">कमरे में आपका ID: %1$s</string>
+    <string name="room_controls_your_id">आपका सदस्य ID: %1$s</string>
     <string name="room_controls_listen_only">आप सुन सकते हैं। कमरा बनाने वाले ने आपको साझा प्लेबैक कंट्रोल नहीं दिया है।</string>
     <string name="room_controls_pending">सह-होस्ट कंट्रोल के लिए होस्ट और सदस्यों का Dkord अपडेट होना चाहिए। पुराने कमरों में अभी भी सिंक और फ़ॉलो काम करते हैं।</string>
     <string name="room_controls_consent">अनुमति देने या हटाने से ऑडियो अपने आप शुरू नहीं होता। सुनने वाले अभी भी सिंक करके चलाएँ और होस्ट को फ़ॉलो करें चुनते हैं।</string>

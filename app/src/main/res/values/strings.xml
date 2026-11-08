@@ -365,7 +365,7 @@
     <string name="room_controls_hint">Choose one, two or more co-hosts, or allow everyone. You always keep creator control.</string>
     <string name="room_controls_members">Members using current Dkord</string>
     <string name="room_controls_empty">Joined members appear here after they connect. Use their name and short ID to choose the right person.</string>
-    <string name="room_controls_your_id">Your room ID: %1$s</string>
+    <string name="room_controls_your_id">Your member ID: %1$s</string>
     <string name="room_controls_listen_only">You can listen. The creator has not given you shared playback controls.</string>
     <string name="room_controls_pending">Co-host controls need an updated host and members. Older rooms can still use Sync &amp; follow.</string>
     <string name="room_controls_consent">Granting or removing access does not start audio. Listeners still choose Sync &amp; play and Follow host.</string>
