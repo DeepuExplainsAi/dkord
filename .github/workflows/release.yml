@@ -8,17 +8,29 @@ on:
         required: true
         type: string
 
+  # One explicit owner-authorized release request, never ordinary PR/code pushes.
+  push:
+    branches: [arena/59a2f745-dkord]
+    paths: [.github/release-requests/v0.8.2.json]
+
 permissions:
   contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || 'v0.8.2' }}
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      TAG: ${{ inputs.tag }}
+      TAG: ${{ inputs.tag || 'v0.8.2' }}
     steps:
       - uses: actions/checkout@v7
+      - name: Validate the explicit trusted-branch release request
+        if: github.event_name == 'push'
+        run: python3 -B .github/scripts/validate_release_request.py
       - name: Validate release tag against app version
         run: |
           python3 - <<'PY'

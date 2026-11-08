@@ -261,15 +261,28 @@ class AppContractsTest(unittest.TestCase):
             self.assertEqual(source.count("@Test"), len(annotations), str(path))
             self.assertTrue(all(token == "fun" for token in annotations), str(path))
 
-    def test_workflows_are_manual_and_android_suite_is_not_skipped(self):
+    def test_manual_entrypoints_retain_the_full_android_suite_and_build(self):
         for path in (".github/workflows/build.yml", ".github/workflows/release.yml"):
             workflow = read(path)
             self.assertIn("  workflow_dispatch:", workflow)
-            self.assertNotRegex(workflow, r"(?m)^\s+(?:push|pull_request|pull_request_target|schedule):")
+            if path.endswith("build.yml"):
+                self.assertNotRegex(workflow, r"(?m)^\s+(?:push|pull_request|pull_request_target|schedule):")
             self.assertIn("./gradlew testDebugUnitTest assembleDebug --stacktrace", workflow)
             self.assertNotIn("continue-on-error:", workflow)
             self.assertNotIn("-x test", workflow)
             self.assertIn("python3 -B -m unittest discover", workflow)
+
+    def test_release_push_is_only_the_explicit_versioned_request_and_keeps_original_gates(self):
+        workflow = read(".github/workflows/release.yml")
+        self.assertIn("branches: [arena/59a2f745-dkord]", workflow)
+        self.assertIn("paths: [.github/release-requests/v0.8.2.json]", workflow)
+        self.assertIn("TAG: ${{ inputs.tag || 'v0.8.2' }}", workflow)
+        self.assertIn("cancel-in-progress: false", workflow)
+        self.assertIn("if: github.event_name == 'push'", workflow)
+        self.assertLess(workflow.index("validate_release_request.py"),
+                        workflow.index("Require the existing stable signing key"))
+        self.assertNotRegex(workflow, r"(?m)^\s+(?:pull_request|pull_request_target|schedule):")
+        self.assertNotIn("--clobber", workflow)
 
     def test_signing_password_is_passed_as_an_environment_value_not_shell_source(self):
         for path in (".github/workflows/build.yml", ".github/workflows/release.yml"):
