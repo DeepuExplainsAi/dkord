@@ -1,5 +1,11 @@
 # HANDOFF (read this first if you are a new AI/dev)
 
+## Part A (branch `fix/autoplay-same-song-music-search`, after v0.8.0)
+- Bug: autoplay queued the same song's variants (Slowed/Ultra Slowed/other uploaders). Fix: `songKey()` in MusicRepository.kt normalises titles (strips artist prefix, brackets, version words); `related(track, queue)` drops anything whose key is already queued. Test: SongKeyTest.
+- Bug: v0.8.0 search defaulted to `ALL` (regular YouTube: vlogs etc). Now default/clear = `SearchFilter.SONGS` (music only, like YouTube Music); "All YouTube" chip/escape remains opt-in. Tests/contract updated.
+- CI build.yml green on this branch (run 42452394498). Not yet released/merged; no device test.
+- TODO next (not started): Part B Shorts-style music reel feed (short clips, swipe, tap -> full song); Part C custom mashup (see Part 2 contract above); verify Listen Together.
+
 App: **Dkord**, package `app.dkord`, repo `dkord` (DeepuExplainsAi). User speaks Hinglish/Hindi; reply in Hinglish.
 ## Current completion handoff — 2026-11-07: v0.8.0 verified / PR #5 merge authorized
 - **Active branch remains `arena/def00661-dkord`**. Owner explicitly requested **“Please merge the pull request”**, authorizing PR #5 only. This supersedes the earlier no-merge-authorization/pending-workflow notes below for PR #5; do not infer permission for another PR, switch to main, delete the branch, or start Part 2 on this completed feature branch.
