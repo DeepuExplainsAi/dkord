@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TrackDao {
+    @Query("SELECT * FROM tracks WHERE id = :id") suspend fun get(id: String): TrackEntity?
     @Upsert suspend fun upsert(track: TrackEntity)
     @Upsert suspend fun upsertAll(tracks: List<TrackEntity>)
 }

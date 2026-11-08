@@ -93,10 +93,15 @@ fun ReelsScreen(onPlay: (List<Track>, Int) -> Unit, modifier: Modifier = Modifie
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(query, { query = it.take(200) }, Modifier.weight(1f), singleLine = true,
                 placeholder = { Text(stringResource(R.string.reels_query), maxLines = 1) },
+                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                    focusedPlaceholderColor = Color.LightGray, unfocusedPlaceholderColor = Color.LightGray,
+                    focusedBorderColor = Color.White, unfocusedBorderColor = Color.LightGray, cursorColor = Color.White),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { search() }))
-            IconButton({ search() }, enabled = query.isNotBlank()) { Icon(Icons.Default.Search, stringResource(R.string.search_submit)) }
+            IconButton({ search() }, enabled = query.isNotBlank()) { Icon(Icons.Default.Search, stringResource(R.string.search_submit), tint = Color.White) }
         }
+        if (state.fromCreators && state.clips.isNotEmpty()) Text(stringResource(R.string.reels_creator_discovery),
+            Modifier.padding(horizontal = 16.dp, vertical = 4.dp), color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             if (state.clips.isNotEmpty()) VerticalPager(pager, Modifier.fillMaxSize()) { page ->
                 val clip = state.clips[page]
@@ -170,7 +175,11 @@ private fun ClipSurface(video: ResolvedVideo, paused: Boolean, stopped: () -> Un
     }
     LaunchedEffect(player, paused) { player.playWhenReady = !paused }
     DisposableEffect(player, lifecycle) {
-        val listener = object : Player.Listener { override fun onPlayerError(error: PlaybackException) { failed() } }
+        val listener = object : Player.Listener { override fun onPlayerError(error: PlaybackException) { failed() }
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY) stopped()
+            }
+        }
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) { player.pause(); stopped() } }
         player.addListener(listener); lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); player.removeListener(listener); player.release() }
@@ -189,9 +198,12 @@ private fun FullSongSheet(clip: MusicClip, dismiss: () -> Unit, choose: (Track) 
     var loading by remember(clip.id) { mutableStateOf(true) }
     var failed by remember(clip.id) { mutableStateOf(false) }
     var retry by remember(clip.id) { mutableIntStateOf(0) }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focus = LocalFocusManager.current
+    fun submit() { if (query.isNotBlank()) { submitted = query.trim(); keyboard?.hide(); focus.clearFocus() } }
     LaunchedEffect(clip.id, submitted, retry) {
         loading = true; failed = false; tracks = emptyList()
-        try { tracks = repo.search(submitted, SearchFilter.SONGS).items.mapNotNull { it.track } }
+        try { tracks = repo.search(submitted, SearchFilter.SONGS).items.mapNotNull { it.track }.distinctBy { it.id } }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { failed = true }
         finally { loading = false }
@@ -201,8 +213,9 @@ private fun FullSongSheet(clip: MusicClip, dismiss: () -> Unit, choose: (Track) 
             Text(stringResource(R.string.reels_choose_song), style = MaterialTheme.typography.titleLarge)
             Text(stringResource(R.string.reels_attribution_hint), style = MaterialTheme.typography.bodySmall)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(query, { query = it.take(200) }, Modifier.weight(1f), singleLine = true)
-                IconButton({ if (query.isNotBlank()) submitted = query.trim() }) { Icon(Icons.Default.Search, stringResource(R.string.search_submit)) }
+                OutlinedTextField(query, { query = it.take(200) }, Modifier.weight(1f), singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { submit() }))
+                IconButton({ submit() }, enabled = query.isNotBlank()) { Icon(Icons.Default.Search, stringResource(R.string.search_submit)) }
             }
         }
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {

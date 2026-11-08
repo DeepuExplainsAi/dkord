@@ -20,6 +20,7 @@ internal data class ShortsState(
     val failed: Boolean = false,
     val next: ShortsCursor? = null,
     val initialized: Boolean = false,
+    val fromCreators: Boolean = false,
 )
 
 internal class ShortsController(private val source: ShortsSource, private val scope: CoroutineScope) {
@@ -52,7 +53,7 @@ internal class ShortsController(private val source: ShortsSource, private val sc
                 currentCoroutineContext().ensureActive()
                 if (generation != revision) return@launch
                 val s = mutable.value
-                mutable.value = s.copy(clips = s.clips + uniqueClips(s.clips, page.clips), next = page.next, loading = false, failed = false)
+                mutable.value = s.copy(clips = s.clips + uniqueClips(s.clips, page.clips), next = page.next, loading = false, failed = false, fromCreators = page.fromCreators)
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) { if (generation == revision) mutable.value = mutable.value.copy(loading = false, failed = true) }
         }

@@ -338,6 +338,58 @@ class AppContractsTest(unittest.TestCase):
         self.assertIn("generation != revision", controller)
         self.assertIn("currentCoroutineContext().ensureActive()", controller)
 
+    def test_real_studio_uses_local_clips_actual_aac_composition_and_durable_background_work(self):
+        exporter = read("app/src/main/java/app/dkord/data/studio/StudioAudioExporter.kt")
+        worker = read("app/src/main/java/app/dkord/data/studio/StudioExportWorker.kt")
+        repo = read("app/src/main/java/app/dkord/data/studio/StudioRepository.kt")
+        for fragment in ("EditedMediaItemSequence.withAudioFrom", "setTransmuxAudio(false)", "MimeTypes.AUDIO_AAC",
+                         "setStartPositionMs(clip.startMs)", "setEndPositionMs(clip.endMs)", "Dispatchers.Main.immediate",
+                         "transformer?.cancel()", "output.delete()"):
+            self.assertIn(fragment, exporter)
+        self.assertIn("CoroutineWorker", worker)
+        self.assertIn("FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING", worker)
+        self.assertIn("db.withTransaction", worker)
+        self.assertIn("DownloadState.DONE", worker)
+        self.assertIn("MediaStore.Audio.Media.IS_PENDING", worker)
+        self.assertIn("cleanUnreferencedSources", repo)
+        self.assertIn("StudioRenderRequest(id, snapshot)", repo)
+        self.assertIn("AtomicFile", repo)
+        self.assertIn("importing", read("app/src/main/java/app/dkord/ui/studio/StudioViewModel.kt"))
+        tests = read("app/src/androidTest/java/app/dkord/StudioAudioExportTest.kt")
+        self.assertIn("assertTone(decoded", tests)
+        self.assertIn("MediaCodec.createDecoderByType", tests)
+        self.assertIn("job.cancelAndJoin()", tests)
+
+    def test_generated_audio_cannot_leak_into_remote_resolvers_radio_lyrics_or_room_metadata(self):
+        stream = read("app/src/main/java/app/dkord/player/StreamDataSource.kt")
+        self.assertLess(stream.index("if (isLocalAudioId(id))"), stream.index("streams.resolve(id"))
+        for path in ("data/stream/Resolvers.kt", "data/stream/VideoResolver.kt", "data/yt/MusicRepository.kt",
+                     "data/yt/RadioTracks.kt", "data/lyrics/Lyrics.kt", "data/download/DownloadManager.kt",
+                     "data/room/RoomPlayback.kt", "player/PlayerController.kt"):
+            self.assertIn("isLocalAudioId", read("app/src/main/java/app/dkord/" + path))
+        room = read("app/src/main/java/app/dkord/data/room/RoomPlayback.kt")
+        self.assertIn("takeUnless { isLocalAudioId(it.id) }", room)
+        self.assertIn("!isLocalAudioId(it.id)", room)
+        sharing = read("app/src/main/java/app/dkord/ui/common/Share.kt")
+        self.assertIn("Intent.EXTRA_STREAM", sharing)
+        self.assertIn("FLAG_GRANT_READ_URI_PERMISSION", sharing)
+        paths = read("app/src/main/res/xml/file_paths.xml")
+        self.assertIn('path="studio/exports/"', paths)
+        self.assertNotIn("<root-path", paths)
+        self.assertNotIn('path="studio/"', paths)
+        self.assertNotIn('path="."', paths)
+
+    def test_editor_is_reachable_and_device_gate_requires_real_audio_and_ui_regressions(self):
+        app = read("app/src/main/java/app/dkord/ui/App.kt")
+        self.assertIn("is Dest.Studio -> StudioScreen", app)
+        self.assertIn("push(Dest.Studio(t))", app)
+        self.assertIn("onOpenStudio = { push(Dest.Studio()) }", app)
+        workflow = read(".github/workflows/validate-pr.yml")
+        for case in ("SearchKeyboardViewportTest", "StudioAudioExportTest", "StudioClipEditorTest", "StudioExportPublicationTest"):
+            self.assertIn("--required-class app.dkord." + case, workflow)
+        self.assertIn("summarize_device_tests.py", workflow)
+        self.assertNotIn("continue-on-error:", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

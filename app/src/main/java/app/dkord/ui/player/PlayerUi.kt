@@ -1,5 +1,7 @@
 package app.dkord.ui.player
 
+import app.dkord.core.isLocalAudioId
+
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -188,7 +190,7 @@ fun FullPlayer(state: PlayerUiState, onClose: () -> Unit, onAddToPlaylist: (Trac
                     IconButton({ moreOpen = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.more)) }
                     DropdownMenu(moreOpen, { moreOpen = false }) {
                         DropdownMenuItem(text = { Text(stringResource(R.string.listen_together)) },
-                            onClick = { moreOpen = false; onListenTogether() })
+                            onClick = { moreOpen = false; onListenTogether() }, enabled = !isLocalAudioId(track.id))
                     }
                 }
             }
@@ -210,7 +212,7 @@ fun FullPlayer(state: PlayerUiState, onClose: () -> Unit, onAddToPlaylist: (Trac
                 }
                 val ctx = LocalContext.current
                 val savedMsg = stringResource(R.string.download_started)
-                IconButton({ actions.download(listOf(track)); Toast.makeText(ctx, savedMsg, Toast.LENGTH_SHORT).show() }) {
+                if (!isLocalAudioId(track.id)) IconButton({ actions.download(listOf(track)); Toast.makeText(ctx, savedMsg, Toast.LENGTH_SHORT).show() }) {
                     Icon(Icons.Default.Download, stringResource(R.string.download))
                 }
                 val liked = track.id in likedIds
@@ -257,7 +259,7 @@ fun FullPlayer(state: PlayerUiState, onClose: () -> Unit, onAddToPlaylist: (Trac
                     Text("  " + stringResource(R.string.autoplay), maxLines = 1, softWrap = false, color = if (st.autoplay) MaterialTheme.colorScheme.primary else LocalContentColorOrDefault())
                 }
                 TextButton({ onAddToPlaylist(track) }) { Text(stringResource(R.string.add_to_playlist), maxLines = 1, softWrap = false) }
-                TextButton({ onPlayVideo(track) }) { Text(stringResource(R.string.play_video), maxLines = 1, softWrap = false) }
+                if (!isLocalAudioId(track.id)) TextButton({ onPlayVideo(track) }) { Text(stringResource(R.string.play_video), maxLines = 1, softWrap = false) }
             }
         }
     }

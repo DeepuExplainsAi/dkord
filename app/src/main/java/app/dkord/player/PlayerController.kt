@@ -2,6 +2,8 @@
 
 package app.dkord.player
 
+import app.dkord.core.isLocalAudioId
+
 import android.content.ComponentName
 import android.content.Context
 import androidx.media3.common.Player
@@ -178,7 +180,7 @@ class PlayerController(
         AutoplaySnapshot(
             queue = (0 until c.mediaItemCount).map { c.getMediaItemAt(it).toTrack() },
             index = c.currentMediaItemIndex,
-            enabled = settings.settings.value.autoplay,
+            enabled = settings.settings.value.autoplay && c.currentMediaItem?.mediaId?.let { !isLocalAudioId(it) } == true,
             playWhenReady = c.playWhenReady,
             repeatOff = c.repeatMode == Player.REPEAT_MODE_OFF,
             idle = c.playbackState == Player.STATE_IDLE,

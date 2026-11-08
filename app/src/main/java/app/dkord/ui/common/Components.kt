@@ -1,5 +1,7 @@
 package app.dkord.ui.common
 
+import app.dkord.core.isLocalAudioId
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -228,7 +230,7 @@ fun TrackMenu(track: Track, onDismiss: () -> Unit, onAddToPlaylist: (Track) -> U
         MenuRow(if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, stringResource(if (liked) R.string.unlike else R.string.like)) { actions.like(track, !liked); onDismiss() }
         MenuRow(Icons.Default.PlaylistAdd, stringResource(R.string.add_to_playlist)) { onDismiss(); onAddToPlaylist(track) }
         MenuRow(Icons.Default.Share, stringResource(R.string.share)) { shareTrack(context, track); onDismiss() }
-        MenuRow(Icons.Default.Download, stringResource(R.string.download)) { actions.download(listOf(track)); onDismiss() }
+        if (!isLocalAudioId(track.id)) MenuRow(Icons.Default.Download, stringResource(R.string.download)) { actions.download(listOf(track)); onDismiss() }
         extra?.invoke()
         Spacer(Modifier.size(24.dp))
     }

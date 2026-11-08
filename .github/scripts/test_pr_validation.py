@@ -36,7 +36,9 @@ class PrValidationSafetyTest(unittest.TestCase):
 
     def test_full_android_suite_and_apk_compile_are_mandatory_not_a_static_check_substitute(self):
         self.assertIn("python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v", WORKFLOW)
-        self.assertIn('id: android_build\n        run: ./gradlew testDebugUnitTest assembleDebug --stacktrace', WORKFLOW)
+        self.assertIn('id: android_build\n        run: |\n          set -o pipefail\n          ./gradlew testDebugUnitTest assembleDebug --stacktrace', WORKFLOW)
+        self.assertIn('2>&1 | tee "$RUNNER_TEMP/dkord-android-build.log"', WORKFLOW)
+        self.assertNotIn('|| true', WORKFLOW)
         self.assertNotIn('continue-on-error:', WORKFLOW)
         self.assertNotIn('-x test', WORKFLOW)
         self.assertIn("ANDROID_BUILD_OUTCOME: ${{ steps.android_build.outcome }}", WORKFLOW)

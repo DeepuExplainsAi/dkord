@@ -32,7 +32,12 @@ jobs:
       - run: chmod +x gradlew
       - name: Run the full Android unit suite and build the APK
         id: android_build
-        run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew testDebugUnitTest assembleDebug --stacktrace 2>&1 | tee "$RUNNER_TEMP/dkord-android-build.log"
+      - name: Surface Android compiler diagnostics
+        if: always()
+        run: python3 -B .github/scripts/annotate_android_build.py "$RUNNER_TEMP/dkord-android-build.log"
       - name: Summarize executed Android tests
         if: always()
         env:
@@ -88,7 +93,7 @@ jobs:
           if-no-files-found: ignore
 
   keyboard-layout:
-    name: Android keyboard viewport tests
+    name: Android keyboard and real audio tests
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -117,7 +122,19 @@ jobs:
           script: |
             adb shell settings put secure show_ime_with_hard_keyboard 1
             chmod +x gradlew
-            ./gradlew connectedDebugAndroidTest --stacktrace
+            set -o pipefail
+            ./gradlew connectedDebugAndroidTest --stacktrace 2>&1 | tee "$RUNNER_TEMP/dkord-device-build.log"
+      - name: Surface Android device-build diagnostics
+        if: always()
+        run: python3 -B .github/scripts/annotate_android_build.py "$RUNNER_TEMP/dkord-device-build.log"
+      - name: Summarize executed device regressions
+        if: always()
+        run: >-
+          python3 -B .github/scripts/summarize_device_tests.py
+          --required-class app.dkord.SearchKeyboardViewportTest
+          --required-class app.dkord.StudioAudioExportTest
+          --required-class app.dkord.StudioClipEditorTest
+          --required-class app.dkord.StudioExportPublicationTest
       - name: Upload Android device-test reports
         if: always()
         uses: actions/upload-artifact@v7

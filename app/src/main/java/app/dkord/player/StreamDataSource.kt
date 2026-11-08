@@ -2,6 +2,8 @@
 
 package app.dkord.player
 
+import app.dkord.core.isLocalAudioId
+
 import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
@@ -42,6 +44,7 @@ class StreamUriResolver(
         if (dataSpec.uri.scheme != TRACK_SCHEME) return dataSpec
         val id = dataSpec.uri.lastPathSegment ?: throw IOException("Bad track uri ${dataSpec.uri}")
         localUri(id)?.let { return dataSpec.buildUpon().setUri(it.toUri()).setKey("local|$id").build() }
+        if (isLocalAudioId(id)) throw app.dkord.data.stream.StreamError.Unavailable("Local audio file is no longer accessible")
         val stream = runBlocking { streams.resolve(id, quality()) }
         val itag = ITAG.find(stream.url)?.groupValues?.get(1) ?: stream.mimeType
         val headers = HashMap(dataSpec.httpRequestHeaders)

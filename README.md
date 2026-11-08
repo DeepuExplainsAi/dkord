@@ -91,3 +91,14 @@ No analytics and no Dkord account server. The app contacts YouTube/Google for mu
 
 ## Disclaimer and license
 Not affiliated with YouTube or Google. Use the app in line with applicable laws and service terms. GPL-3.0; see [LICENSE](LICENSE).
+
+## Unreleased development work (0.9.0 / code 12)
+
+The working PR adds a single-owner keyboard/insets fix, a native Shorts video tab, and **Mashup Studio** (Library or a song menu).
+
+- Shorts uses actual provider short-form metadata/creator tabs, a vertical player and an editable Songs lookup. Choose the matching full song explicitly; a clip is **not** treated as verified original-song attribution.
+- Studio imports readable, non-DRM phone audio or completed Dkord downloads into persistent private projects. Select arbitrary valid millisecond start/end or duration ranges, reuse sources, reorder/remove clips and preview the arrangement.
+- Merge creates one real AAC/M4A file on-device, with WorkManager progress/cancellation and a frozen input snapshot. Saved output is playable in Downloads, usable in playlists, shareable as audio and can be copied through the system file picker. Device codec/storage limits still apply.
+- Generated local audio never falls through to a remote stream/radio/lyrics/video lookup or room metadata relay. Sharing grants access only to the finished audio, not private project inputs.
+
+This is **not a published APK**. Official latest remains the v0.8.2 link above; a new signed release and any PR merge require separate authorization. CI device checks cover IME layout, real AAC decode/range/order, cancellation, persistence, EN/HI editor layout and actual saved-output registration. Phone/live-provider smoke remains necessary; see `HANDOFF.md` for exact run results.

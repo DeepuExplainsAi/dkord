@@ -1,5 +1,7 @@
 package app.dkord.data.room
 
+import app.dkord.core.isLocalAudioId
+
 import app.dkord.core.Track
 import kotlinx.coroutines.flow.Flow
 
@@ -18,10 +20,10 @@ interface RoomPlayback {
     suspend fun sync(message: RoomMessage, positionMs: Long)
 }
 
-fun roomMessage(state: RoomPlaybackState, timestamp: Long): RoomMessage? = state.current?.let { track ->
+fun roomMessage(state: RoomPlaybackState, timestamp: Long): RoomMessage? = state.current?.takeUnless { isLocalAudioId(it.id) }?.let { track ->
     RoomMessage(track.id, track.title, track.artist, track.thumbnail, state.positionMs.coerceIn(0, RoomCodec.MAX_POSITION_MS),
         state.playing, timestamp, state.queue.drop((state.queueIndex + 1).coerceAtLeast(0))
-            .filter { it.id != track.id }.take(RoomCodec.MAX_QUEUE).map(RoomTrack::fromTrack))
+            .filter { it.id != track.id && !isLocalAudioId(it.id) }.take(RoomCodec.MAX_QUEUE).map(RoomTrack::fromTrack))
 }
 
 /** Related autoplay may append a local suffix; do not restart the same song on every heartbeat. */

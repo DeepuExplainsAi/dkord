@@ -1,5 +1,8 @@
 package app.dkord.ui
 
+import app.dkord.ui.screens.StudioScreen
+import androidx.compose.material3.TextButton
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -163,6 +166,7 @@ fun App() {
                     Dest.ListenTogether -> ListenTogetherScreen(onBack = ::pop, onOpenPlayer = { pop(); playerOpen = true }, onMessage = ::say)
                     Dest.Logs -> DebugLogScreen(::pop, ::say)
                     is Dest.Video -> VideoScreen(dest.id, dest.title, ::pop)
+                    is Dest.Studio -> StudioScreen(dest.track, { list, index -> play(list, index); playerOpen = true }, { menuTrack = it }, ::say, ::pop)
                 }
             }
         }
@@ -177,7 +181,11 @@ fun App() {
 
     ObserveAppUpdates()
 
-    menuTrack?.let { t -> TrackMenu(t, onDismiss = { menuTrack = null }, onAddToPlaylist = { pickTracks = listOf(it) }) }
+    menuTrack?.let { t -> TrackMenu(t, onDismiss = { menuTrack = null }, onAddToPlaylist = { pickTracks = listOf(it) }, extra = {
+        TextButton({ menuTrack = null; playerOpen = false; push(Dest.Studio(t)) }, Modifier.padding(horizontal = 16.dp)) {
+            Text(stringResource(R.string.studio_use_track))
+        }
+    }) }
     pickTracks?.let { PlaylistPicker(it, onDismiss = { pickTracks = null }, onResult = ::say) }
 }
 
@@ -232,7 +240,7 @@ private fun TabContent(
                     Tab.HOME -> HomeScreen(onItem, onPlay, m)
                     Tab.SEARCH -> SearchScreen(onItem, onPlay, onMenu, m, onMessage = say)
                     Tab.REELS -> ReelsScreen(onPlay, m)
-                    Tab.LIBRARY -> LibraryScreen({ push(Dest.Playlist(it)) }, { push(Dest.Liked) }, { push(Dest.Recent) }, onItem, say, m)
+                    Tab.LIBRARY -> LibraryScreen({ push(Dest.Playlist(it)) }, { push(Dest.Liked) }, { push(Dest.Recent) }, onItem, say, m, onOpenStudio = { push(Dest.Studio()) })
                     Tab.DOWNLOADS -> DownloadsScreen(onPlay, onMenu, m)
                 }
             }

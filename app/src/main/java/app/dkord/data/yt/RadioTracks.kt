@@ -1,5 +1,7 @@
 package app.dkord.data.yt
 
+import app.dkord.core.isLocalAudioId
+
 import app.dkord.core.Track
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -48,7 +50,7 @@ internal suspend fun musicRadioRecommendations(
     fetchRadio: suspend () -> List<Track>,
     searchSongs: suspend (String) -> List<Track>,
 ): List<Track> {
-    if (seed.id.isBlank()) return emptyList()
+    if (seed.id.isBlank() || isLocalAudioId(seed.id)) return emptyList()
     val filter = RadioTrackFilter(seed, queue)
     val radio = filter.select(radioCandidates(fetchRadio))
     if (radio.isNotEmpty()) return radio

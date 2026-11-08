@@ -49,4 +49,19 @@ class ShortsControllerTest {
         repeat(10) { c.more() }; runCurrent(); advanceTimeBy(10); runCurrent()
         assertEquals(2, calls); assertEquals(listOf("a", "b"), c.state.value.clips.map { it.id })
     }
+    @Test fun native_flag_not_short_duration_decides_what_is_a_short() {
+        fun item(id: String, short: Boolean) = org.schabi.newpipe.extractor.stream.StreamInfoItem(0,
+            "https://www.youtube.com/watch?v=$id", "Actual native title", org.schabi.newpipe.extractor.stream.StreamType.VIDEO_STREAM).apply {
+            setDuration(30); setShortFormContent(short); setUploaderName("Native creator")
+        }
+        val clips = nativeClips(listOf(item("abcdefghijk", false), item("bcdefghijkl", true)))
+        assertEquals(listOf("bcdefghijkl"), clips.map { it.id })
+    }
+    @Test fun native_shorts_tabs_unknown_duration_is_not_dropped_or_given_a_fictional_length() {
+        val native = org.schabi.newpipe.extractor.stream.StreamInfoItem(0, "https://www.youtube.com/shorts/abcdefghijk",
+            "Native clip", org.schabi.newpipe.extractor.stream.StreamType.VIDEO_STREAM).apply { setShortFormContent(true) }
+        val clip = nativeClips(listOf(native), "Native channel").single()
+        assertEquals(0L, clip.durationSec); assertEquals("Native channel", clip.creator)
+    }
+
 }

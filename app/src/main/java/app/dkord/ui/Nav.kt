@@ -18,6 +18,7 @@ sealed interface Dest {
     @Serializable data object Recent : Dest
     @Serializable data object Settings : Dest
     @Serializable data object ListenTogether : Dest
+    @Serializable data class Studio(val track: app.dkord.core.Track? = null) : Dest
     @Serializable data object Logs : Dest
     @Serializable data class Video(val id: String, val title: String) : Dest
 }

@@ -1,5 +1,7 @@
 package app.dkord.data.download
 
+import app.dkord.core.isLocalAudioId
+
 import android.content.Context
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
@@ -32,6 +34,7 @@ class DownloadManager(
     suspend fun enqueue(tracks: List<Track>) {
         val now = System.currentTimeMillis()
         for (t in tracks.distinctBy { it.id }) {
+            if (isLocalAudioId(t.id)) continue
             val existing = dao.get(t.id)
             if (existing?.state == DownloadState.DONE && existing.localUri?.let(storage::exists) == true) continue
             if (existing != null && existing.state != DownloadState.DONE) {
@@ -52,6 +55,7 @@ class DownloadManager(
     }
 
     suspend fun resume(id: String) {
+        if (isLocalAudioId(id)) return
         dao.setState(id, DownloadState.QUEUED, null, System.currentTimeMillis())
         kick()
     }

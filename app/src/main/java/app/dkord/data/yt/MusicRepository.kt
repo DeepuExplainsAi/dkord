@@ -1,5 +1,7 @@
 package app.dkord.data.yt
 
+import app.dkord.core.isLocalAudioId
+
 import app.dkord.core.BrowseItem
 import app.dkord.core.Page
 import app.dkord.core.Track
@@ -51,6 +53,7 @@ class MusicRepository(private val client: InnerTubeClient) {
      * The plain youtube.com watch-page related list is NOT used (it returns vlogs/normal videos).
      */
     suspend fun related(track: Track, queue: List<Track> = emptyList()): List<Track> = withContext(Dispatchers.IO) {
+        if (isLocalAudioId(track.id)) return@withContext emptyList()
         musicRadioRecommendations(track, queue,
             fetchRadio = { MusicParser.parseWatchNext(client.next(track.id)) },
             searchSongs = { query -> search(query, SearchFilter.SONGS).items.mapNotNull { it.track } },
