@@ -1,0 +1,10 @@
+# GUI and multimedia native binaries; pinned to the same Qt minor on every OS.
+PyQt6==6.10.2
+PyQt6-Qt6==6.10.2
+yt-dlp[default]==2026.10.26
+yt-dlp-ejs==0.8.0
+ytmusicapi==1.12.3
+imageio-ffmpeg==0.8.1
+av==16.0.1
+cryptography==46.0.3
+platformdirs==4.5.0
