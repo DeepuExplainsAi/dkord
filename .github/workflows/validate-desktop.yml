@@ -17,7 +17,8 @@ permissions:
   contents: read
 concurrency:
   group: pr-desktop-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  # Finish an already-running native/x86 build; retain only the latest pending head.
+  cancel-in-progress: false
 jobs:
   desktop:
     name: Native ${{ matrix.target }} preview

@@ -25,7 +25,8 @@ jobs:
           distribution: temurin
           java-version: 21
       - name: Prepare verified public-certificate tooling
-        run: python3 -m pip install --only-binary=:all: cryptography==46.0.3
+        run: |
+          python3 -m pip install --only-binary=:all: cryptography==46.0.3
       - name: Verify the existing identity against the actual immutable published APK
         env:
           GH_TOKEN: ${{ github.token }}
