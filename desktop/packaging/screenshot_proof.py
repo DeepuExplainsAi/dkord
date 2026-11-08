@@ -29,7 +29,7 @@ def main(folder, source=None, emit=True):
         assert len(data)==item['bytes'] and len(data)<=512*1024 and hashlib.sha256(data).hexdigest()==item['sha256']
         assert data[:8]==b'\x89PNG\r\n\x1a\n' and struct.unpack('>II',data[16:24])==(item['width'],item['height'])
         if not emit:continue
-        encoded=base64.b64encode(data).decode('ascii');parts=[encoded[i:i+58000] for i in range(0,len(encoded),58000)]
+        encoded=base64.b64encode(data).decode('ascii');parts=[encoded[i:i+3800] for i in range(0,len(encoded),3800)]
         for i,part in enumerate(parts,1):print(f'::notice title=Dkord Windows screenshot {item["name"]} part {i} of {len(parts)}::'+part)
 
 if __name__=='__main__':
