@@ -154,6 +154,11 @@ class CoreTest(unittest.TestCase):
             with wave.open(str(exact),'wb') as out:
                 out.setparams((1,2,48000,0,'NONE','not compressed'));out.writeframes(b'\0\0'*60336)
             self.assertEqual(1257,probe_ffmpeg(exact))
+            import aifc
+            big_endian=self.root/'precise-big-endian.aiff'
+            with aifc.open(str(big_endian),'wb') as out:
+                out.setparams((1,2,48000,0,b'NONE',b'not compressed'));out.writeframes(b'\0\0'*60336)
+            self.assertEqual(1257,probe_ffmpeg(big_endian))
 
     def test_real_compat_codec_refuses_a_header_with_no_decodable_audio(self):
         file=self.root/'empty.wav'

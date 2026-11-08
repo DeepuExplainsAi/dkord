@@ -28,8 +28,12 @@ FLAGS=[
     '--enable-protocol=file,pipe',
     '--enable-demuxer=mov,mp3,wav,matroska,ogg,flac,aac,ape,asf,aiff',
     '--enable-muxer=mp4,mov,wav,pcm_s16le,null',
-    '--enable-decoder=aac,aac_fixed,mp3,mp3float,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le,pcm_u8,flac,vorbis,opus,alac,wmav2',
+    '--enable-decoder=aac,aac_fixed,mp3,mp3float,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le,pcm_u8,pcm_s8,pcm_s16be,pcm_s24be,pcm_s32be,pcm_f32be,pcm_f64be,flac,vorbis,opus,alac,ape,mp2,mp2float,wmav1,wmav2',
     '--enable-encoder=aac,pcm_s16le','--enable-parser=aac,mpegaudio,flac,opus,vorbis',
+    # mov/matroska build the CBS support unit even without a video decoder.
+    # MSVC C17 rejects its unsized empty table; one real metadata helper makes
+    # that upstream table nonempty without patching source or enabling video decode.
+    '--enable-bsf=h264_metadata',
     '--enable-filter=atrim,asetpts,aresample,aformat,concat,anull,abuffer,abuffersink',
     '--extra-cflags=-D_WIN32_WINNT=0x0A00',
 ]
