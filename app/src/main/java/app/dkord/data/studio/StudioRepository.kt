@@ -128,6 +128,17 @@ internal class StudioRepository(private val context: Context) {
             }
         } finally { if (!committed) file.delete(); pendingImports.remove(file.name) }
     }
+    /** Explicit online source preparation: temporary bytes, no Downloads row/public file/URL persistence. */
+    suspend fun importPreparedAudio(projectId: String, title: String, prepare: suspend (File) -> Unit) = withContext(Dispatchers.IO) {
+        val file = File(temporary, "${studioId()}.online")
+        pendingImports.add(file.name)
+        try {
+            prepare(file)
+            currentCoroutineContext().ensureActive()
+            importAudio(projectId, Uri.fromFile(file), title)
+        } finally { file.delete(); pendingImports.remove(file.name) }
+    }
+
     suspend fun copyAudio(source: Uri, destination: Uri) = withContext(Dispatchers.IO) {
         require(source != destination)
         // A SAF URI can alias a MediaStore file. Read fully before opening the destination for
@@ -204,7 +215,7 @@ internal class StudioRepository(private val context: Context) {
             if (info == null || info.state.isFinished) { AtomicFile(file).delete(); File(temporary, "$id.m4a").delete() }
         }
         temporary.listFiles()?.filter {
-            (it.extension == "import" && it.name !in pendingImports) || (it.extension == "copy" && it.name !in pendingCopies)
+            (it.extension in setOf("import", "online") && it.name !in pendingImports) || (it.extension == "copy" && it.name !in pendingCopies)
         }?.forEach(File::delete)
         cleanUnreferencedSources()
     }

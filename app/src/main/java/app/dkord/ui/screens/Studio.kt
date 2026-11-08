@@ -43,10 +43,12 @@ import java.util.UUID
 internal fun StudioScreen(initialTrack: Track?, onPlay: (List<Track>, Int) -> Unit, onMenu: (Track) -> Unit, onMessage: (String) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     val repo: StudioRepository = koinInject()
     val downloads: DownloadManager = koinInject()
-    val vm = koinVm { StudioViewModel(repo, downloads) }
+    val online: StudioOnlineImporter = koinInject()
+    val vm = koinVm { StudioViewModel(repo, downloads, online) }
     val library by repo.state.collectAsState()
     val busy by vm.busy.collectAsState()
     val importing by vm.importing.collectAsState()
+    val preparation by vm.preparation.collectAsState()
     val entries by remember { downloads.downloads() }.collectAsState(emptyList())
     val context = LocalContext.current
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
@@ -55,6 +57,7 @@ internal fun StudioScreen(initialTrack: Track?, onPlay: (List<Track>, Int) -> Un
     var rename by rememberSaveable { mutableStateOf(false) }
     var deleting by rememberSaveable { mutableStateOf(false) }
     var downloadedPicker by rememberSaveable { mutableStateOf(false) }
+    var onlinePicker by rememberSaveable { mutableStateOf(false) }
     var edit by remember { mutableStateOf<ClipEdit?>(null) }
     var preview by remember { mutableStateOf(false) }
     var importProject by rememberSaveable { mutableStateOf<String?>(null) }
@@ -90,6 +93,9 @@ internal fun StudioScreen(initialTrack: Track?, onPlay: (List<Track>, Int) -> Un
         edit = null
         vm.change(project.id) { it.withClip(item.source.id, start, end, item.clip?.id ?: studioId()) }
     } }
+    if (onlinePicker && project != null) StudioSongPicker(onSelect = { track ->
+        onlinePicker = false; vm.useTrack(project.id, track)
+    }, onDismiss = { onlinePicker = false })
     if (preview && project != null) ArrangementPreview(project, repo) { preview = false }
     if (downloadedPicker && project != null) ModalBottomSheet(onDismissRequest = { downloadedPicker = false }) {
         Text(stringResource(R.string.studio_downloads), Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge)
@@ -138,6 +144,7 @@ internal fun StudioScreen(initialTrack: Track?, onPlay: (List<Track>, Int) -> Un
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton({ importProject = project.id; pickAudio.launch(arrayOf("audio/*")) }, enabled = !busy) { Text(stringResource(R.string.studio_device_audio)) }
                         OutlinedButton({ downloadedPicker = true }, enabled = !busy) { Text(stringResource(R.string.studio_downloads)) }
+                        OutlinedButton({ onlinePicker = true }, enabled = !busy) { Text(stringResource(R.string.studio_online_search)) }
                     }
                 }
                 if (initialTrack != null) item {
@@ -145,18 +152,21 @@ internal fun StudioScreen(initialTrack: Track?, onPlay: (List<Track>, Int) -> Un
                     OutlinedCard {
                         Column(Modifier.padding(12.dp)) {
                             Text(initialTrack.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Button({ vm.useTrack(project.id, initialTrack) }, enabled = !busy && status !in setOf(DownloadState.QUEUED, DownloadState.RUNNING)) {
-                                Text(stringResource(if (status == DownloadState.DONE) R.string.studio_add_source else if (status in setOf(DownloadState.QUEUED, DownloadState.RUNNING)) R.string.downloading else R.string.studio_download_source))
+                            Button({ vm.useTrack(project.id, initialTrack) }, enabled = !busy) {
+                                Text(stringResource(if (status == DownloadState.DONE) R.string.studio_add_source else R.string.studio_use_online))
                             }
                         }
                     }
                 }
                 if (importing) item {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(Modifier.size(24.dp)); Text(stringResource(R.string.studio_importing), Modifier.weight(1f).padding(8.dp))
+                        CircularProgressIndicator(Modifier.size(24.dp)); Text(stringResource(if (preparation != null) R.string.studio_preparing_online else R.string.studio_importing), Modifier.weight(1f).padding(8.dp))
                         TextButton(vm::cancelImport) { Text(stringResource(R.string.cancel)) }
                     }
                 }
+                preparation?.fraction?.let { fraction -> item {
+                    LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
+                } }
                 item { Text(stringResource(R.string.studio_sources), style = MaterialTheme.typography.titleMedium) }
                 items(project.sources, key = { "source-${it.id}" }) { source ->
                     OutlinedCard(Modifier.fillMaxWidth()) {

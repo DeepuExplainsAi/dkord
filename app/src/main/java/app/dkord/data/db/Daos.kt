@@ -89,10 +89,11 @@ interface DownloadDao {
     fun observeAll(): Flow<List<DownloadWithTrack>>
 
     @Transaction
-    @Query("SELECT * FROM downloads WHERE state = 'QUEUED' ORDER BY createdAt LIMIT 1")
-    suspend fun nextQueued(): DownloadWithTrack?
+    @Query("SELECT * FROM downloads WHERE state = 'QUEUED' AND trackId NOT IN (:activeIds) " +
+        "AND (:localOnly = 0 OR localUri IS NOT NULL) ORDER BY CASE WHEN localUri IS NOT NULL THEN 0 ELSE 1 END, createdAt LIMIT 1")
+    suspend fun nextQueued(localOnly: Boolean = false, activeIds: List<String> = emptyList()): DownloadWithTrack?
 
-    @Query("SELECT localUri FROM downloads WHERE trackId = :id AND state = 'DONE'")
+    @Query("SELECT localUri FROM downloads WHERE trackId = :id AND localUri IS NOT NULL")
     suspend fun localUri(id: String): String?
 
     @Query("UPDATE downloads SET state = 'RUNNING', error = NULL, updatedAt = :now WHERE trackId = :id AND state = 'QUEUED'")
@@ -120,8 +121,18 @@ interface DownloadDao {
     )
     suspend fun done(id: String, uri: String, size: Long, mime: String, now: Long): Int
 
-    @Query("UPDATE downloads SET state = 'QUEUED', updatedAt = :now WHERE state = 'RUNNING'")
-    suspend fun resetRunning(now: Long)
+    @Query("UPDATE downloads SET location = :location, deviceTree = :tree WHERE trackId = :id")
+    suspend fun setLocation(id: String, location: DownloadLocation, tree: String? = null)
+
+    /** Stage a complete private copy before public publication. Failed device copies retry locally. */
+    @Query("UPDATE downloads SET localUri = :uri, bytes = :size, total = :size, mime = :mime WHERE trackId = :id")
+    suspend fun staged(id: String, uri: String, size: Long, mime: String): Int
+
+    @Query("UPDATE downloads SET deviceUri = :uri WHERE trackId = :id")
+    suspend fun deviceCopy(id: String, uri: String): Int
+
+    @Query("UPDATE downloads SET state = 'QUEUED', updatedAt = :now WHERE state = 'RUNNING' AND trackId NOT IN (:activeIds)")
+    suspend fun resetRunning(now: Long, activeIds: List<String> = emptyList())
 
     @Query("UPDATE downloads SET state = 'QUEUED', error = NULL, updatedAt = :now WHERE state = 'FAILED'")
     suspend fun requeueFailed(now: Long)

@@ -180,6 +180,7 @@ fun App() {
     }
 
     ObserveAppUpdates()
+    app.dkord.ui.common.DownloadDestinationHost(actions, ::say)
 
     menuTrack?.let { t -> TrackMenu(t, onDismiss = { menuTrack = null }, onAddToPlaylist = { pickTracks = listOf(it) }, extra = {
         TextButton({ menuTrack = null; playerOpen = false; push(Dest.Studio(t)) }, Modifier.padding(horizontal = 16.dp)) {

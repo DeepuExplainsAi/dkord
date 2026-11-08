@@ -94,7 +94,7 @@
     <string name="video_none">इस ट्रैक के लिए कोई चलने योग्य वीडियो नहीं मिला। ऑडियो चलता रहेगा।</string>
     <string name="video_restricted">इस ट्रैक का वीडियो ब्लॉक या प्रतिबंधित है।</string>
     <string name="video_failed">वीडियो नहीं चल सका।</string>
-    <string name="download_started">डाउनलोड शुरू। फ़ाइल Music/Dkord में दिखेगी।</string>
+    <string name="download_started">डाउनलोड कतार में है। प्रगति Downloads में देखें।</string>
     <string name="app_update">ऐप अपडेट</string>
     <string name="app_version">वर्शन %s</string>
     <string name="update_checking">जाँच हो रही है…</string>
@@ -207,7 +207,7 @@
     <string name="extractor_bundled">ऐप में मौजूद: %s</string>
     <string name="extractor_current">आपके पास नवीनतम वर्शन है</string>
     <string name="extractor_versions">ऐप में %1$s, नवीनतम %2$s</string>
-    <string name="folder_hint">डाउनलोड किए गानों के लिए फ़ोल्डर चुनें, या ऐप का म्यूज़िक फ़ोल्डर इस्तेमाल करें।</string>
+    <string name="folder_hint">डिवाइस कॉपियाँ Music/Dkord या चुने हुए फ़ोल्डर में जाती हैं। निजी ऑफ़लाइन ऑडियो Dkord के अंदर रहता है।</string>
     <string name="import_failed">वह फ़ाइल पढ़ी नहीं जा सकी</string>
     <string name="import_playlists">प्लेलिस्ट इम्पोर्ट करें</string>
     <string name="imported_n">%d प्लेलिस्ट इम्पोर्ट हुईं</string>
@@ -268,7 +268,7 @@
     <string name="studio_delete">प्रोजेक्ट मिटाएँ?</string>
     <string name="studio_delete_hint">यह प्रोजेक्ट और इसकी आयात की गई प्रतियाँ मिटाएँ? सेव की गई ऑडियो डाउनलोड में रहेगी। मूल फ़ाइलें नहीं बदलेंगी।</string>
     <string name="studio_choose_project">%1$s जोड़ने के लिए प्रोजेक्ट चुनें या बनाएँ।</string>
-    <string name="studio_sources_hint">फ़ोन या Dkord डाउनलोड से उपलब्ध, DRM-मुक्त ऑडियो जोड़ें। ऑनलाइन गाने पहले डाउनलोड करें।</string>
+    <string name="studio_sources_hint">ऑनलाइन गाना, फ़ोन का ऑडियो या Dkord का पूरा डाउनलोड चुनें। ऑनलाइन ऑडियो इस प्रोजेक्ट के लिए निजी रूप से तैयार होगा।</string>
     <string name="studio_device_audio">फ़ोन का ऑडियो</string>
     <string name="studio_downloads">Dkord डाउनलोड</string>
     <string name="studio_no_downloads">कोई पूरा डाउनलोड नहीं है। पहले गाना डाउनलोड करें, फिर यहाँ लौटें।</string>
@@ -338,4 +338,20 @@
     <!-- Home song taps start related radio; whole-shelf playback is explicit. -->
     <string name="shelf_play_all">सभी चलाएँ</string>
     <string name="shelf_play_all_description">%1$s के सभी गाने चलाएँ</string>
+    <string name="download_destination">डाउनलोड के विकल्प</string>
+    <string name="download_in_dkord">Dkord में डाउनलोड करें</string>
+    <string name="download_in_dkord_hint">निजी ऑफ़लाइन ऑडियो। सार्वजनिक Music फ़ोल्डर में नहीं जुड़ेगा।</string>
+    <string name="download_to_device">डिवाइस पर डाउनलोड करें</string>
+    <string name="download_to_device_hint">Music/Dkord या अपने चुने हुए डिवाइस फ़ोल्डर में भी एक कॉपी सहेजें।</string>
+    <string name="download_existing_copies">डिवाइस की पुरानी कॉपियाँ नहीं हटेंगी। निजी ऑडियो भी डिवाइस की स्टोरेज लेता है।</string>
+    <string name="download_destination_failed">इस स्थान पर डाउनलोड नहीं हो सका। फ़ोल्डर की अनुमति जाँचकर दोबारा कोशिश करें।</string>
+    <string name="download_private_label">Dkord में</string>
+    <string name="download_device_label">Dkord में + डिवाइस कॉपी</string>
+    <string name="download_legacy_label">पुराना डाउनलोड</string>
+    <string name="studio_online_search">ऑनलाइन गाने खोजें</string>
+    <string name="studio_use_online">ऑनलाइन गाना इस्तेमाल करें</string>
+    <string name="studio_online_hint">पहले डाउनलोड किए बिना गाना चुनें। इस प्रोजेक्ट के लिए ऑडियो निजी रूप से तैयार होगा; Downloads या सार्वजनिक Music में नहीं जुड़ेगा।</string>
+    <string name="studio_preparing_online">ऑनलाइन ऑडियो तैयार हो रहा है…</string>
+    <string name="studio_search_empty">कोई गाना नहीं मिला। दूसरा नाम खोजें।</string>
+    <string name="studio_source_add">प्रोजेक्ट में जोड़ें</string>
 </resources>
