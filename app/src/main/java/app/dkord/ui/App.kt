@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -163,7 +164,8 @@ fun App() {
                     Dest.Liked -> LikedScreen(::pop, ::play) { menuTrack = it }
                     Dest.Recent -> RecentScreen(::pop, ::play) { menuTrack = it }
                     Dest.Settings -> SettingsScreen(::pop, { push(Dest.Logs) }, ::say)
-                    Dest.ListenTogether -> ListenTogetherScreen(onBack = ::pop, onOpenPlayer = { pop(); playerOpen = true }, onMessage = ::say)
+                    Dest.ListenTogether -> ListenTogetherScreen(onBack = ::pop, onOpenPlayer = { pop(); playerOpen = true }, onMessage = ::say,
+                        onChooseMusic = { stack = emptyList(); tab = Tab.LIBRARY })
                     Dest.Logs -> DebugLogScreen(::pop, ::say)
                     is Dest.Video -> VideoScreen(dest.id, dest.title, ::pop)
                     is Dest.Studio -> StudioScreen(dest.track, { list, index -> play(list, index); playerOpen = true }, { menuTrack = it }, ::say, ::pop)
@@ -225,7 +227,10 @@ private fun TabContent(
                             Text(stringResource(R.string.app_title), Modifier.padding(start = 10.dp))
                         }
                     },
-                    actions = { IconButton(openSettings) { Icon(Icons.Default.Settings, stringResource(R.string.settings)) } },
+                    actions = {
+                        IconButton({ push(Dest.ListenTogether) }) { Icon(Icons.Default.Groups, stringResource(R.string.listen_together)) }
+                        IconButton(openSettings) { Icon(Icons.Default.Settings, stringResource(R.string.settings)) }
+                    },
                 )
                 HomeUpdateNotice(visible = tab == Tab.HOME, onOpenSettings = openSettings)
             }
@@ -244,7 +249,7 @@ private fun TabContent(
                     Tab.HOME -> HomeScreen(onItem, onPlay, m, onRelated = onRelated)
                     Tab.SEARCH -> SearchScreen(onItem, onPlay, onMenu, m, onMessage = say, onRelated = onRelated)
                     Tab.LISTEN, Tab.REELS -> ListenAgainScreen(onPlay, onMenu, onOpenPlayer, onSearch, say, m)
-                    Tab.LIBRARY -> LibraryScreen({ push(Dest.Playlist(it)) }, { push(Dest.Liked) }, { push(Dest.Recent) }, onItem, say, m, onOpenStudio = { push(Dest.Studio()) })
+                    Tab.LIBRARY -> LibraryScreen({ push(Dest.Playlist(it)) }, { push(Dest.Liked) }, { push(Dest.Recent) }, onItem, say, m, onOpenStudio = { push(Dest.Studio()) }, onOpenTogether = { push(Dest.ListenTogether) })
                     Tab.DOWNLOADS -> DownloadsScreen(onPlay, onMenu, m)
                 }
             }

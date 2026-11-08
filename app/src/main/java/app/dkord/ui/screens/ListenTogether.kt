@@ -67,7 +67,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListenTogetherScreen(onBack: () -> Unit, onOpenPlayer: () -> Unit, onMessage: (String) -> Unit) {
+fun ListenTogetherScreen(onBack: () -> Unit, onOpenPlayer: () -> Unit, onMessage: (String) -> Unit, onChooseMusic: () -> Unit = onBack) {
     val rooms: RoomController = koinInject()
     val state by rooms.state.collectAsState()
     val context = LocalContext.current
@@ -80,6 +80,8 @@ fun ListenTogetherScreen(onBack: () -> Unit, onOpenPlayer: () -> Unit, onMessage
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(stringResource(R.string.room_anywhere_hint), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (state.role == null) {
                 RoomInstructions()
                 OutlinedTextField(name, { name = it.take(48) }, Modifier.fillMaxWidth(),
@@ -173,6 +175,7 @@ fun ListenTogetherScreen(onBack: () -> Unit, onOpenPlayer: () -> Unit, onMessage
                         }
                     }
                 }
+                OutlinedButton(onChooseMusic, Modifier.fillMaxWidth()) { Text(stringResource(R.string.room_choose_music)) }
                 RoomControlsPanel(state.access, isHost, rooms::controlMode, rooms::memberControl)
                 state.error?.let { error ->
                     val message = when (error) {

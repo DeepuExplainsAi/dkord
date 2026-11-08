@@ -5,6 +5,10 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'desktop/**'
+      - 'app/src/main/res/**/strings.xml'
+      - 'app/src/main/java/app/dkord/ui/theme/Theme.kt'
+      - 'app/src/main/java/app/dkord/ui/screens/Home.kt'
+      - 'app/src/main/java/app/dkord/ui/App.kt'
       - '.gitattributes'
       - 'LICENSE'
       - '.github/workflows/validate-desktop.yml'
@@ -89,6 +93,8 @@ jobs:
           else
             python -m pip install -r desktop/requirements-build.txt -c desktop/constraints.lock
           fi
+      - name: Refuse drift from phone-owned design and navigation
+        run: python desktop/scripts/export_phone_contract.py --check
       - name: Execute real codec, data, updater and native Qt widget tests
         run: python desktop/packaging/ci_run.py tests python -m pytest desktop/tests -v --junitxml=desktop/.artifacts/test-results.xml
       - name: Check all required native tests actually ran without skips
@@ -100,9 +106,10 @@ jobs:
           import xml.etree.ElementTree as ET
           root = ET.parse('desktop/.artifacts/test-results.xml').getroot()
           cases = root.findall('.//testcase')
-          for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest'):
+          for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest', 'RoomProtocolTest', 'LyricsTest', 'PhoneContractTest'):
               assert any(cls in c.attrib.get('classname', '') for c in cases), f'Missing {cls}'
           assert len(cases) >= 36, f'Only {len(cases)} desktop cases'
+          assert len(cases) >= 60, f'New phone/desktop parity regressions missing: {len(cases)} cases'
           for case in cases:
               for marker in ('failure','error','skipped'):
                   error=case.find(marker)
