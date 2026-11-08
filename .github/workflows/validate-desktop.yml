@@ -137,9 +137,24 @@ jobs:
         env:
           QT_QPA_PLATFORM: windows
         run: python desktop/packaging/ci_run.py screenshot desktop/.artifacts/bundle/Dkord/Dkord.exe --capture-ui desktop/.artifacts/screenshots
-      - name: Publish verifiable screenshot proof for the requested Windows preview
+      - name: Expose real screenshot transport batch 1 of6 (eight notices, under GitHub step cap)
         if: matrix.target == 'windows-x86'
-        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots --source "${{ env.DKORD_SOURCE_SHA }}" --batch 0
+      - name: Expose real screenshot transport batch 2 of6 (eight notices, under GitHub step cap)
+        if: matrix.target == 'windows-x86'
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots --source "${{ env.DKORD_SOURCE_SHA }}" --batch 1
+      - name: Expose real screenshot transport batch 3 of6 (eight notices, under GitHub step cap)
+        if: matrix.target == 'windows-x86'
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots --source "${{ env.DKORD_SOURCE_SHA }}" --batch 2
+      - name: Expose real screenshot transport batch 4 of6 (eight notices, under GitHub step cap)
+        if: matrix.target == 'windows-x86'
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots --source "${{ env.DKORD_SOURCE_SHA }}" --batch 3
+      - name: Expose real screenshot transport batch 5 of6 (eight notices, under GitHub step cap)
+        if: matrix.target == 'windows-x86'
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots --source "${{ env.DKORD_SOURCE_SHA }}" --batch 4
+      - name: Expose real screenshot transport batch 6 of6 (eight notices, under GitHub step cap)
+        if: matrix.target == 'windows-x86'
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots --source "${{ env.DKORD_SOURCE_SHA }}" --batch 5
       - name: Upload actual Windows app screenshots
         if: matrix.target == 'windows-x86' && always()
         uses: actions/upload-artifact@v7

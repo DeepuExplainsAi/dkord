@@ -43,6 +43,13 @@ class DesktopScreenshotProofTest(unittest.TestCase):
             message=line.split('::',2)[2];self.assertLessEqual(len(message),3800)
             if 'windows-x86-player.png part ' in line:parts.append(message)
         self.assertGreater(len(parts),1);self.assertEqual(data,base64.b64decode(''.join(parts),validate=True))
+        expected=out.getvalue().splitlines();actual=[]
+        for batch in range(6):
+            with contextlib.redirect_stdout(io.StringIO()) as emitted:proof_module.main(self.root,self.source,True,batch)
+            lines=emitted.getvalue().splitlines();self.assertLessEqual(len(lines),8);actual+=lines
+        self.assertEqual(expected,actual)
+        workflow=(ROOT/'.github/workflows/validate-desktop.yml').read_text()
+        for batch in range(6):self.assertIn('--batch '+str(batch),workflow)
 
     def test_wrong_source_version_os_process_binding_and_unfrozen_app_are_rejected(self):
         for key,value in (('source','0'*40),('version','9.0.0'),('os','Linux'),('python_bits',64),('platform','windows-x64'),('qt_binding','PyQt6'),('qt_version','6.10.2'),('frozen',False)):
