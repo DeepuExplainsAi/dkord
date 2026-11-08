@@ -10,13 +10,13 @@ from validate_release_request import BRANCH, CODE, REPOSITORY, REQUEST, ROOT, TA
 
 class ReleaseRequestTest(unittest.TestCase):
     def setUp(self):
-        self.before = '174750b1cfcf7aa578d2190d0838d276d80b0cb2'
+        self.before = '2dd195ac3477b2692070f5174bf256c87325d79e'
         self.after = hashlib.sha1(b'new release-request commit fixture').hexdigest()
         self.request = {'tag': TAG, 'versionCode': CODE, 'branch': BRANCH, 'validatedHead': self.before}
         self.event = {'ref': f'refs/heads/{BRANCH}', 'before': self.before, 'after': self.after,
                       'repository': {'full_name': REPOSITORY}, 'forced': False, 'deleted': False}
         self.context = dict(event_name='push', ref=self.event['ref'], repository=REPOSITORY,
-                            sha=self.after, tag=TAG, version_name='0.8.2', version_code=CODE)
+                            sha=self.after, tag=TAG, version_name='0.9.0', version_code=CODE)
 
     def check(self, request=None, event=None, **context):
         return validate(self.request if request is None else request, self.event if event is None else event,
@@ -46,7 +46,7 @@ class ReleaseRequestTest(unittest.TestCase):
             self.check(event=event)
 
     def test_only_the_authorized_tag_and_application_version_are_accepted(self):
-        for context in ({'tag': 'v0.8.1'}, {'tag': 'v0.8.3'}, {'version_name': '0.8.3'}, {'version_code': 10}):
+        for context in ({'tag': 'v0.8.1'}, {'tag': 'v0.8.2'}, {'tag': 'v0.9.1'}, {'version_name': '0.8.2'}, {'version_name': '0.9.1'}, {'version_code': 11}):
             with self.subTest(context=context), self.assertRaises(ValueError):
                 self.check(**context)
         request = self.request | {'tag': 'v0.8.3'}
@@ -54,9 +54,14 @@ class ReleaseRequestTest(unittest.TestCase):
             self.check(request=request)
 
     def test_request_code_must_be_the_authorized_integer_not_a_string_or_boolean(self):
-        for code in (10, 12, '11', True):
+        for code in (CODE - 1, CODE + 1, str(CODE), True):
             with self.subTest(code=code), self.assertRaises(ValueError):
                 self.check(request=self.request | {'versionCode': code})
+
+    def test_consumed_v082_request_cannot_be_replayed_as_a_new_release(self):
+        historical = json.loads((ROOT / '.github/release-requests/v0.8.2.json').read_text(encoding='utf-8'))
+        with self.assertRaises(ValueError):
+            self.check(request=historical, tag='v0.8.2', version_name='0.8.2', version_code=11)
 
     def test_force_push_or_deletion_cannot_trigger_publication(self):
         for flag in ('forced', 'deleted'):

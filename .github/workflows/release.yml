@@ -4,20 +4,20 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag matching app versionName (for example v0.8.2)'
+        description: 'Release tag matching app versionName (for example v0.9.0)'
         required: true
         type: string
 
   # One explicit owner-authorized release request, never ordinary PR/code pushes.
   push:
     branches: [arena/59a2f745-dkord]
-    paths: [.github/release-requests/v0.8.2.json]
+    paths: [.github/release-requests/v0.9.0.json]
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ inputs.tag || 'v0.8.2' }}
+  group: release-${{ inputs.tag || 'v0.9.0' }}
   cancel-in-progress: false
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      TAG: ${{ inputs.tag || 'v0.8.2' }}
+      TAG: ${{ inputs.tag || 'v0.9.0' }}
     steps:
       - uses: actions/checkout@v7
       - name: Validate the explicit trusted-branch release request
@@ -114,17 +114,18 @@ jobs:
         run: |
           printf 'Dkord %s\n\n' "$TAG" > "$RUNNER_TEMP/release-notes.md"
           cat >> "$RUNNER_TEMP/release-notes.md" <<'NOTES'
-          - Emergency search/player hotfix based on the published v0.8.1 source; Songs stays the default and first scope, like the earlier music-first releases. All YouTube / Videos remain explicit options for other uploads.
-          - Tapping a search result plays that exact upload first, not every matching original/slowed/cover/hour-mix result. Explicit album, playlist and Home-shelf queues are preserved.
-          - Autoplay requests genuinely different related music for the current queue. Same-song versions, already queued tracks, explicit hour-loop/every-version compilations and out-of-range automatic recommendations are excluded without filtering manual search results.
-          - Old radio responses cannot append after a new selection, queue edit, disconnect, pause, repeat change or Autoplay-off. Prefetch does not interrupt the selected song; paused/sleep-stopped playback is not deliberately restarted by a late result.
-          - Music-radio-first recommendation order is preserved, with music-only search and creator fallback when results are only more versions of the seed; cancellation does not start extra fallback requests.
-          - Search has a separate 48dp submit button and compact single-line English/Hindi placeholder, avoiding editable-text/caret overlap. Full-player secondary buttons wrap as whole controls instead of stacking Add to playlist letter-by-letter.
-          - Persistent recents/pins, explicit creator-cover/instrumental/long-mix selection, downloads, local playlists, rooms, existing player controls and original signing/update safety gates retained.
+          ## New in v0.9.0
+          - Search keyboard/insets repair: one app-shell IME owner, consumed nested padding and keyboard-aware bottom controls avoid duplicate reserved space. Submit, keyboard Search, clear, history, suggestions and explicit search scopes are preserved.
+          - Genuine Shorts: native provider videos in a vertical feed, paged creator Shorts discovery, one active clip player and lifecycle/headset cleanup. Find full song opens an editable Songs lookup; choose the matching song explicitly. Original-song attribution is not verified and a guessed first result is never silently played.
+          - Real Mashup Studio: open from Library or a song menu, import readable non-DRM phone audio or completed Dkord downloads, choose arbitrary valid millisecond start/end or duration ranges, reuse sources, reorder/remove clips and preview.
+          - Merge produces one actual playable AAC/M4A file on-device, not a queue or playlist. Persistent projects, frozen export inputs, foreground progress/cancel and incomplete-output cleanup are included. Saved audio supports playback, playlists, file sharing and Save a copy.
+          - English/Hindi UI and a keyboard-safe editor footer with owner language/accessibility font inheritance. Private project inputs are not exposed by audio sharing; generated local tracks do not fall through to remote stream/radio/lyrics/video or room lookup.
+          - Existing selected-song-first playback, guarded diverse radio, downloads, recents/pins, rooms, settings, visible Choliwood naming and original signing/update safety are retained. No global colour/theme replacement.
 
-          Upstream availability/account/region/format restrictions are not bypassed. Anonymous ordering is not promised to match an account-personalized official app. This release does not include a mashup editor or new Shorts/reel feed.
+          ## Validation and limits
+          The application source passed 300 JVM tests and all 9 real Android device regressions, including actual mixed-format AAC decode/range/order, cancellation, persistence, foreground saved-output registration and English/Hindi real-keyboard editor layout. These tests do not establish full Search-screen/physical-phone/OEM/live-provider acceptance. Provider/account/region/format restrictions and device codec/storage limits still apply; original-song links are not guaranteed. Only accessible non-DRM audio is supported. External document-provider failure can leave a partial user-selected Save-copy document; arbitrary user documents are never deleted automatically.
 
-          Install the APK over your existing Dkord app to keep playlists, likes, downloads and settings (same package and signing key).
+          Install **Dkord-v0.9.0.apk** over your existing Dkord app, without uninstalling, to retain playlists, likes, downloads and settings. Same app.dkord package and original signing key; versionCode12 increases from v0.8.2/code11. The release pipeline checks actual old/new APK package/signatures/version compatibility before publication. PR #7 is not merged by this release.
           NOTES
           gh release create "$TAG" "$RELEASE_APK" --latest --target "$GITHUB_SHA" \
             --title "Dkord ${TAG}" --notes-file "$RUNNER_TEMP/release-notes.md"

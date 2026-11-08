@@ -1,4 +1,4 @@
-"""Validate the owner's narrowly scoped v0.8.2 trusted-push release request.
+"""Validate the owner's narrowly scoped v0.9.0 trusted-push release request.
 
 This does not sign or publish. The existing release workflow still runs its full tests,
 original-key signing and actual old/new APK compatibility gates afterwards.
@@ -10,11 +10,11 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-REQUEST = Path('.github/release-requests/v0.8.2.json')
+REQUEST = Path('.github/release-requests/v0.9.0.json')
 BRANCH = 'arena/59a2f745-dkord'
 REPOSITORY = 'DeepuExplainsAi/dkord'
-TAG = 'v0.8.2'
-CODE = 11
+TAG = 'v0.9.0'
+CODE = 12
 SHA = re.compile(r'[0-9a-f]{40}')
 
 
@@ -38,9 +38,9 @@ def validate(request, event, *, event_name, ref, repository, sha, tag, version_n
     if event.get('deleted') is not False or event.get('forced') is not False:
         raise ValueError('Deleted or force-pushed refs cannot request this release.')
     if request['branch'] != BRANCH or request['tag'] != TAG or tag != TAG or version_name != TAG[1:]:
-        raise ValueError('This trusted-push route is authorized for v0.8.2 on the assigned branch only.')
+        raise ValueError('This trusted-push route is authorized for v0.9.0 on the assigned branch only.')
     if type(request['versionCode']) is not int or request['versionCode'] != CODE or version_code != CODE:
-        raise ValueError('Release request must match the authorized increasing app versionCode11.')
+        raise ValueError('Release request must match the authorized increasing app versionCode12.')
     previous = request['validatedHead']
     if not isinstance(previous, str) or not SHA.fullmatch(previous) or int(previous, 16) == 0:
         raise ValueError('Request must identify a real previously validated source commit.')

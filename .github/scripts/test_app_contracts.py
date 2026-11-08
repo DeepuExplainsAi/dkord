@@ -288,8 +288,9 @@ class AppContractsTest(unittest.TestCase):
     def test_release_push_is_only_the_explicit_versioned_request_and_keeps_original_gates(self):
         workflow = read(".github/workflows/release.yml")
         self.assertIn("branches: [arena/59a2f745-dkord]", workflow)
-        self.assertIn("paths: [.github/release-requests/v0.8.2.json]", workflow)
-        self.assertIn("TAG: ${{ inputs.tag || 'v0.8.2' }}", workflow)
+        self.assertIn("paths: [.github/release-requests/v0.9.0.json]", workflow)
+        self.assertNotIn("paths: [.github/release-requests/v0.8.2.json]", workflow)
+        self.assertIn("TAG: ${{ inputs.tag || 'v0.9.0' }}", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("if: github.event_name == 'push'", workflow)
         self.assertLess(workflow.index("validate_release_request.py"),
