@@ -5,6 +5,7 @@ import app.dkord.data.room.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*
+import kotlinx.coroutines.flow.*
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.IOException
@@ -126,7 +127,7 @@ class RoomSharingTest {
     @Test fun creator_offline_lease_blocks_new_intent_and_local_studio_audio_never_leaves_device() = runTest {
         val r = room(1); runCurrent(); val guest = r.guests.single()
         r.host.setMode(RoomControlMode.EVERYONE); runCurrent()
-        guest.request(stateOf(Track("studio:private", "Private mix", "Me"), true)); runCurrent()
+        guest.request(stateOf(Track("local-studio-private", "Private mix", "Me"), true)); runCurrent()
         assertEquals(RoomSharingError.LOCAL_AUDIO, guest.state.value.error); assertTrue(r.accepted.isEmpty())
         r.host.stop(); advanceTimeBy(180_001); runCurrent()
         guest.request(stateOf(roomNext, true)); runCurrent()
@@ -144,4 +145,43 @@ class RoomSharingTest {
         assertTrue(legacy.acceptState(song)) // Compatibility before any verified creator is available.
         assertFalse(legacy.state.value.canControl)
     }
+    @Test fun reconnect_refreshes_presence_and_permissions_without_waiting_for_ninety_second_heartbeat() = runTest {
+        val r = room(0); runCurrent(); r.host.setMode(RoomControlMode.EVERYONE); runCurrent()
+        var streams = 0
+        val flaky = object : RoomControlTransport by r.relay {
+            override fun subscribeControls(code: String, after: String?) = flow {
+                if (++streams == 1) throw IOException("disconnected")
+                emitAll(r.relay.subscribeControls(code, after))
+            }
+        }
+        val guest = RoomSharing(flaky, backgroundScope, false, r.host.code, now = { clock + testScheduler.currentTime }, onControl = {})
+        guest.start(); runCurrent(); advanceTimeBy(5000); runCurrent()
+        assertEquals(2, streams)
+        assertTrue(guest.state.value.canControl)
+        assertEquals(2, r.relay.frames.count { it.kind == RoomControlKind.HELLO && RoomSignatures.memberId(it.publicKey) == guest.state.value.selfId })
+    }
+
+    @Test fun inflight_presence_refresh_cannot_consume_a_pending_manual_intent_it_did_not_publish() = runTest {
+        val r = room(0); runCurrent(); r.host.setMode(RoomControlMode.EVERYONE); runCurrent()
+        val bootstrap = r.relay.frames.last { it.kind == RoomControlKind.POLICY }
+        val disconnect = CompletableDeferred<Unit>(); var streams = 0
+        val flaky = object : RoomControlTransport by r.relay {
+            override fun subscribeControls(code: String, after: String?) = flow {
+                if (++streams == 1) {
+                    emit(RoomControlEvent(bootstrap)); disconnect.await(); throw IOException("closed")
+                }
+                emitAll(r.relay.subscribeControls(code, after))
+            }
+        }
+        val guest = RoomSharing(flaky, backgroundScope, false, r.host.code, now = { clock + testScheduler.currentTime }, onControl = {})
+        guest.start(); runCurrent(); assertTrue(guest.state.value.canControl)
+        val held = CompletableDeferred<Unit>(); var blocked = false
+        r.relay.beforeControl = { if (it.kind == RoomControlKind.HELLO) { blocked = true; held.await() } }
+        advanceTimeBy(90_000)
+        guest.request(stateOf(roomNext, true)); runCurrent(); assertTrue(blocked)
+        disconnect.complete(Unit); runCurrent(); advanceTimeBy(5000); runCurrent()
+        held.complete(Unit); runCurrent()
+        assertEquals(roomNext.id, r.accepted.single().videoId)
+    }
+
 }

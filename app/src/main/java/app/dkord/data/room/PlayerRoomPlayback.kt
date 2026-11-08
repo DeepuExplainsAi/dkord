@@ -9,12 +9,15 @@ import kotlin.math.abs
 
 /** Remote applications use existing player commands silently; only deliberate app controls are proposed. */
 class PlayerRoomPlayback(private val player: PlayerController) : RoomPlayback {
+    private var generation = 0L
+    override fun cancelSync() { generation++ }
     override val controls = player.commands.map(::snapshot)
     override val states = player.state.map(::snapshot)
     override fun current() = snapshot(player.state.value)
 
     override suspend fun sync(message: RoomMessage, positionMs: Long) = withContext(Dispatchers.Main.immediate) {
-        player.withoutRoomCommands {
+        val request = ++generation
+        player.withoutRoomCommands(isCurrent = { generation == request }) {
             val tracks = listOf(RoomTrack(message.videoId, message.title, message.artist, message.thumbnail).toTrack()) +
                 message.queue.map { it.toTrack() }
             val state = player.state.value

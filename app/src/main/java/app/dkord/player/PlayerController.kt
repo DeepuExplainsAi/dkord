@@ -61,7 +61,7 @@ class PlayerController(
     private val commandEvents = MutableSharedFlow<PlayerUiState>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     /** Explicit in-app commands only: buffering, focus, progress and remote sync are not co-host intent. */
     val commands: kotlinx.coroutines.flow.SharedFlow<PlayerUiState> = commandEvents
-    fun withoutRoomCommands(block: () -> Unit) = commandGate.remotely(block)
+    fun withoutRoomCommands(isCurrent: () -> Boolean = { true }, block: () -> Unit) = commandGate.remotely(isCurrent, block)
     val sleep: StateFlow<SleepState> get() = sleepTimer.state
 
     private var controller: MediaController? = null
@@ -105,11 +105,12 @@ class PlayerController(
         }, MoreExecutors.directExecutor())
     }
 
-    private inline fun withController(crossinline block: (MediaController) -> Unit) {
-        val report = commandGate.report
-        val execute: (MediaController) -> Unit = { value ->
+    private inline fun withController(reportRoom: Boolean = true, crossinline block: (MediaController) -> Unit) {
+        val ticket = commandGate.capture()
+        val execute: (MediaController) -> Unit = execute@ { value ->
+            if (!ticket.isCurrent()) return@execute
             block(value)
-            if (report && commandEvents.subscriptionCount.value > 0) {
+            if (reportRoom && ticket.report && commandEvents.subscriptionCount.value > 0) {
                 // playWhenReady is the user's intent even while media is still buffering.
                 commandEvents.tryEmit(snapshot(value).copy(isPlaying = value.playWhenReady))
             }
@@ -182,9 +183,9 @@ class PlayerController(
     /** Like every music app: restart the track if it is past 3s, otherwise go to the previous one. */
     fun previous() = withController { if (it.currentPosition > 3_000 || !it.hasPreviousMediaItem()) it.seekTo(0) else it.seekToPreviousMediaItem() }
     fun seekTo(ms: Long) = withController { it.seekTo(ms) }
-    fun setShuffle(on: Boolean) = withController { it.shuffleModeEnabled = on }
-    fun toggleShuffle() = withController { it.shuffleModeEnabled = !it.shuffleModeEnabled }
-    fun cycleRepeat() = withController {
+    fun setShuffle(on: Boolean) = withController(reportRoom = false) { it.shuffleModeEnabled = on }
+    fun toggleShuffle() = withController(reportRoom = false) { it.shuffleModeEnabled = !it.shuffleModeEnabled }
+    fun cycleRepeat() = withController(reportRoom = false) {
         autoplay.invalidate()
         it.repeatMode = when (it.repeatMode) {
             Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
@@ -192,7 +193,7 @@ class PlayerController(
             else -> Player.REPEAT_MODE_OFF
         }
     }
-    fun setSpeed(speed: Float) = withController { it.setPlaybackSpeed(speed.coerceIn(0.25f, 3f)) }
+    fun setSpeed(speed: Float) = withController(reportRoom = false) { it.setPlaybackSpeed(speed.coerceIn(0.25f, 3f)) }
     fun stop() = withController { autoplay.invalidate(); radioSeed = null; radioHint = ""; it.stop(); it.clearMediaItems() }
 
     // Sleep timer runs in the app process on the main thread, next to the service's player.

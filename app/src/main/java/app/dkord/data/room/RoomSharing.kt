@@ -54,6 +54,7 @@ internal class RoomSharing(
     private data class Pending(val snapshot: RoomMessage, val revision: Long)
     private var pending: Pending? = null
     private var hello = !owner
+    private var helloVersion = 0L
     private var policy = owner
     private var job: Job? = null
     private var generation = 0L
@@ -63,7 +64,7 @@ internal class RoomSharing(
     fun start() {
         stop()
         val epoch = generation
-        wake = Channel(Channel.CONFLATED); hello = !owner; policy = owner
+        wake = Channel(Channel.CONFLATED); hello = !owner; helloVersion++; policy = owner
         job = scope.launch {
             coroutineScope {
                 launch { sendLoop(epoch) }
@@ -71,7 +72,7 @@ internal class RoomSharing(
                 launch {
                     while (isActive && active(epoch)) {
                         delay(90_000)
-                        if (owner) { prune(); policy = true } else hello = true
+                        if (owner) { prune(); policy = true } else { hello = true; helloVersion++ }
                         refresh(); wake.trySend(Unit)
                     }
                 }
@@ -110,6 +111,7 @@ internal class RoomSharing(
     fun request(value: RoomPlaybackState) {
         refresh()
         if (owner || !state.value.canControl) return
+        if (value.current == null) { pending = null; return }
         val message = roomMessage(value, now())
         if (message == null) {
             pending = null; mutable.update { it.copy(error = RoomSharingError.LOCAL_AUDIO) }; return
@@ -177,6 +179,10 @@ internal class RoomSharing(
                 currentCoroutineContext().ensureActive()
                 if (active(epoch)) connectionError(error)
                 delay(retryDelay(error))
+                if (active(epoch)) {
+                    if (owner) policy = true else { hello = true; helloVersion++ }
+                    wake.trySend(Unit) // Refresh presence/policy immediately on reconnect, not 90s later.
+                }
             }
         }
     }
@@ -184,6 +190,7 @@ internal class RoomSharing(
         for (ignored in wake) {
             while (active(epoch) && currentCoroutineContext().isActive) {
                 val sendHello = hello
+                val presenceVersion = helloVersion
                 val sendPolicy = owner && policy
                 val control = pending?.takeIf { !owner && it.revision == revision && leaseValid() && allowed(identity.id) && now() - it.snapshot.timestamp <= 10_000 }
                 if (!sendHello && !sendPolicy && control == null) { pending = null; break }
@@ -197,9 +204,11 @@ internal class RoomSharing(
                     transport.publishControl(code, identity.sign(unsigned))
                     currentCoroutineContext().ensureActive()
                     if (!active(epoch)) return
-                    if (sendHello) hello = false
-                    else if (sendPolicy && unsigned.revision == revision) policy = false
-                    else if (pending === control) pending = null
+                    when {
+                        sendHello -> if (presenceVersion == helloVersion) hello = false
+                        sendPolicy -> if (unsigned.revision == revision) policy = false
+                        else -> if (pending === control) pending = null
+                    }
                     mutable.update { it.copy(connected = true, error = null) }; refresh()
                 } catch (error: CancellationException) { throw error }
                 catch (error: Exception) {

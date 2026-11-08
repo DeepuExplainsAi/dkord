@@ -122,7 +122,7 @@ class RoomControlMessageTest {
     @Test fun a_control_frame_cannot_nest_authority_local_audio_or_mismatched_timestamp() {
         val host = RoomIdentity.generate(); val base = RoomControlMessage(host.roomCode, RoomControlKind.CONTROL,
             host.publicKey, clock, 1, host.session, revision = 1, snapshot = song())
-        for (snapshot in listOf(host.signState(song()), song().copy(videoId = "studio:private"), song().copy(timestamp = clock - 1))) {
+        for (snapshot in listOf(host.signState(song()), song().copy(videoId = "local-studio-private"), song().copy(timestamp = clock - 1))) {
             assertFalse(RoomControlCodec.verify(host.sign(base.copy(snapshot = snapshot)), host.roomCode))
         }
     }

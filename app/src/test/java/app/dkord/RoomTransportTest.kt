@@ -2,6 +2,7 @@ package app.dkord
 
 import app.dkord.data.room.*
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -91,6 +92,18 @@ class RoomTransportTest {
             NtfyRoomTransport(client(429, "Busy") {}).publishControl(id.roomCode, frame)
             fail("Expected rate limit")
         } catch (e: RoomTransportException) { assertTrue(e.rateLimited) }
+    }
+
+    @Test fun finite_stream_delivers_last_playback_and_control_message_before_completing() = runBlocking {
+        val id = RoomIdentity.generate(); val frame = id.sign(RoomControlMessage(id.roomCode, RoomControlKind.HELLO,
+            id.publicKey, msg.timestamp, 1))
+        val controlLine = buildJsonObject {
+            put("event", "message"); put("message", RoomControlCodec.encode(frame))
+        }.toString() + "\n"
+        val playback = NtfyRoomTransport(client(body = line("last")) {}).subscribe("ABCDEFGHJK").toList()
+        val controls = NtfyRoomTransport(client(body = controlLine) {}).subscribeControls(id.roomCode).toList()
+        assertEquals(listOf(msg), playback.map { it.message })
+        assertEquals(listOf(frame), controls.map { it.message })
     }
 
 }

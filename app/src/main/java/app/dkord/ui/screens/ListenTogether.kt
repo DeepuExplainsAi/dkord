@@ -154,7 +154,6 @@ fun ListenTogetherScreen(onBack: () -> Unit, onOpenPlayer: () -> Unit, onMessage
                         }
                     }
                 }
-                RoomControlsPanel(state.access, isHost, rooms::controlMode, rooms::memberControl)
                 if (isHost) {
                     Text(stringResource(R.string.room_host_controls), style = MaterialTheme.typography.bodyMedium)
                     Button(onOpenPlayer, Modifier.fillMaxWidth()) { Text(stringResource(R.string.room_open_player)) }
@@ -174,6 +173,7 @@ fun ListenTogetherScreen(onBack: () -> Unit, onOpenPlayer: () -> Unit, onMessage
                         }
                     }
                 }
+                RoomControlsPanel(state.access, isHost, rooms::controlMode, rooms::memberControl)
                 state.error?.let { error ->
                     val message = when (error) {
                         RoomError.INVALID_CODE -> R.string.room_invalid_code

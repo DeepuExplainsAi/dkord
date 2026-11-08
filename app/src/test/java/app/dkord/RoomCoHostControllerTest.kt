@@ -3,6 +3,7 @@ package app.dkord
 import app.dkord.data.room.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -103,4 +104,37 @@ class RoomCoHostControllerTest {
         friend.playback.manual(stateOf(roomNext, true)); runCurrent()
         assertEquals(1, relay.main.size); assertTrue(relay.frames.none { it.kind == RoomControlKind.CONTROL })
     }
+    private class DeferredPlayback : RoomPlayback {
+        override val states = MutableStateFlow(stateOf(roomNext, true))
+        private var generation = 0
+        private val queued = mutableListOf<() -> Unit>()
+        var applied = 0
+        override fun current() = states.value
+        override fun cancelSync() { generation++ }
+        override suspend fun sync(message: RoomMessage, positionMs: Long) {
+            val request = ++generation
+            queued += { if (request == generation) applied++ }
+        }
+        fun connect() { queued.toList().also { queued.clear() }.forEach { it() } }
+    }
+    @Test fun leave_new_room_and_follow_off_invalidate_queued_remote_audio_without_stopping_local_playback() = runTest {
+        val relay = ControlRelay(); val host = client(relay, stateOf()); host.controller.create(); runCurrent()
+        val playback = DeferredPlayback(); val guest = RoomController(relay, playback, backgroundScope) { clock }
+        val code = checkNotNull(host.controller.state.value.code)
+        guest.join(code); runCurrent(); guest.followAutomatically(true); runCurrent()
+        guest.followAutomatically(false); playback.connect(); assertEquals(0, playback.applied)
+        guest.syncNow(); runCurrent(); guest.leave(); playback.connect(); assertEquals(0, playback.applied)
+        guest.join(code); runCurrent(); guest.syncNow(); runCurrent()
+        guest.join("ABCDEFGHJK"); runCurrent(); playback.connect(); assertEquals(0, playback.applied)
+        assertEquals(roomNext.id, playback.current().current?.id); assertTrue(playback.current().playing)
+    }
+    @Test fun same_room_retry_keeps_the_already_consented_deferred_sync() = runTest {
+        val relay = ControlRelay(); val host = client(relay, stateOf()); host.controller.create(); runCurrent()
+        val playback = DeferredPlayback(); val guest = RoomController(relay, playback, backgroundScope) { clock }
+        guest.join(checkNotNull(host.controller.state.value.code)); runCurrent()
+        guest.followAutomatically(true); runCurrent(); guest.retry(); runCurrent()
+        playback.connect(); assertEquals(1, playback.applied)
+        assertTrue(guest.state.value.followAutomatically)
+    }
+
 }

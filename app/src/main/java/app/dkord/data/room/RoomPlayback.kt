@@ -17,6 +17,8 @@ data class RoomPlaybackState(
 interface RoomPlayback {
     val controls: Flow<RoomPlaybackState> get() = kotlinx.coroutines.flow.emptyFlow()
     val states: Flow<RoomPlaybackState>
+    /** Invalidate deferred remote player callbacks, without stopping ordinary local playback. */
+    fun cancelSync() = Unit
     fun current(): RoomPlaybackState
     suspend fun sync(message: RoomMessage, positionMs: Long)
 }

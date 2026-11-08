@@ -62,7 +62,8 @@ class NtfyRoomTransport(
                 currentCoroutineContext().ensureActive()
                 RoomCodec.decodeRelayLine(source.readUtf8LineStrict(16_384))?.let { emit(it) }
             }
-            throw RoomTransportException(false, "Room relay stream disconnected")
+            // Complete normally on EOF so flowOn cannot cancel the final in-flight frame.
+            // RoomController owns reconnect/backoff after collection finishes.
         }
     }.flowOn(Dispatchers.IO).buffer(0)
 
@@ -81,7 +82,7 @@ class NtfyRoomTransport(
                 currentCoroutineContext().ensureActive()
                 RoomControlCodec.decodeRelayLine(source.readUtf8LineStrict(16_384))?.let { emit(it) }
             }
-            throw RoomTransportException(false, "Room controls relay stream disconnected")
+            // RoomSharing reconnects after normal completion, after the last frame is delivered.
         }
     }.flowOn(Dispatchers.IO).buffer(0)
 

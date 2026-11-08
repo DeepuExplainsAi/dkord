@@ -93,7 +93,10 @@ class RoomController(
         } }
         commandsJob = scope.launch { playback.controls.collect { snapshot ->
             if (sharing === value) {
-                if (state.value.role == RoomRole.HOST) { sharedOverride = null; hostChanges?.trySend(Unit) }
+                if (state.value.role == RoomRole.HOST) {
+                    syncRequest++; syncJob?.cancel(); syncJob = null; playback.cancelSync()
+                    sharedOverride = null; hostChanges?.trySend(Unit)
+                }
                 else value.request(snapshot)
             }
         } }
@@ -102,7 +105,7 @@ class RoomController(
 
     private fun acceptControl(message: RoomMessage) {
         val id = session; val request = ++syncRequest
-        syncJob?.cancel(); pendingSeek = null
+        syncJob?.cancel(); playback.cancelSync(); pendingSeek = null
         val desired = message.copy(positionMs = synchronizedPosition(message, now()), timestamp = now(), authority = null)
         sharedOverride = desired
         hostChanges?.trySend(Unit)
@@ -140,7 +143,7 @@ class RoomController(
 
     private fun resetSession(retainSharing: Boolean) {
         sharing?.stop(); sharingStateJob?.cancel(); sharingStateJob = null; commandsJob?.cancel(); commandsJob = null
-        if (!retainSharing) sharing = null
+        if (!retainSharing) { sharing = null; playback.cancelSync() }
         sharedOverride = null
         session++; syncRequest++
         roomJob?.cancel(); roomJob = null
@@ -169,7 +172,7 @@ class RoomController(
         if (state.value.role != RoomRole.GUEST) return
         mutableState.update { it.copy(followAutomatically = follow) }
         if (follow) syncNow() else {
-            syncRequest++; syncJob?.cancel(); syncJob = null
+            syncRequest++; syncJob?.cancel(); syncJob = null; playback.cancelSync()
             mutableState.update { it.copy(syncing = false) }
         }
     }
@@ -180,7 +183,7 @@ class RoomController(
         val message = value.host ?: return
         val id = session
         val request = ++syncRequest
-        syncJob?.cancel()
+        syncJob?.cancel(); playback.cancelSync()
         mutableState.update { it.copy(syncing = true, error = it.error.takeUnless { error -> error == RoomError.PLAYBACK }) }
         syncJob = scope.launch {
             try {
@@ -259,7 +262,9 @@ class RoomController(
                             val expectedQueue = listOf(RoomTrack(desired.videoId, desired.title, desired.artist, desired.thumbnail).toTrack()) + desired.queue.map { it.toTrack() }
                             if (value.playing == desired.playing && roomQueueMatches(value, expectedQueue) &&
                                 abs(value.positionMs - synchronizedPosition(desired, time)) <= 1_500) sharedOverride = null
-                            else { previous = value; observedAt = time; return@collect }
+                            // The goal is already canonical (or pending publication). Local buffering/ack
+                            // is not another user command and must not broadcast it a second time.
+                            previous = value; observedAt = time; return@collect
                         }
                         val old = previous
                         val expected = old?.let { it.positionMs + if (it.playing) (time - observedAt).coerceAtLeast(0) else 0 }
