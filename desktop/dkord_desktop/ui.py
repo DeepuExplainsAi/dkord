@@ -509,25 +509,31 @@ class MainWindow(QMainWindow):
         except Exception as error:self.notify(str(error))
 
     def build_player(self, layout):
-        frame=QFrame();frame.setObjectName("player"); body=QVBoxLayout(frame);body.setContentsMargins(22,12,22,14)
-        top=QHBoxLayout(); self.now=label("Nothing playing");self.now.setMaximumWidth(300);self.now.setMinimumWidth(150)
-        self.now_artist=label("Choose a song to start", "muted")
+        frame=QFrame();frame.setObjectName("player");body=QVBoxLayout(frame);body.setContentsMargins(22,12,22,14)
+        # Keep metadata/transport, seeking and secondary controls on separate rows.
+        # A 1024px desktop with the queue dock must not squeeze words into vertical
+        # letters or clip repeat/speed controls; the same controls still work at1360+.
+        top=QHBoxLayout();self.now=label("Nothing playing");self.now.setMaximumWidth(420);self.now.setMinimumWidth(0);self.now.setWordWrap(False)
+        self.now_artist=label("Choose a song to start","muted");self.now_artist.setWordWrap(False);self.now_artist.setMinimumWidth(0)
         info=QVBoxLayout();info.addWidget(self.now);info.addWidget(self.now_artist);top.addLayout(info,1)
         self.previous_button=button("◀",lambda:self.next_track(-1));self.previous_button.setToolTip("Previous")
         self.play_button=button("Play",self.toggle,True);self.play_button.setObjectName("play-toggle")
         self.next_button=button("▶",lambda:self.next_track(1));self.next_button.setToolTip("Next")
-        top.addWidget(self.previous_button);top.addWidget(self.play_button);top.addWidget(self.next_button)
-        self.shuffle=QCheckBox("Shuffle");self.shuffle.setChecked(bool(self.store.setting("shuffle",False)));self.shuffle.toggled.connect(self.shuffle_queue);top.addWidget(self.shuffle)
-        self.repeat=QComboBox();self.repeat.addItems(["Repeat off","Repeat one","Repeat all"]);self.repeat.setCurrentIndex(int(self.store.setting("repeat",0)));top.addWidget(self.repeat)
-        self.speed=QDoubleSpinBox();self.speed.setRange(.5,2);self.speed.setSingleStep(.05);self.speed.setSuffix("×");self.speed.setValue(float(self.store.setting("speed",1)));self.speed.setMaximumWidth(92)
-        self.speed.valueChanged.connect(self.player.setPlaybackRate);self.player.setPlaybackRate(self.speed.value());top.addWidget(self.speed)
-        top.addWidget(button("Lyrics",self.lyrics));top.addWidget(button("Sleep",self.sleep_timer));top.addWidget(button("Queue",lambda:self.queue_dock.setVisible(not self.queue_dock.isVisible())))
-        volume=QSlider(Qt.Orientation.Horizontal);volume.setRange(0,100);volume.setValue(int(self.audio.volume()*100));volume.setFixedWidth(90);volume.setToolTip("Volume")
-        volume.valueChanged.connect(lambda v:self.audio.setVolume(v/100));top.addWidget(volume)
-        body.addLayout(top);line=QHBoxLayout();self.elapsed=label("0:00","muted");self.remaining=label("—","muted")
+        top.addWidget(self.previous_button);top.addWidget(self.play_button);top.addWidget(self.next_button);body.addLayout(top)
+        line=QHBoxLayout();self.elapsed=label("0:00","muted");self.remaining=label("—","muted")
         self.seek=QSlider(Qt.Orientation.Horizontal);self.seek.setObjectName("playback-seek");self.seek.setRange(0,1);self.seek.setEnabled(False)
         self.seek.sliderReleased.connect(lambda:self.player.setPosition(self.seek.value()))
-        line.addWidget(self.elapsed);line.addWidget(self.seek,1);line.addWidget(self.remaining);body.addLayout(line);layout.addWidget(frame)
+        line.addWidget(self.elapsed);line.addWidget(self.seek,1);line.addWidget(self.remaining);body.addLayout(line)
+        options=QHBoxLayout()
+        self.shuffle=QCheckBox("Shuffle");self.shuffle.setChecked(bool(self.store.setting("shuffle",False)));self.shuffle.toggled.connect(self.shuffle_queue);options.addWidget(self.shuffle)
+        self.repeat=QComboBox();self.repeat.addItems(["Repeat off","Repeat one","Repeat all"]);self.repeat.setMinimumWidth(116);self.repeat.setCurrentIndex(int(self.store.setting("repeat",0)));options.addWidget(self.repeat)
+        self.speed=QDoubleSpinBox();self.speed.setRange(.5,2);self.speed.setSingleStep(.05);self.speed.setSuffix("×");self.speed.setValue(float(self.store.setting("speed",1)));self.speed.setFixedWidth(92)
+        self.speed.valueChanged.connect(self.player.setPlaybackRate);self.player.setPlaybackRate(self.speed.value());options.addWidget(self.speed)
+        options.addStretch()
+        options.addWidget(button("Lyrics",self.lyrics));options.addWidget(button("Sleep",self.sleep_timer));options.addWidget(button("Queue",lambda:self.queue_dock.setVisible(not self.queue_dock.isVisible())))
+        volume=QSlider(Qt.Orientation.Horizontal);volume.setRange(0,100);volume.setValue(int(self.audio.volume()*100));volume.setFixedWidth(90);volume.setToolTip("Volume")
+        volume.valueChanged.connect(lambda v:self.audio.setVolume(v/100));options.addWidget(volume)
+        body.addLayout(options);layout.addWidget(frame)
 
     def current(self):
         return self.queue[self.index] if self.queue and 0<=self.index<len(self.queue) else None
@@ -730,7 +736,9 @@ class MainWindow(QMainWindow):
         clips.itemDoubleClicked.connect(lambda item:self.edit_clip(indexed[item.data(Qt.ItemDataRole.UserRole)["sourceId"]],item.data(Qt.ItemDataRole.UserRole)))
         b.addWidget(clips,1)
         buttons=QHBoxLayout()
-        buttons.addWidget(button("↑ Move up",lambda:self.move_clip(clips.currentRow(),-1)));buttons.addWidget(button("↓ Move down",lambda:self.move_clip(clips.currentRow(),1)));buttons.addWidget(button("Remove clip",lambda:self.remove_clip(clips.currentRow())))
+        for text,delta,description in (("↑",-1,"Move selected clip up"),("↓",1,"Move selected clip down")):
+            move=button(text,lambda checked=False,delta=delta:self.move_clip(clips.currentRow(),delta));move.setToolTip(description);move.setAccessibleName(description);buttons.addWidget(move)
+        buttons.addWidget(button("Remove clip",lambda:self.remove_clip(clips.currentRow())))
         b.addLayout(buttons);side.addWidget(right,2);self.content_layout.addWidget(lists,1)
         export_row=QWidget();e=QHBoxLayout(export_row);e.setContentsMargins(0,0,0,0)
         e.addWidget(label("Total · "+clock(sum(c["endMs"]-c["startMs"] for c in p["clips"])),"muted"));e.addStretch()

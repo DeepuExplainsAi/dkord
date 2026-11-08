@@ -58,7 +58,12 @@ def capture(app, output: Path):
         window=MainWindow(store,NoNetwork(),autoload=False);window.resize(1360,850);window.show()
         def settle():
             deadline=time.monotonic()+.5
-            while time.monotonic()<deadline:app.processEvents();time.sleep(.01)
+            while time.monotonic()<deadline:
+                app.processEvents()
+                # This CLI intentionally does not start app.exec(). Flush deletions
+                # queued by real page navigation, not old rows behind the next page.
+                QtCore.QCoreApplication.sendPostedEvents(None,QtCore.QEvent.Type.DeferredDelete)
+                time.sleep(.01)
         records=[]
         for page,name in [('Liked songs','windows-x86-player.png'),('Mashup Studio','windows-x86-studio.png')]:
             window.studio_id=project;window.navigate(page,fetch=False)

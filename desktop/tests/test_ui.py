@@ -115,6 +115,14 @@ class NativeWidgetTest(unittest.TestCase):
         self.assertEqual(before,file.read_bytes());self.assertTrue(self.window.player.source().isEmpty())
 
     def test_real_player_output_bridge_retains_volume_and_empty_source_semantics(self):
+        from dkord_desktop.qt import QtCore,QWidget
+        self.window.resize(1024,768);self.app.processEvents()
+        player=self.window.findChild(QWidget,'player')
+        for control in (self.window.now,self.window.now_artist,self.window.previous_button,self.window.play_button,self.window.next_button,self.window.repeat,self.window.speed,self.window.shuffle):
+            rect=control.rect().translated(control.mapTo(player,QtCore.QPoint(0,0)))
+            self.assertTrue(player.rect().contains(rect),(control.objectName(),rect,player.rect()))
+        self.assertFalse(self.window.now.wordWrap());self.assertFalse(self.window.now_artist.wordWrap())
+        self.assertGreaterEqual(self.window.repeat.width(),116);self.assertEqual(92,self.window.speed.width())
         self.window.audio.setVolume(.42)
         self.assertAlmostEqual(.42,self.window.audio.volume(),places=3)
         self.assertIs(self.window.audio,self.window.player.audioOutput())
