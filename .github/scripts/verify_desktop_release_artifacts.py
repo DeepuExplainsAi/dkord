@@ -151,7 +151,7 @@ def main():
     parser.add_argument('--version', required=True)
     args = parser.parse_args()
     paths = verify_and_stage(args.root, args.output, args.sha, args.version)
-    print(f'::notice title=Native preview release proof::{len(paths)} native preview files verified for {args.sha}: all6 targets, hashes, formats and actual35-case/all3-class proof. These are NOT trusted signed/notarized releases.')
+    print(f'::notice title=Native preview release proof::{len(paths)} native preview files verified for {args.sha}: all6 targets, hashes, formats and actual36-case/all3-class proof. These are NOT trusted signed/notarized releases.')
 
 if __name__ == '__main__':
     main()

@@ -4,16 +4,18 @@
 
 This is a separate **native Qt/Python desktop client**, not an Android APK in a browser frame. It is under active development; it is **not yet a finished Android-parity, signed or notarized public release**. The Android app and existing official APK/update feed are unchanged by desktop packaging.
 
-**Public development downloads:** [v0.10.0 exe/pkg/deb/AppImage previews](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.0). All5 real OS/CPU builds and30 native cases each passed; [exact source/package/hash receipt](../docs/releases/v0.10.0-publication.md). These are NOT trusted signed production updates; desktop parity/trust gaps below remain open.
+**Original development downloads (preserved):** [v0.10.0 exe/pkg/deb/AppImage previews](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.0). All5 real OS/CPU builds and30 native cases each passed; [exact source/package/hash receipt](../docs/releases/v0.10.0-publication.md). These are NOT trusted signed production updates; desktop parity/trust gaps below remain open.
 
 ## Windows32 x86 compatibility preview
-A genuine **windows-x86** target is being validated on this branch, separately from the existing x64 installer. It uses **32-bit Python3.11 +Qt5.15.2/PyQt5 +Node22 ia32**, with **FFmpeg/ffprobe8.1.3 built from digest-pinned source for x86**. Qt6/PyAV do not publish Win32 wheels; the old imageio Win32 FFmpeg4.2.2 is deliberately excluded. The five existing64-bit targets keep their Qt6/PyAV profiles.
+A genuine **windows-x86** target is now [published in Desktop Preview2](https://github.com/DeepuExplainsAi/dkord/releases/tag/desktop-v0.10.0-preview.2), separately from the original x64 installer. It uses **32-bit Python3.11 +Qt5.15.2/PyQt5 +Node22 ia32**, with **FFmpeg/ffprobe8.1.3 built from digest-pinned source for x86**. Qt6/PyAV do not publish Win32 wheels; the old imageio Win32 FFmpeg4.2.2 is deliberately excluded. The five existing64-bit targets keep their Qt6/PyAV profiles.
 
 Target **Windows10 32-bit** (or an x86 process under WoW64), not Windows7/8. CI runs a real32-bit process on a64-bit Windows runner; it does not replace physical32-bit OS/audio/update acceptance. The installer uses a separate `Dkord-x86` directory/ID/shortcuts so it cannot mix Qt5/Qt6 DLLs or overwrite the original64-bit program. Stable per-user library storage/format stays shared and protected by the existing single-instance lock. Never uninstall/clear data to test it.
 
-The requested [Preview2 download page](https://github.com/DeepuExplainsAi/dkord/releases/tag/desktop-v0.10.0-preview.2) must not be described as published until its exact-head tests/packages/screenshots and publication job succeed. It is a **separate desktop prerelease**, not a replacement of Androidv0.10.0/latest. Full parity and production signing/update trust remain open.
+[Download the genuine Windows32 installer](https://github.com/DeepuExplainsAi/dkord/releases/download/desktop-v0.10.0-preview.2/Dkord-desktop-v0.10.0-windows-x86.exe) (63,117,131 bytes). **36 tests perhost×6 native targets +432 JVM/38 Android emulator cases and exact frozen/package/screenshot publication gates passed**; [source/hash/publication receipt](../docs/releases/desktop-v0.10.0-preview.2-publication.md). It is a **separate desktop prerelease**, not a replacement of Androidv0.10.0/latest. Full parity and production signing/update trust remain open.
 
 Native CI also captures **the real frozen Windows32 window** (player/library and Studio) with clearly identified generated offline audio. No AI image, fake live catalogue or private user-data screenshot is substituted. PNG and source/bitness/frozen/hash receipts accompany the preview.
+
+[Actual Windows player/library screenshot](https://github.com/DeepuExplainsAi/dkord/releases/download/desktop-v0.10.0-preview.2/windows-x86-player.png) · [Actual Windows Studio screenshot](https://github.com/DeepuExplainsAi/dkord/releases/download/desktop-v0.10.0-preview.2/windows-x86-studio.png)
 
 ## Implemented
 - PC sidebar, resizable music tables, queue dock, timeline, native media playback, volume/speed/repeat/shuffle/sleep, saved queue and real local history.
