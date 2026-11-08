@@ -354,4 +354,24 @@
     <string name="studio_preparing_online">ऑनलाइन ऑडियो तैयार हो रहा है…</string>
     <string name="studio_search_empty">कोई गाना नहीं मिला। दूसरा नाम खोजें।</string>
     <string name="studio_source_add">प्रोजेक्ट में जोड़ें</string>
+    <string name="room_display_name">कमरे में आपका नाम (वैकल्पिक)</string>
+    <string name="room_cohost">आप सह-होस्ट हैं</string>
+    <string name="room_cohost_controls">ऐप के प्लेयर से गाना चलाएँ, रोकें, बदलें या आगे-पीछे करें। कमरे को फ़ॉलो करने वाले सभी सदस्यों पर यह लागू होगा। अनुमति केवल कमरा बनाने वाला बदल सकता है।</string>
+    <string name="room_cohost_player">प्लेयर खोलें · सह-होस्ट कंट्रोल</string>
+    <string name="room_controls_title">प्लेबैक कंट्रोल की अनुमति</string>
+    <string name="room_controls_host_only">सिर्फ़ मैं · कमरा बनाने वाला</string>
+    <string name="room_controls_selected">चुने हुए सदस्य</string>
+    <string name="room_controls_everyone">सभी · नए सदस्य भी</string>
+    <string name="room_controls_hint">एक, दो या अधिक सह-होस्ट चुनें या सभी को अनुमति दें। कमरा बनाने का आपका अधिकार हमेशा बना रहेगा।</string>
+    <string name="room_controls_members">नए Dkord का उपयोग करने वाले सदस्य</string>
+    <string name="room_controls_empty">कनेक्ट होने पर जुड़े सदस्य यहाँ दिखेंगे। सही व्यक्ति चुनने के लिए नाम और छोटा ID देखें।</string>
+    <string name="room_controls_your_id">कमरे में आपका ID: %1$s</string>
+    <string name="room_controls_listen_only">आप सुन सकते हैं। कमरा बनाने वाले ने आपको साझा प्लेबैक कंट्रोल नहीं दिया है।</string>
+    <string name="room_controls_pending">सह-होस्ट कंट्रोल के लिए होस्ट और सदस्यों का Dkord अपडेट होना चाहिए। पुराने कमरों में अभी भी सिंक और फ़ॉलो काम करते हैं।</string>
+    <string name="room_controls_consent">अनुमति देने या हटाने से ऑडियो अपने आप शुरू नहीं होता। सुनने वाले अभी भी सिंक करके चलाएँ और होस्ट को फ़ॉलो करें चुनते हैं।</string>
+    <string name="room_controls_privacy">कमरे के नाम और प्लेबैक मेटाडेटा सार्वजनिक रिले का उपयोग करते हैं। कोड केवल भरोसेमंद लोगों से साझा करें; ऑडियो फ़ाइलें अपलोड नहीं होतीं।</string>
+    <string name="room_controls_network">प्लेबैक कंट्रोल का कनेक्शन टूट गया। दोबारा जुड़ रहा है; आप अपने डिवाइस पर अभी भी सुन सकते हैं।</string>
+    <string name="room_controls_rate_limit">सार्वजनिक रिले व्यस्त है। और कंट्रोल साझा करने से पहले थोड़ा इंतज़ार करें।</string>
+    <string name="room_controls_local_audio">लोकल Studio ऑडियो इसी डिवाइस पर रहता है। कमरे को कंट्रोल करने के लिए ऑनलाइन सूची का गाना चुनें।</string>
+    <string name="room_controls_owner_offline">कमरा बनाने वाले से संपर्क नहीं हो पा रहा है। दोबारा जुड़ने तक साझा कंट्रोल रुका हुआ है।</string>
 </resources>

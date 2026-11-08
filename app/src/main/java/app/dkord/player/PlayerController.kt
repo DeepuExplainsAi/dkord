@@ -17,6 +17,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -55,6 +57,11 @@ class PlayerController(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state
+    private val commandGate = PlaybackCommandGate()
+    private val commandEvents = MutableSharedFlow<PlayerUiState>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    /** Explicit in-app commands only: buffering, focus, progress and remote sync are not co-host intent. */
+    val commands: kotlinx.coroutines.flow.SharedFlow<PlayerUiState> = commandEvents
+    fun withoutRoomCommands(block: () -> Unit) = commandGate.remotely(block)
     val sleep: StateFlow<SleepState> get() = sleepTimer.state
 
     private var controller: MediaController? = null
@@ -99,8 +106,16 @@ class PlayerController(
     }
 
     private inline fun withController(crossinline block: (MediaController) -> Unit) {
+        val report = commandGate.report
+        val execute: (MediaController) -> Unit = { value ->
+            block(value)
+            if (report && commandEvents.subscriptionCount.value > 0) {
+                // playWhenReady is the user's intent even while media is still buffering.
+                commandEvents.tryEmit(snapshot(value).copy(isPlaying = value.playWhenReady))
+            }
+        }
         val c = controller
-        if (c != null) block(c) else { pending.addLast { block(it) }; connect() }
+        if (c != null) execute(c) else { pending.addLast(execute); connect() }
     }
 
     // ---- commands ----
@@ -221,8 +236,12 @@ class PlayerController(
 
     private fun refresh(p: Player) {
         if (radioSeed == null && p.mediaItemCount > 0) radioSeed = p.currentMediaItem?.toTrack()
+        _state.value = snapshot(p)
+    }
+
+    private fun snapshot(p: Player): PlayerUiState {
         val queue = (0 until p.mediaItemCount).map { p.getMediaItemAt(it).toTrack() }
-        _state.value = PlayerUiState(
+        return PlayerUiState(
             connected = true,
             current = p.currentMediaItem?.toTrack(),
             isPlaying = p.isPlaying,

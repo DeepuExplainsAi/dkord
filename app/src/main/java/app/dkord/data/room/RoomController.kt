@@ -32,6 +32,7 @@ data class RoomState(
     val error: RoomError? = null,
     val syncing: Boolean = false,
     val hasSynced: Boolean = false,
+    val access: RoomAccessState = RoomAccessState(),
 )
 
 /** App-lifetime opt-in sessions. Old jobs cannot change a newly joined room's state. */
@@ -51,6 +52,10 @@ class RoomController(
     private data class Seek(val videoId: String, val positionMs: Long, val at: Long)
     private var pendingSeek: Seek? = null
     private var hostChanges: Channel<Unit>? = null
+    private var sharing: RoomSharing? = null
+    private var sharingStateJob: Job? = null
+    private var commandsJob: Job? = null
+    private var sharedOverride: RoomMessage? = null
 
     fun seeked(positionMs: Long) {
         if (state.value.role != RoomRole.HOST) return
@@ -59,34 +64,84 @@ class RoomController(
         hostChanges?.trySend(Unit)
     }
 
-    fun create() {
+    fun create(name: String = "") {
         if (state.value.role == RoomRole.HOST) return
         leave()
-        val code = RoomCode.generate()
+        val access = newSharing(true, name = name)
+        val code = access?.code ?: RoomCode.generate()
         mutableState.value = RoomState(code, RoomRole.HOST, connecting = true)
+        attachSharing(access)
         host(code, session)
+    }
+
+    fun controlMode(mode: RoomControlMode) { if (state.value.role == RoomRole.HOST) sharing?.setMode(mode) }
+    fun memberControl(id: String, allow: Boolean) { if (state.value.role == RoomRole.HOST) sharing?.setMember(id, allow) }
+
+    private fun newSharing(owner: Boolean, code: String? = null, name: String = ""): RoomSharing? {
+        val side = transport as? RoomControlTransport ?: return null
+        lateinit var value: RoomSharing
+        value = RoomSharing(side, scope, owner, code, name, now) { message ->
+            if (sharing === value && state.value.role == RoomRole.HOST) acceptControl(message)
+        }
+        return value
+    }
+    private fun attachSharing(value: RoomSharing?) {
+        sharingStateJob?.cancel(); commandsJob?.cancel(); sharing = value
+        if (value == null) return
+        sharingStateJob = scope.launch { value.state.collect { access ->
+            if (sharing === value) mutableState.update { it.copy(access = access) }
+        } }
+        commandsJob = scope.launch { playback.controls.collect { snapshot ->
+            if (sharing === value) {
+                if (state.value.role == RoomRole.HOST) { sharedOverride = null; hostChanges?.trySend(Unit) }
+                else value.request(snapshot)
+            }
+        } }
+        value.start()
+    }
+
+    private fun acceptControl(message: RoomMessage) {
+        val id = session; val request = ++syncRequest
+        syncJob?.cancel(); pendingSeek = null
+        val desired = message.copy(positionMs = synchronizedPosition(message, now()), timestamp = now(), authority = null)
+        sharedOverride = desired
+        hostChanges?.trySend(Unit)
+        syncJob = scope.launch {
+            try { playback.sync(desired, desired.positionMs) }
+            catch (error: CancellationException) { throw error }
+            catch (_: Exception) {
+                if (current(id) && request == syncRequest) update(id) { it.copy(error = RoomError.PLAYBACK) }
+            }
+        }
     }
 
     fun clearCodeError() {
         if (state.value.role == null && state.value.error == RoomError.INVALID_CODE) mutableState.update { it.copy(error = null) }
     }
 
-    fun join(input: String) {
+    fun join(input: String, name: String = "") {
         val code = RoomCode.normalize(input)
         if (code == null) { mutableState.update { it.copy(error = RoomError.INVALID_CODE) }; return }
         val previous = state.value
         val sameRoom = previous.role == RoomRole.GUEST && previous.code == code
         if (sameRoom && previous.connecting && previous.error == null) return
         val resume = if (sameRoom) cursor else null
-        leave()
+        val access = if (sameRoom) sharing else null
+        resetSession(retainSharing = sameRoom)
         cursor = resume
         mutableState.value = RoomState(code, RoomRole.GUEST, connecting = true,
             host = previous.host.takeIf { sameRoom }, followAutomatically = sameRoom && previous.followAutomatically,
             hasSynced = sameRoom && previous.hasSynced)
+        attachSharing(access ?: newSharing(false, code, name))
         guest(code, session)
     }
 
-    fun leave() {
+    fun leave() = resetSession(false)
+
+    private fun resetSession(retainSharing: Boolean) {
+        sharing?.stop(); sharingStateJob?.cancel(); sharingStateJob = null; commandsJob?.cancel(); commandsJob = null
+        if (!retainSharing) sharing = null
+        sharedOverride = null
         session++; syncRequest++
         roomJob?.cancel(); roomJob = null
         syncJob?.cancel(); syncJob = null
@@ -105,6 +160,7 @@ class RoomController(
             roomJob?.cancel()
             hostChanges?.close(); hostChanges = null
             mutableState.update { it.copy(connecting = true, error = null) }
+            attachSharing(sharing)
             host(code, session)
         }
     }
@@ -182,6 +238,7 @@ class RoomController(
         if (message.timestamp > clock + 5 * 60_000 || message.timestamp < clock - 12 * 60 * 60_000) return
         val value = state.value
         if (value.role != RoomRole.GUEST || message.timestamp <= (value.host?.timestamp ?: 0)) return
+        if (sharing?.acceptState(message) == false) return
         update(id) { it.copy(host = message, connecting = false, error = null) }
         if (state.value.followAutomatically) syncNow()
     }
@@ -191,11 +248,19 @@ class RoomController(
             coroutineScope {
                 val changes = Channel<Unit>(Channel.CONFLATED)
                 if (current(id)) hostChanges = changes
+                if (sharedOverride != null) changes.trySend(Unit)
                 launch {
                     var previous: RoomPlaybackState? = null
                     var observedAt = now()
                     playback.states.collect { value ->
                         val time = now()
+                        val desired = sharedOverride
+                        if (desired != null) {
+                            val expectedQueue = listOf(RoomTrack(desired.videoId, desired.title, desired.artist, desired.thumbnail).toTrack()) + desired.queue.map { it.toTrack() }
+                            if (value.playing == desired.playing && roomQueueMatches(value, expectedQueue) &&
+                                abs(value.positionMs - synchronizedPosition(desired, time)) <= 1_500) sharedOverride = null
+                            else { previous = value; observedAt = time; return@collect }
+                        }
                         val old = previous
                         val expected = old?.let { it.positionMs + if (it.playing) (time - observedAt).coerceAtLeast(0) else 0 }
                         if (old == null || value.current != old.current || value.playing != old.playing ||
@@ -207,23 +272,27 @@ class RoomController(
                 launch {
                     while (isActive) {
                         delay(15_000)
-                        if (playback.current().playing) changes.trySend(Unit)
+                        if (sharedOverride?.playing ?: playback.current().playing) changes.trySend(Unit)
                     }
                 }
                 var sentAt = state.value.host?.timestamp ?: 0L
                 for (ignored in changes) {
                     currentCoroutineContext().ensureActive()
                     val stamp = maxOf(now(), sentAt + 1)
-                    var snapshot = playback.current()
+                    var snapshot = sharedOverride?.let { desired ->
+                        val track = RoomTrack(desired.videoId, desired.title, desired.artist, desired.thumbnail).toTrack()
+                        RoomPlaybackState(track, listOf(track) + desired.queue.map { it.toTrack() }, 0, synchronizedPosition(desired, now()), desired.playing)
+                    } ?: playback.current()
                     pendingSeek?.let { seek ->
                         val expected = seek.positionMs + if (snapshot.playing) (now() - seek.at).coerceAtLeast(0) else 0
                         if (snapshot.current?.id == seek.videoId && now() - seek.at < 2_000 && abs(snapshot.positionMs - expected) > 50) {
                             snapshot = snapshot.copy(positionMs = expected)
                         } else pendingSeek = null
                     }
-                    val message = roomMessage(snapshot, stamp)
-                    if (message == null) { update(id) { it.copy(connecting = false) }; continue }
+                    val plain = roomMessage(snapshot, stamp)
+                    if (plain == null) { update(id) { it.copy(connecting = false) }; continue }
                     try {
+                        val message = sharing?.signedState(plain) ?: plain
                         transport.publish(code, message)
                         currentCoroutineContext().ensureActive()
                         sentAt = stamp

@@ -29,3 +29,14 @@ Android0.10.0/code14 is unpublished. Published0.9.1 and older assets remain immu
 - With real authorized releases, check/download/verify/install from the app after consent. Windows gets Windows; Intel Mac gets Intel and Apple Silicon gets arm64; Linux deb/AppImage stays appropriate to the installed distribution. No repeated release-page browsing. Skipped versions and ready-file replacement must remain safe.
 - Record user-data directory and audio/database/settings hashes before/after installing over a real previous desktop version. No installer/uninstaller path should delete that directory. Handle app close, interrupted update download, readonly AppImage location, invalid packages and OS permission prompts without losing media/projects.
 - There is no automatic phone-to-PC/cloud audio synchronization. JSON moves metadata, not audio; do not record cross-device sync as passed.
+
+
+## Room co-host addition (Android 0.10.0, unpublished)
+- [ ] On at least three real updated devices, creator selects exactly one, then two members; each can play/pause/change song/seek for all opted-in followers. Non-selected member controls remain local.
+- [ ] Everyone also admits a newly joined updated member; co-hosts cannot administer permissions. Creator unticks one, reclaims all with Only me, and continues controlling playback.
+- [ ] Grant/revoke never opts listeners into audio; verify Sync & play/Follow off, explicit consent, Hindi/large font, duplicate nicknames/IDs and narrow-screen scrolling.
+- [ ] Test creator buffering/provider failure, simultaneous controls, delayed/replayed messages, revoke while an intent is in flight, loss/reconnect/429, background/Doze, creator departure, same-room retry and real Leave/rejoin.
+- [ ] Updated/old host/guest combinations retain one-way listening; unsigned state cannot downgrade a pinned updated creator. Public relay is not E2EE or a verified-account/private-room server.
+- [ ] Test actual lazy MediaController/remote commands for no echo, notification/headset local-only guest behavior, no local Studio/private metadata leak and no stale audio after leaving a room.
+
+JVM and emulator actor/widget cases are executable regressions, not substitutes for these physical/live-provider checks. Protocol: [ROOM_CONTROLS.md](ROOM_CONTROLS.md).

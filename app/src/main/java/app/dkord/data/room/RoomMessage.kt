@@ -27,6 +27,7 @@ data class RoomMessage(
     val timestamp: Long,
     val queue: List<RoomTrack> = emptyList(),
     val version: Int = 1,
+    val authority: RoomAuthority? = null,
 )
 
 /** Relay cursor is opaque; transports may use a message id or another resume token. */
@@ -39,21 +40,22 @@ object RoomCodec {
     private val id = Regex("[A-Za-z0-9_-]{11}")
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
-    fun encode(message: RoomMessage): String {
+    fun encode(message: RoomMessage, maxBytes: Int = MAX_BYTES): String {
+        require(maxBytes in 1500..MAX_BYTES)
         require(valid(message)) { "Invalid room message" }
         var clean = clean(message).copy(queue = message.queue.asSequence()
             .filter { id.matches(it.videoId) && it.videoId != message.videoId && short(it.title).isNotBlank() }
             .distinctBy { it.videoId }.take(MAX_QUEUE).map(::cleanTrack).toList())
         var text = json.encodeToString(clean)
-        if (text.toByteArray(Charsets.UTF_8).size >= MAX_BYTES) {
+        if (text.toByteArray(Charsets.UTF_8).size >= maxBytes) {
             clean = clean.copy(thumbnail = null, queue = clean.queue.map { it.copy(thumbnail = null) })
             text = json.encodeToString(clean)
         }
-        while (text.toByteArray(Charsets.UTF_8).size >= MAX_BYTES && clean.queue.isNotEmpty()) {
+        while (text.toByteArray(Charsets.UTF_8).size >= maxBytes && clean.queue.isNotEmpty()) {
             clean = clean.copy(queue = clean.queue.dropLast(1))
             text = json.encodeToString(clean)
         }
-        require(text.toByteArray(Charsets.UTF_8).size < MAX_BYTES) { "Room message too large" }
+        require(text.toByteArray(Charsets.UTF_8).size < maxBytes) { "Room message too large" }
         return text
     }
 

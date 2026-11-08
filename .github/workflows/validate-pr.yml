@@ -139,6 +139,7 @@ jobs:
           --required-class app.dkord.OnlineStudioAndStorageTest
           --required-class app.dkord.DownloadDestinationTest
           --required-class app.dkord.StudioSongPickerTest
+          --required-class app.dkord.RoomCoHostTest
       - name: Upload Android device-test reports
         if: always()
         uses: actions/upload-artifact@v7

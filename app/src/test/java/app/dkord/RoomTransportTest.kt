@@ -58,4 +58,39 @@ class RoomTransportTest {
             fail("Expected rate limit")
         } catch (e: RoomTransportException) { assertTrue(e.rateLimited) }
     }
+    @Test fun controls_use_a_separate_topic_short_bootstrap_and_resumable_cursor() = runBlocking {
+        val identity = RoomIdentity.generate()
+        val frame = identity.sign(RoomControlMessage(identity.roomCode, RoomControlKind.POLICY,
+            identity.publicKey, msg.timestamp, 1, identity.session, revision = 1))
+        val line = buildJsonObject {
+            put("event", "message"); put("id", "control1"); put("message", RoomControlCodec.encode(frame))
+        }.toString() + "\n"
+        val requests = mutableListOf<Request>()
+        val transport = NtfyRoomTransport(client(body = line) { requests += it })
+        assertEquals(frame, transport.subscribeControls(identity.roomCode).first().message)
+        assertEquals("/dkord-${identity.roomCode}-controls/json", requests[0].url.encodedPath)
+        assertEquals("30s", requests[0].url.queryParameter("since"))
+        assertEquals("control1", transport.subscribeControls(identity.roomCode, "control1").first().cursor)
+        assertEquals("control1", requests[1].url.queryParameter("since"))
+    }
+    @Test fun signed_control_post_has_no_auth_cookies_or_audio_and_round_trips() = runBlocking {
+        val id = RoomIdentity.generate(); val frame = id.sign(RoomControlMessage(id.roomCode, RoomControlKind.HELLO,
+            id.publicKey, msg.timestamp, 1, name = "Friend"))
+        var captured: Request? = null
+        NtfyRoomTransport(client(body = "{}") { captured = it }).publishControl(id.roomCode, frame)
+        val request = checkNotNull(captured); val buffer = Buffer(); checkNotNull(request.body).writeTo(buffer)
+        assertEquals("/dkord-${id.roomCode}-controls", request.url.encodedPath)
+        assertEquals("POST", request.method)
+        assertNull(request.header("Cookie")); assertNull(request.header("Authorization"))
+        assertEquals(frame, RoomControlCodec.decode(buffer.readUtf8()))
+    }
+    @Test fun control_publish_rate_limits_are_handled_without_using_the_main_topic() = runBlocking {
+        val id = RoomIdentity.generate(); val frame = id.sign(RoomControlMessage(id.roomCode, RoomControlKind.HELLO,
+            id.publicKey, msg.timestamp, 1))
+        try {
+            NtfyRoomTransport(client(429, "Busy") {}).publishControl(id.roomCode, frame)
+            fail("Expected rate limit")
+        } catch (e: RoomTransportException) { assertTrue(e.rateLimited) }
+    }
+
 }

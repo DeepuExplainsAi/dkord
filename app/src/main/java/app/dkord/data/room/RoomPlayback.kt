@@ -15,6 +15,7 @@ data class RoomPlaybackState(
 )
 
 interface RoomPlayback {
+    val controls: Flow<RoomPlaybackState> get() = kotlinx.coroutines.flow.emptyFlow()
     val states: Flow<RoomPlaybackState>
     fun current(): RoomPlaybackState
     suspend fun sync(message: RoomMessage, positionMs: Long)
