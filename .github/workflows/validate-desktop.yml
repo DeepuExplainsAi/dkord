@@ -102,7 +102,7 @@ jobs:
           cases = root.findall('.//testcase')
           for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest'):
               assert any(cls in c.attrib.get('classname', '') for c in cases), f'Missing {cls}'
-          assert len(cases) >= 35, f'Only {len(cases)} desktop cases'
+          assert len(cases) >= 36, f'Only {len(cases)} desktop cases'
           for case in cases:
               for marker in ('failure','error','skipped'):
                   error=case.find(marker)

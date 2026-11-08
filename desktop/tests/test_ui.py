@@ -86,6 +86,26 @@ class NativeWidgetTest(unittest.TestCase):
         self.assertEqual([(True,'cleanup committed',0,'existing playlists and offline data')],observations)
         self.assertEqual([],self.provider.calls)
 
+    def test_real_capture_uses_isolated_store_and_actual_widget_pixels_without_network_or_overwrite(self):
+        from dkord_desktop.capture import capture
+        from dkord_desktop.qt import QImage
+        from dkord_desktop.platforms import platform_key
+        import hashlib,json,platform
+        canary=Path(self.temp.name)/'original-user-file';canary.write_bytes(b'KEEP existing original music and library')
+        output=Path(self.temp.name)/'isolated-capture'
+        self.assertEqual(0,capture(self.app,output))
+        proof=json.loads((output/'windows-x86-screenshot-proof.json').read_text(encoding='utf-8'))
+        self.assertEqual(platform_key(),proof['platform']);self.assertEqual(platform.system(),proof['os']);self.assertIs(False,proof['frozen'])
+        self.assertEqual({'Liked songs','Mashup Studio'},{x['page'] for x in proof['images']})
+        for item in proof['images']:
+            path=output/item['name'];image=QImage(str(path))
+            self.assertFalse(image.isNull());self.assertGreaterEqual(image.width(),1360);self.assertGreaterEqual(image.height(),850)
+            self.assertEqual(item['sha256'],hashlib.sha256(path.read_bytes()).hexdigest())
+        before={p.name:p.read_bytes() for p in output.iterdir()}
+        with self.assertRaises(ValueError):capture(self.app,output)
+        self.assertEqual(before,{p.name:p.read_bytes() for p in output.iterdir()})
+        self.assertEqual(b'KEEP existing original music and library',canary.read_bytes());self.assertEqual([],self.provider.calls)
+
     def test_theme_choice_persists_without_changing_likes_or_original_audio(self):
         track=Track('online00001','संगवारी','Artist');self.window.store.like(track,True)
         file=Path(self.temp.name)/'theme-original.wav';tone(file);before=file.read_bytes()

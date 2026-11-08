@@ -33,7 +33,7 @@ def digest(path):
 def verify_tests(path):
     root = ET.parse(path).getroot()
     cases = root.findall('.//testcase')
-    if len(cases) < 35:
+    if len(cases) < 36:
         raise ValueError('Missing executed native cases')
     for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest'):
         if not any(cls in c.get('classname', '') for c in cases):

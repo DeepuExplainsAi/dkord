@@ -37,17 +37,18 @@ def tone(path, hz):
 
 
 def capture(app, output: Path):
-    if output.exists() and any(output.iterdir()):raise ValueError('Screenshot output must be empty; never overwrite existing files')
+    if output.is_symlink() or (output.exists() and (not output.is_dir() or any(output.iterdir()))):raise ValueError('Screenshot output must be empty; never overwrite existing files')
     output.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='dkord-offline-screenshot-') as temp:
         root=Path(temp);store=Store(root/'isolated-data');media=MediaLibrary(store,NoNetwork());tracks=[];files=[]
         for title,hz in [('Warm glow',220),('Midnight pulse',440),('First light',880)]:
-            path=root/(title+'.wav');tone(path,hz);files.append(path)
+            path=media.offline/(title+'.wav');tone(path,hz);files.append(path)
             track=Track('studio:'+str(uuid4()),title+' · audio sample','Dkord generated tones','Offline showcase',12)
             store.put_track(track);store.queue_download(track,'app')
             store.update_download(track.id,state='DONE',path=str(path),bytes=path.stat().st_size,total=path.stat().st_size)
             store.like(track,True);store.history(track,3200);tracks.append(track)
-        store.save_playlist('Offline showcase',tracks);store.remember_queue(tracks,0,3200)
+        store.save_playlist('Offline showcase',tracks)
+        store.set_setting('session',{'version':1,'queue':[track.json() for track in tracks],'index':0,'position':3200})
         project=store.create_project('Nightfall · offline demo mix')
         for file in files[:2]:media.import_source(project,file,threading.Event())
         def edit(data):

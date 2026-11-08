@@ -4,6 +4,24 @@ import sys
 from pathlib import Path
 
 
+def capture_ui(app, output):
+    from .capture import capture
+    # An error report belongs only to a new/empty capture destination. Never
+    # overwrite an existing user's capture-error.txt or add files to their library.
+    fresh=not output.exists() or (output.is_dir() and not output.is_symlink() and not any(output.iterdir()))
+    try:
+        return capture(app,output)
+    except Exception:
+        import traceback
+        if fresh:
+            try:
+                output.mkdir(parents=True,exist_ok=True)
+                with (output/'capture-error.txt').open('x',encoding='utf-8') as report:report.write(traceback.format_exc())
+            except OSError:
+                pass
+        return 1
+
+
 def main():
     parser=argparse.ArgumentParser(description="Dkord native desktop music player and Mashup Studio")
     parser.add_argument("--data-dir",type=Path,help="Developer/test user-data directory; normal installations use the stable per-user path")
@@ -16,14 +34,7 @@ def main():
     from .ui import MainWindow
     app=QApplication(sys.argv[:1]);app.setOrganizationName("Dkord");app.setOrganizationDomain("app.dkord");app.setApplicationName("Dkord")
     if args.capture_ui:
-        from .capture import capture
-        try:
-            return capture(app,args.capture_ui)
-        except Exception:
-            import traceback
-            args.capture_ui.mkdir(parents=True,exist_ok=True)
-            (args.capture_ui/'capture-error.txt').write_text(traceback.format_exc(),encoding='utf-8')
-            return 1
+        return capture_ui(app,args.capture_ui)
     if args.self_test:
         from .selftest import run
         return run(app)

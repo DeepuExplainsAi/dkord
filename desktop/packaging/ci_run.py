@@ -20,6 +20,13 @@ with log.open('w',encoding='utf-8') as file:
     for line in process.stdout:
         print(line,end='',flush=True);file.write(line);file.flush();tail.append(line)
     code=process.wait()
+if code and phase=='screenshot' and '--capture-ui' in command:
+    try:
+        report=Path(command[command.index('--capture-ui')+1])/'capture-error.txt'
+        if report.is_file() and not report.is_symlink():
+            with report.open(encoding='utf-8') as file:tail.extend(file.read(8000).splitlines(keepends=True))
+    except OSError as error:
+        tail.append('Could not read isolated screenshot failure report: '+str(error))
 if code:
     text=(''.join(tail) or 'Native process exited without stdout; consult self-test report.').strip()[-2800:]
     text=text.replace('%','%25').replace('\r','%0D').replace('\n','%0A')

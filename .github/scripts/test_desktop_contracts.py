@@ -14,7 +14,7 @@ class DesktopContractsTest(unittest.TestCase):
     def test_native_validation_covers_all_os_and_cpu_builds_without_publication_or_secrets(self):
         flow=read('.github/workflows/validate-desktop.yml')
         for target in ('windows-x64','windows-x86','macos-x64','macos-arm64','linux-x64','linux-arm64'):self.assertIn('target: '+target,flow)
-        for required in ('contents: read','--self-test','packaging/build.py','no failures/errors/skips','assert len(cases) >= 35','include-hidden-files: true','packaging/ci_run.py','PYTHONUTF8: 1'):
+        for required in ('contents: read','--self-test','packaging/build.py','no failures/errors/skips','assert len(cases) >= 36','include-hidden-files: true','packaging/ci_run.py','PYTHONUTF8: 1'):
             self.assertIn(required,flow)
         for forbidden in ('secrets.','contents: write','gh release','continue-on-error'):self.assertNotIn(forbidden,flow)
     def test_desktop_has_real_native_widgets_codec_renderer_and_no_mock_browser(self):
