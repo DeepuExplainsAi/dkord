@@ -259,13 +259,6 @@
     <string name="search_all">पूरा YouTube</string>
     <string name="search_scope_uploads">कवर, वाद्य संगीत और अन्य YouTube अपलोड।</string>
     <string name="search_scope_music_catalogue">YouTube Music का कैटलॉग</string>
-    <string name="tab_reels">शॉर्ट्स</string>
-    <string name="reels_query">संगीत क्लिप खोजें</string>
-    <string name="reels_full_song">पूरा गाना खोजें</string>
-    <string name="reels_choose_song">पूरा गाना चुनें</string>
-    <string name="reels_attribution_hint">नीचे सही गाना चुनें। क्लिप में मूल गाने की पहचान न हो तो खोज बदलें।</string>
-    <string name="reels_failed">क्लिप लोड नहीं हुईं। कनेक्शन जाँचकर फिर कोशिश करें।</string>
-    <string name="reels_empty">इस खोज के लिए शॉर्ट्स नहीं मिले। दूसरा गाना खोजें या और लोड करें।</string>
     <string name="studio_title">मैशअप स्टूडियो</string>
     <string name="studio_exporting">ऑडियो जोड़ा जा रहा है…</string>
     <string name="studio_audio_source">ऑडियो स्रोत</string>
@@ -314,5 +307,31 @@
     <string name="studio_copy_saved">ऑडियो की प्रति सेव हो गई।</string>
     <string name="studio_copy_failed">प्रति सेव नहीं हुई। फ़ोल्डर की अनुमति और खाली जगह जाँचें।</string>
     <string name="studio_use_track">मैशअप स्टूडियो में जोड़ें</string>
-    <string name="reels_creator_discovery">मिलते-जुलते क्रिएटर के शॉर्ट्स</string>
+
+    <!-- Audio-first listening history; no short-video feed. -->
+    <string name="tab_listen">सुनें</string>
+    <string name="listen_title">दोबारा सुनें</string>
+    <string name="listen_hint">आपका संगीत, वहीं से जहाँ छोड़ा था।</string>
+    <string name="listen_continue">सुनना जारी रखें</string>
+    <string name="listen_now_playing">अभी चल रहा है</string>
+    <string name="listen_open_player">प्लेयर खोलें</string>
+    <string name="listen_position">%1$s / %2$s</string>
+    <string name="listen_search">सुने हुए गाने खोजें</string>
+    <string name="listen_manage">बदलें</string>
+    <string name="listen_done">हो गया</string>
+    <string name="listen_clear">इतिहास साफ करें</string>
+    <string name="listen_clear_title">सुने गए गानों का इतिहास साफ करें?</string>
+    <string name="listen_clear_message">केवल सुनने का इतिहास हटेगा। गाने, पसंद, प्लेलिस्ट, डाउनलोड और मौजूदा कतार बनी रहेगी।</string>
+    <string name="listen_liked">पसंद</string>
+    <string name="listen_downloaded">डाउनलोड किए गए</string>
+    <string name="listen_no_match">इतिहास में कोई मिलता-जुलता गाना नहीं</string>
+    <string name="listen_reset">फ़िल्टर हटाएँ</string>
+    <string name="listen_play_all">ये गाने चलाएँ</string>
+    <string name="listen_today">आज</string>
+    <string name="listen_yesterday">कल</string>
+    <string name="listen_earlier">पहले</string>
+    <string name="listen_remove">सुनने के इतिहास से %1$s हटाएँ</string>
+    <string name="listen_load_failed">सुनने का इतिहास नहीं पढ़ सके। डेटा साफ किए बिना फिर कोशिश करें।</string>
+    <string name="listen_action_failed">इतिहास नहीं बदल सके। आपके गाने और फ़ाइलें नहीं हटाई गईं।</string>
+    <string name="listen_empty_hint">गाना चलने पर वह यहाँ दिखेगा। शुरू करने के लिए कोई गाना खोजें।</string>
 </resources>

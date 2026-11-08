@@ -1,4 +1,4 @@
-# 0.9.0 development acceptance checks — not a published APK
+# 0.9.1 development acceptance checks — UNPUBLISHED; not a pass report
 
 CI and phone/live-provider checks are different. Exact completed run proof is in `HANDOFF.md`; this checklist is **not** a record of phone passes. Never uninstall/reset data to test an update; future official APKs must use the existing package/key and a fresh greater version code.
 
@@ -7,12 +7,13 @@ CI and phone/live-provider checks are different. Exact completed run proof is in
 - Focus search: keyboard opens, navigation/mini-player no longer reserve a second keyboard-sized gap. Suggestions/history can scroll to the real keyboard boundary; no mid-row clipping hidden behind a black region.
 - Test clear, history/edit, both visible submit and IME Search, every native scope, correction/retry and full-width Load more. Songs remains default; All YouTube remains opt-in. Switch tabs while typing and dismiss the keyboard.
 
-## Genuine Shorts and full-song selection
-- On a real provider connection, search a chosen song/creator (not a production hardcoded example). Videos must be actual native Shorts/upload IDs; an empty all-search can discover actual matching creator Shorts tabs, labeled accordingly.
-- Swipe several pages; only the settled/frontmost video has a player. Confirm page retry, duplicate removal and continued paging, including an unknown provider duration.
-- Start an audio song, enter a clip, open Settings/another destination, background the app, unplug headphones and return. No two audible players or outgoing-animation interruption of a newly chosen song.
-- Find full song opens an editable native Songs lookup. Choose the matching title/artist explicitly. A guessed first result is never played or presented as verified original audio. The chosen full song continues even if feed pagination completes.
-- Check light/dark setting readability. No claims that provider metadata always identifies original audio or that every provider video is available.
+## Listen Again; Shorts removed
+- No Shorts/Reels navigation item, vertical-video feed, background clip player or channel-discovery request remains. Existing opt-in manual video search/player is intentionally preserved.
+- Open Listen: no audio starts automatically. With an existing saved/current song, Continue resumes its actual queue/position; opening a currently playing song does not pause it. Re-enter after Activity/process recreation without resetting data.
+- Check real locally played songs grouped Today/Yesterday/Earlier in device timezone. Search title/artist/album, Hindi and English, filter liked/completed-download history, clear filters and explicit Play these songs. An individual row must play only the chosen song first, not silently queue all history.
+- Verify large-font Hindi/English on narrow screens, scrolling, actual IME, accessible actions, state restoration and the old0.9 saved tab mapping directly to Listen (never re-opening a clip player).
+- Manage: remove one history entry, cancel and then confirm Clear history. Likes, tracks, playlists, source/export/download files and the current queue must remain. A missing externally removed download still fails locally under existing playback handling; a completed-download record is not a current file-permission guarantee.
+- Empty history offers real Search; local read/write failure offers Retry/error without clearing storage or fabricating recent tracks. Playback/source errors must never be misreported as successful listening.
 
 ## Real Mashup Studio
 - Open Library → Mashup Studio, or a song menu → Use in Mashup Studio. Online sources use normal Dkord download first; choose only completed/readable sources.

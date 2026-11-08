@@ -2,6 +2,7 @@ package app.dkord.data.library
 
 import androidx.room.withTransaction
 import app.dkord.core.Track
+import app.dkord.core.ListeningEntry
 import app.dkord.data.db.AppDatabase
 import app.dkord.data.db.HistoryEntity
 import app.dkord.data.db.LikedEntity
@@ -83,6 +84,12 @@ class LibraryRepository(private val db: AppDatabase) {
     // ---- history ----
 
     fun recent(limit: Int = 50): Flow<List<Track>> = library.observeRecent(limit).map { l -> l.map { it.toTrack() } }
+
+    fun history(limit: Int = HISTORY_KEEP): Flow<List<ListeningEntry>> =
+        library.observeHistory(limit.coerceIn(1, HISTORY_KEEP)).map { rows -> rows.map { ListeningEntry(it.track.toTrack(), it.playedAt) } }
+
+    /** History-only removal never deletes a track, file, like, playlist item or saved queue. */
+    suspend fun removeFromHistory(id: String) = library.removeFromHistory(id)
 
     suspend fun recordPlayed(track: Track) = db.withTransaction {
         db.tracks().upsert(track.toEntity())

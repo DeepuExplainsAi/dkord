@@ -322,22 +322,41 @@ class AppContractsTest(unittest.TestCase):
         self.assertIn('keyAlias = "dkord"', gradle)
         self.assertRegex(gradle, r'versionName\s*=\s*"\d+\.\d+\.\d+"')
 
-    def test_shorts_use_native_metadata_one_settled_video_and_explicit_song_selection(self):
-        source = read("app/src/main/java/app/dkord/data/shorts/ShortsRepository.kt")
-        screen = read("app/src/main/java/app/dkord/ui/screens/Reels.kt")
-        controller = read("app/src/main/java/app/dkord/ui/shorts/ShortsController.kt")
-        self.assertIn("item.isShortFormContent", source)
-        self.assertIn("StreamType.VIDEO_STREAM", source)
-        self.assertIn("SearchInfo.getMoreItems", source)
-        self.assertIn("VerticalPager", screen)
-        self.assertIn("page == pager.settledPage", screen)
-        self.assertIn("player.release()", screen)
-        self.assertIn("Lifecycle.Event.ON_STOP", screen)
-        self.assertIn("repo.search(submitted, SearchFilter.SONGS)", screen)
-        self.assertIn("choose(track)", screen)
-        self.assertNotIn("tracks.first()", screen)
-        self.assertIn("generation != revision", controller)
-        self.assertIn("currentCoroutineContext().ensureActive()", controller)
+    def test_unwanted_shorts_feed_is_removed_not_hidden_behind_another_name(self):
+        for path in ("app/src/main/java/app/dkord/data/shorts/ShortsRepository.kt",
+                     "app/src/main/java/app/dkord/ui/shorts/ShortsController.kt",
+                     "app/src/main/java/app/dkord/ui/screens/Reels.kt"):
+            self.assertFalse((ROOT / path).exists(), path)
+        app = read("app/src/main/java/app/dkord/ui/App.kt")
+        module = read("app/src/main/java/app/dkord/di/AppModule.kt")
+        self.assertNotIn("ShortsRepository", module)
+        self.assertIn("TabSpec(Tab.LISTEN, Icons.Default.History, R.string.tab_listen)", app)
+        self.assertNotIn("TabSpec(Tab.REELS", app)
+        self.assertNotIn("ReelsScreen", app)
+        for path in ("app/src/main/res/values/strings.xml", "app/src/main/res/values-hi/strings.xml"):
+            self.assertNotIn('name="reels_', read(path))
+            self.assertNotIn('name="tab_reels"', read(path))
+
+    def test_listen_again_uses_local_history_single_track_play_and_safe_resume(self):
+        screen = read("app/src/main/java/app/dkord/ui/screens/ListenAgain.kt")
+        vm = read("app/src/main/java/app/dkord/ui/listen/ListenAgainViewModel.kt")
+        self.assertIn("onPlay(listOf(it), 0)", screen)
+        self.assertIn("actions.player.resume()", screen)
+        self.assertIn("library.history()", vm)
+        for forbidden in ("MusicRepository", "ShortsSource", "VideoResolver", "VerticalPager", "ExoPlayer", "searchQHFactory"):
+            self.assertNotIn(forbidden, screen + vm)
+        resume = read("app/src/main/java/app/dkord/player/ResumePlayback.kt")
+        self.assertNotIn("setMediaItems", resume)
+        self.assertNotIn("stop()", resume)
+        self.assertIn("player.play()", resume)
+        dao = read("app/src/main/java/app/dkord/data/db/Daos.kt")
+        self.assertIn('DELETE FROM history WHERE trackId = :id', dao)
+        self.assertNotIn('DELETE FROM tracks', dao)
+        self.assertIn('version = 1', read("app/src/main/java/app/dkord/data/db/AppDatabase.kt"))
+        nav = read("app/src/main/java/app/dkord/ui/Nav.kt")
+        self.assertIn("if (value == Tab.REELS) Tab.LISTEN", nav)
+        self.assertIn("rememberSaveable(stateSaver = TabSaver)", read("app/src/main/java/app/dkord/ui/App.kt"))
+        self.assertIn("--required-class app.dkord.ListenAgainTest", read(".github/workflows/validate-pr.yml"))
 
     def test_real_studio_uses_local_clips_actual_aac_composition_and_durable_background_work(self):
         exporter = read("app/src/main/java/app/dkord/data/studio/StudioAudioExporter.kt")

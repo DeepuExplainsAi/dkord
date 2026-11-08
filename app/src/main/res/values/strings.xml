@@ -259,13 +259,6 @@
     <string name="search_all">All YouTube</string>
     <string name="search_scope_uploads">YouTube uploads: covers, instrumentals and more.</string>
     <string name="search_scope_music_catalogue">YouTube Music catalogue</string>
-    <string name="tab_reels">Shorts</string>
-    <string name="reels_query">Find music clips</string>
-    <string name="reels_full_song">Find full song</string>
-    <string name="reels_choose_song">Choose the full song</string>
-    <string name="reels_attribution_hint">Choose the matching song below. A clip may not identify its original audio; edit the search if needed.</string>
-    <string name="reels_failed">Could not load clips. Check your connection and retry.</string>
-    <string name="reels_empty">No native Shorts found for this query. Try another song or load more.</string>
     <string name="studio_title">Mashup Studio</string>
     <string name="studio_exporting">Merging audio…</string>
     <string name="studio_audio_source">Audio source</string>
@@ -314,5 +307,31 @@
     <string name="studio_copy_saved">Audio copy saved.</string>
     <string name="studio_copy_failed">Could not save a copy. Check folder access and free space.</string>
     <string name="studio_use_track">Use in Mashup Studio</string>
-    <string name="reels_creator_discovery">Shorts from matching creators</string>
+
+    <!-- Audio-first listening history; no short-video feed. -->
+    <string name="tab_listen">Listen</string>
+    <string name="listen_title">Listen again</string>
+    <string name="listen_hint">Your music, right where you left it.</string>
+    <string name="listen_continue">Continue listening</string>
+    <string name="listen_now_playing">Now playing</string>
+    <string name="listen_open_player">Open player</string>
+    <string name="listen_position">%1$s / %2$s</string>
+    <string name="listen_search">Search listening history</string>
+    <string name="listen_manage">Manage</string>
+    <string name="listen_done">Done</string>
+    <string name="listen_clear">Clear history</string>
+    <string name="listen_clear_title">Clear listening history?</string>
+    <string name="listen_clear_message">Only listening history is removed. Songs, likes, playlists, downloads and the current queue stay.</string>
+    <string name="listen_liked">Liked</string>
+    <string name="listen_downloaded">Downloaded</string>
+    <string name="listen_no_match">No matching songs in your history</string>
+    <string name="listen_reset">Reset filters</string>
+    <string name="listen_play_all">Play these songs</string>
+    <string name="listen_today">Today</string>
+    <string name="listen_yesterday">Yesterday</string>
+    <string name="listen_earlier">Earlier</string>
+    <string name="listen_remove">Remove %1$s from listening history</string>
+    <string name="listen_load_failed">Could not read listening history. Retry without clearing your data.</string>
+    <string name="listen_action_failed">Could not update history. Your songs and files were not removed.</string>
+    <string name="listen_empty_hint">Songs appear here after they actually start playing. Find a song to begin.</string>
 </resources>

@@ -140,6 +140,7 @@ class PlayerController(
         if (it.playWhenReady) { autoplay.invalidate(); it.pause() }
         else { if (it.playbackState == Player.STATE_IDLE) it.prepare(); it.play() }
     }
+    fun resume() = withController { resumeExistingQueue(it) }
     fun pause() = withController { autoplay.invalidate(); it.pause() }
     fun next() = withController {
         if (it.hasNextMediaItem()) it.seekToNextMediaItem()

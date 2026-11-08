@@ -40,7 +40,6 @@ val appModule = module {
     single { StreamModule(get()) } bind StreamResolver::class
     single { InnerTubeClient(get<AuthStore>()) }
     single { MusicRepository(get()) }
-    single { app.dkord.data.shorts.ShortsRepository() }
     single { app.dkord.data.studio.StudioRepository(androidContext()) }
     single { SearchHistoryRepository(PreferencesSearchHistoryStorage(androidContext())) }
     single { NewReleasesRepository.fromMusic(get()) }

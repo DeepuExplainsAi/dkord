@@ -95,3 +95,6 @@ data class PlaylistEntryRow(
     @Embedded val track: TrackEntity,
     val itemId: Long,
 )
+
+/** Projection only; adding history timestamps does not change any table or schema version. */
+data class HistoryTrackRow(@Embedded val track: TrackEntity, val playedAt: Long)

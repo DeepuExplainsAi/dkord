@@ -68,6 +68,11 @@ interface LibraryDao {
     @Query("SELECT t.* FROM history h JOIN tracks t ON t.id = h.trackId ORDER BY h.playedAt DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<TrackEntity>>
 
+    @Query("SELECT t.*, h.playedAt FROM history h JOIN tracks t ON t.id = h.trackId ORDER BY h.playedAt DESC, t.id LIMIT :limit")
+    fun observeHistory(limit: Int): Flow<List<HistoryTrackRow>>
+
+    @Query("DELETE FROM history WHERE trackId = :id") suspend fun removeFromHistory(id: String)
+
     @Query("DELETE FROM history WHERE trackId NOT IN (SELECT trackId FROM history ORDER BY playedAt DESC LIMIT :keep)")
     suspend fun trimHistory(keep: Int)
 

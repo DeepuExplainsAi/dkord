@@ -3,7 +3,7 @@
 Free, open-source Android music client. YouTube / YouTube Music search, stream resolution and playback run on the phone; no custom paid backend is included. Optional Listen Together rooms use a public relay. Licensed GPL-3.0.
 
 ## Features
-Native Shorts with full-song lookup · real on-device clip/merge Mashup Studio · music-first search with optional broad YouTube scopes · Home with moods, charts and collapsed-by-default New Releases · background audio with notification, lock-screen and Bluetooth controls · music-only related-radio autoplay · queue, shuffle, repeat, speed and sleep timer · synced lyrics (LRCLIB) · tagged M4A downloads with pause/resume · local playlists with JSON import/export · song sharing · Listen Together rooms · compact in-app updates · dark / light / AMOLED / Material You themes.
+Listen Again resume/searchable history (unreleased0.9.1) · real on-device clip/merge Mashup Studio · music-first search with optional broad YouTube scopes · Home with moods, charts and collapsed-by-default New Releases · background audio with notification, lock-screen and Bluetooth controls · music-only related-radio autoplay · queue, shuffle, repeat, speed and sleep timer · synced lyrics (LRCLIB) · tagged M4A downloads with pause/resume · local playlists with JSON import/export · song sharing · Listen Together rooms · compact in-app updates · dark / light / AMOLED / Material You themes.
 
 ## Install and updates
 Latest official **[v0.9.0 / code 12](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.9.0)**: **[download Dkord-v0.9.0.apk](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.9.0/Dkord-v0.9.0.apk)**. Future updates are available from [the latest stable release](https://github.com/DeepuExplainsAi/dkord/releases/latest). Official updates use the same package/signing identity: install over the existing app, **without uninstalling**, to retain playlists, likes, downloads and settings. Uninstalling generally removes local app data.
@@ -92,7 +92,19 @@ No analytics and no Dkord account server. The app contacts YouTube/Google for mu
 ## Disclaimer and license
 Not affiliated with YouTube or Google. Use the app in line with applicable laws and service terms. GPL-3.0; see [LICENSE](LICENSE).
 
-## v0.9.0 / code 12 — keyboard repair, Shorts and Mashup Studio
+## Unreleased0.9.1/code13 — Listen Again replaces Shorts
+
+The owner rejected the0.9 Shorts experience and requested complete removal, not a renamed/re-filtered video feed. The current source replaces it with **Listen** / **Listen Again**:
+
+- Resume the actual current/saved song and queue at its position; entering the tab does not start audio, and opening a playing song does not toggle it off.
+- Search real local listening history by title/artist/album, grouped Today/Yesterday/Earlier in the device timezone. Liked and completed-download filters work locally; no fake recommendations, play-count statistics or channel discovery.
+- A history row plays just that chosen song first. **Play these songs** is a separate explicit whole-list action; normal song menus remain available.
+- Manage one history entry or confirm clearing history without deleting songs, likes, playlists, downloaded/exported files or the current queue. History records a song only after it really starts playing.
+- English/Hindi, larger fonts/real IME, saved filters/query/tab state and old0.9 tab migration. The legacy enum value is deserialization-only; all Shorts feed/controller/repository/DI/UI strings are removed. Ordinary opt-in manual video search/player stays.
+
+**Not a published APK.** Latest official remains0.9.0 below; these source changes need fresh Android validation and separate new-release authorization. PR #7 remains draft/unmerged. The checklist in `docs/NEW_FEATURE_SMOKE.md` is not a phone-pass report.
+
+## Published0.9.0 / code12 — historical feature snapshot
 
 The published release adds a single-owner keyboard/insets fix, a native Shorts video tab, and **Mashup Studio** (Library or a song menu).
 

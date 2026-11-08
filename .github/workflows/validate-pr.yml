@@ -134,6 +134,7 @@ jobs:
           --required-class app.dkord.StudioAudioExportTest
           --required-class app.dkord.StudioClipEditorTest
           --required-class app.dkord.StudioExportPublicationTest
+          --required-class app.dkord.ListenAgainTest
       - name: Upload Android device-test reports
         if: always()
         uses: actions/upload-artifact@v7

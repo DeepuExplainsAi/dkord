@@ -7,7 +7,20 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable
-enum class Tab { HOME, SEARCH, REELS, LIBRARY, DOWNLOADS }
+enum class Tab {
+    HOME, SEARCH, LISTEN, LIBRARY, DOWNLOADS,
+    // Deserialization-only compatibility with old Java-enum saved state. Never displayed as a tab.
+    REELS,
+}
+
+internal fun restoredTab(value: Any): Tab = when (value) {
+    is Tab -> if (value == Tab.REELS) Tab.LISTEN else value
+    is String -> Tab.entries.firstOrNull { it.name == value }?.let(::restoredTab) ?: Tab.HOME
+    else -> Tab.HOME
+}
+
+/** New saves use stable names; old serialized enum values safely map to the audio-only replacement. */
+val TabSaver = Saver<Tab, Any>(save = { restoredTab(it).name }, restore = ::restoredTab)
 
 /** Screens above the tabs. Serializable so the back stack survives rotation and process death. */
 @Serializable
