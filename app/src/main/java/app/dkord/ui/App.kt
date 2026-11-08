@@ -1,5 +1,8 @@
 package app.dkord.ui
 
+import app.dkord.ui.screens.StudioScreen
+import androidx.compose.material3.TextButton
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -12,6 +15,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +26,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -54,6 +60,7 @@ import app.dkord.core.Track
 import app.dkord.player.PlaybackEvents
 import app.dkord.player.PlaybackProblem
 import app.dkord.ui.common.Actions
+import app.dkord.ui.common.KeyboardAwareScaffold
 import app.dkord.ui.common.HomeUpdateNotice
 import app.dkord.ui.common.ObserveAppUpdates
 import app.dkord.ui.common.DkordMotion
@@ -71,6 +78,7 @@ import app.dkord.ui.screens.LikedScreen
 import app.dkord.ui.screens.LocalPlaylistScreen
 import app.dkord.ui.screens.RecentScreen
 import app.dkord.ui.screens.SearchScreen
+import app.dkord.ui.screens.ListenAgainScreen
 import app.dkord.ui.screens.ListenTogetherScreen
 import app.dkord.ui.screens.SettingsScreen
 import kotlinx.coroutines.launch
@@ -86,7 +94,7 @@ fun App() {
     val scope = rememberCoroutineScope()
 
     val savedTabs = rememberSaveableStateHolder()
-    var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
+    var tab by rememberSaveable(stateSaver = TabSaver) { mutableStateOf(Tab.HOME) }
     var stack by rememberSaveable(stateSaver = BackStackSaver) { mutableStateOf(emptyList<Dest>()) }
     var playerOpen by rememberSaveable { mutableStateOf(false) }
     var menuTrack by remember { mutableStateOf<Track?>(null) }
@@ -120,14 +128,14 @@ fun App() {
     }
 
     Box(Modifier.fillMaxSize()) {
-        Scaffold(
+        KeyboardAwareScaffold(
             snackbarHost = { SnackbarHost(snack) },
             bottomBar = {
                 if (top == null || top is Dest.Detail || top is Dest.Playlist || top is Dest.Liked || top is Dest.Recent) Column {
                     MiniPlayer(state, player, onOpen = { playerOpen = true })
                     if (top == null) NavigationBar {
                         tabs.forEach { (t, icon, label) ->
-                            NavigationBarItem(tab == t, { tab = t }, { Icon(icon, null) }, label = { Text(stringResource(label)) })
+                            NavigationBarItem(tab == t, { tab = t }, { Icon(icon, null) }, label = { Text(stringResource(label), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) })
                         }
                     }
                 }
@@ -136,7 +144,7 @@ fun App() {
             AnimatedContent(
                 targetState = stack,
                 contentKey = { it.size to it.lastOrNull() },
-                modifier = Modifier.fillMaxSize().padding(pad),
+                modifier = Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad),
                 transitionSpec = {
                     when (navigationDirection(initialState.size, targetState.size)) {
                         NavigationDirection.FORWARD ->
@@ -149,7 +157,7 @@ fun App() {
                 label = "dest",
             ) { entries ->
                 when (val dest = entries.lastOrNull()) {
-                    null -> TabContent(tab, savedTabs, ::say, { push(Dest.Settings) }, ::push, ::onItem, ::play, { menuTrack = it })
+                    null -> TabContent(tab, savedTabs, ::say, { push(Dest.Settings) }, ::push, ::onItem, ::play, { menuTrack = it }, onOpenPlayer = { playerOpen = true }, onSearch = { tab = Tab.SEARCH }, onRelated = { track, hint -> player.playRelated(track, hint) })
                     is Dest.Detail -> DetailScreen(dest.toItem(), ::pop, ::onItem, ::play, { menuTrack = it }, { pickTracks = it })
                     is Dest.Playlist -> LocalPlaylistScreen(dest.id, ::pop, ::play) { menuTrack = it }
                     Dest.Liked -> LikedScreen(::pop, ::play) { menuTrack = it }
@@ -158,6 +166,7 @@ fun App() {
                     Dest.ListenTogether -> ListenTogetherScreen(onBack = ::pop, onOpenPlayer = { pop(); playerOpen = true }, onMessage = ::say)
                     Dest.Logs -> DebugLogScreen(::pop, ::say)
                     is Dest.Video -> VideoScreen(dest.id, dest.title, ::pop)
+                    is Dest.Studio -> StudioScreen(dest.track, { list, index -> play(list, index); playerOpen = true }, { menuTrack = it }, ::say, ::pop)
                 }
             }
         }
@@ -172,7 +181,11 @@ fun App() {
 
     ObserveAppUpdates()
 
-    menuTrack?.let { t -> TrackMenu(t, onDismiss = { menuTrack = null }, onAddToPlaylist = { pickTracks = listOf(it) }) }
+    menuTrack?.let { t -> TrackMenu(t, onDismiss = { menuTrack = null }, onAddToPlaylist = { pickTracks = listOf(it) }, extra = {
+        TextButton({ menuTrack = null; playerOpen = false; push(Dest.Studio(t)) }, Modifier.padding(horizontal = 16.dp)) {
+            Text(stringResource(R.string.studio_use_track))
+        }
+    }) }
     pickTracks?.let { PlaylistPicker(it, onDismiss = { pickTracks = null }, onResult = ::say) }
 }
 
@@ -180,6 +193,7 @@ private data class TabSpec(val tab: Tab, val icon: androidx.compose.ui.graphics.
 private val tabs = listOf(
     TabSpec(Tab.HOME, Icons.Default.Home, R.string.tab_home),
     TabSpec(Tab.SEARCH, Icons.Default.Search, R.string.tab_search),
+    TabSpec(Tab.LISTEN, Icons.Default.History, R.string.tab_listen),
     TabSpec(Tab.LIBRARY, Icons.Default.LibraryMusic, R.string.tab_library),
     TabSpec(Tab.DOWNLOADS, Icons.Default.Download, R.string.tab_downloads),
 )
@@ -195,8 +209,12 @@ private fun TabContent(
     onItem: (app.dkord.core.BrowseItem) -> Unit,
     onPlay: (List<Track>, Int) -> Unit,
     onMenu: (Track) -> Unit,
+    onOpenPlayer: () -> Unit,
+    onSearch: () -> Unit,
+    onRelated: (Track, String) -> Unit,
 ) {
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             Column {
                 TopAppBar(
@@ -214,7 +232,7 @@ private fun TabContent(
     ) { pad ->
         AnimatedContent(
             targetState = tab,
-            modifier = Modifier.fillMaxSize().padding(pad),
+            modifier = Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad),
             transitionSpec = { fadeIn(tween(DkordMotion.CONTENT)) togetherWith fadeOut(tween(DkordMotion.QUICK)) },
             label = "tab",
         ) { selected ->
@@ -222,9 +240,10 @@ private fun TabContent(
             savedTabs.SaveableStateProvider(selected.name) {
                 val m = Modifier.fillMaxSize()
                 when (selected) {
-                    Tab.HOME -> HomeScreen(onItem, onPlay, m)
-                    Tab.SEARCH -> SearchScreen(onItem, onPlay, onMenu, m, onMessage = say)
-                    Tab.LIBRARY -> LibraryScreen({ push(Dest.Playlist(it)) }, { push(Dest.Liked) }, { push(Dest.Recent) }, onItem, say, m)
+                    Tab.HOME -> HomeScreen(onItem, onPlay, m, onRelated = onRelated)
+                    Tab.SEARCH -> SearchScreen(onItem, onPlay, onMenu, m, onMessage = say, onRelated = onRelated)
+                    Tab.LISTEN, Tab.REELS -> ListenAgainScreen(onPlay, onMenu, onOpenPlayer, onSearch, say, m)
+                    Tab.LIBRARY -> LibraryScreen({ push(Dest.Playlist(it)) }, { push(Dest.Liked) }, { push(Dest.Recent) }, onItem, say, m, onOpenStudio = { push(Dest.Studio()) })
                     Tab.DOWNLOADS -> DownloadsScreen(onPlay, onMenu, m)
                 }
             }

@@ -1,5 +1,7 @@
 package app.dkord.data.yt
 
+import app.dkord.core.isLocalAudioId
+
 import app.dkord.core.BrowseItem
 import app.dkord.core.Page
 import app.dkord.core.Track
@@ -10,8 +12,8 @@ import org.schabi.newpipe.extractor.search.SearchInfo
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory as F
 
 enum class SearchFilter(internal val id: String) {
-    ALL(F.ALL), VIDEOS(F.VIDEOS), SONGS(F.MUSIC_SONGS), MUSIC_VIDEOS(F.MUSIC_VIDEOS),
-    ALBUMS(F.MUSIC_ALBUMS), ARTISTS(F.MUSIC_ARTISTS), PLAYLISTS(F.MUSIC_PLAYLISTS)
+    SONGS(F.MUSIC_SONGS), ALBUMS(F.MUSIC_ALBUMS), ARTISTS(F.MUSIC_ARTISTS), PLAYLISTS(F.MUSIC_PLAYLISTS),
+    MUSIC_VIDEOS(F.MUSIC_VIDEOS), VIDEOS(F.VIDEOS), ALL(F.ALL)
 }
 
 /** Opaque handle for the next search page. */
@@ -25,6 +27,11 @@ class SearchResult(
 )
 
 class MusicRepository(private val client: InnerTubeClient) {
+    private val radioFacts = CachedRadioFacts({ track ->
+        val root = client.radioMetadata(track.id)
+        if (root.at("videoDetails", "videoId").str() != track.id) throw java.io.IOException("Radio metadata unavailable")
+        parseRadioFacts(root, track.id)
+    })
 
     // ---- Search & suggestions: NewPipeExtractor (no auth, no PO token needed) ----
 
@@ -46,21 +53,17 @@ class MusicRepository(private val client: InnerTubeClient) {
     }
 
     /**
-     * Autoplay: anonymous YouTube Music Radio for [track], preserving its recommendation order.
+     * Autoplay: anonymous YouTube Music Radio anchored to the user selection, not the queue tail.
      * Falls back to the YouTube Music "songs" search if no usable radio songs remain after filtering.
      * The plain youtube.com watch-page related list is NOT used (it returns vlogs/normal videos).
      */
-    suspend fun related(track: Track): List<Track> = withContext(Dispatchers.IO) {
-        fun usable(songs: List<Track>) = songs.distinctBy { it.id }.filter {
-            it.id.isNotBlank() && it.title.isNotBlank() && it.id != track.id &&
-                (it.durationSec == 0L || it.durationSec in 60..720)
-        }
-
-        val radio = usable(runCatching { MusicParser.parseWatchNext(client.next(track.id)) }.getOrDefault(emptyList()))
-        radio.ifEmpty {
-            usable(runCatching { search("${track.artist} ${track.title}", SearchFilter.SONGS).items.mapNotNull { it.track } }
-                .getOrDefault(emptyList()))
-        }
+    suspend fun related(track: Track, queue: List<Track> = emptyList(), contextHint: String = ""): List<Track> = withContext(Dispatchers.IO) {
+        if (isLocalAudioId(track.id)) return@withContext emptyList()
+        musicRadioRecommendations(track, queue,
+            fetchRadio = { MusicParser.parseWatchNext(client.next(track.id)) },
+            searchSongs = { query -> search(query, SearchFilter.SONGS).items.mapNotNull { it.track } },
+            hint = contextHint, factsSource = radioFacts,
+        )
     }
 
     // ---- Browse: InnerTube WEB_REMIX (personalised when signed in) ----

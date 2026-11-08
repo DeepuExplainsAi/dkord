@@ -30,12 +30,13 @@ class SearchController(
     private val scope: CoroutineScope,
 ) {
     private val mutableQuery = MutableStateFlow("")
-    private val mutableFilter = MutableStateFlow(SearchFilter.ALL)
+    private val mutableFilter = MutableStateFlow(SearchFilter.SONGS)
     private val mutableResults = MutableStateFlow<Load<List<BrowseItem>>?>(null)
     private val mutableSuggestions = MutableStateFlow<List<String>>(emptyList())
     private val mutableSuggestionLoading = MutableStateFlow(false)
     private val mutableSuggestionFailed = MutableStateFlow(false)
     private val mutableCorrection = MutableStateFlow<SearchCorrection?>(null)
+    private val mutablePlaybackHint = MutableStateFlow("")
     private val mutableHasMore = MutableStateFlow(false)
     private val mutableMore = MutableStateFlow(false)
     private val mutableMoreFailed = MutableStateFlow(false)
@@ -46,6 +47,7 @@ class SearchController(
     val suggestionsLoading = mutableSuggestionLoading.asStateFlow()
     val suggestionsFailed = mutableSuggestionFailed.asStateFlow()
     val correction = mutableCorrection.asStateFlow()
+    val playbackHint = mutablePlaybackHint.asStateFlow()
     val hasMore = mutableHasMore.asStateFlow()
     val loadingMore = mutableMore.asStateFlow()
     val moreFailed = mutableMoreFailed.asStateFlow()
@@ -135,6 +137,7 @@ class SearchController(
                         val suggested = normalizeSearchQuery(value.query)
                         value.copy(query = suggested).takeIf { suggested.isNotBlank() && searchIdentity(suggested) != searchIdentity(normalized) }
                     }
+                    mutablePlaybackHint.value = mutableCorrection.value?.takeIf { it.corrected }?.query ?: normalized
                     mutableResults.value = Load.Ok(result.items.distinctBy { it.kind to it.id })
                 }
             } catch (e: CancellationException) {
@@ -175,7 +178,7 @@ class SearchController(
     fun clear() {
         invalidate()
         mutableQuery.value = ""
-        mutableFilter.value = SearchFilter.ALL
+        mutableFilter.value = SearchFilter.SONGS
         mutableResults.value = null
     }
 
@@ -194,5 +197,6 @@ class SearchController(
         mutableSuggestionLoading.value = false
         mutableSuggestionFailed.value = false
         mutableCorrection.value = null
+        mutablePlaybackHint.value = ""
     }
 }

@@ -62,9 +62,9 @@ class SearchControllerTest {
         val f = fixture()
         f.controller.typed("  Arijit   Singh  "); f.controller.search(); runCurrent()
         assertEquals("Arijit Singh", f.controller.query.value)
-        assertEquals(listOf("Arijit Singh" to SearchFilter.ALL), f.source.searches)
+        assertEquals(listOf("Arijit Singh" to SearchFilter.SONGS), f.source.searches)
         assertEquals(listOf("Arijit Singh"), f.controller.ids())
-        assertEquals(listOf(SavedSearch("Arijit Singh", SearchFilter.ALL)), f.history.state.value.entries)
+        assertEquals(listOf(SavedSearch("Arijit Singh", SearchFilter.SONGS)), f.history.state.value.entries)
         assertEquals(1, f.storage.writes)
         advanceTimeBy(1000); runCurrent()
         assertTrue(f.source.suggested.isEmpty())
@@ -120,7 +120,7 @@ class SearchControllerTest {
     @Test fun old_uncancellable_search_cannot_replace_a_newer_query_or_filter() = runTest {
         val f = fixture()
         f.source.find = { _, filter ->
-            withContext(NonCancellable) { delay(if (filter == SearchFilter.ALL) 100 else 10) }
+            withContext(NonCancellable) { delay(if (filter == SearchFilter.SONGS) 100 else 10) }
             SearchPage(listOf(song(filter.name)))
         }
         f.controller.search("Artist"); runCurrent()
@@ -286,14 +286,14 @@ class SearchControllerTest {
         assertTrue(f.history.state.value.entries.isEmpty())
     }
 
-    @Test fun new_searches_default_to_all_and_arbitrary_queries_are_not_rewritten() = runTest {
+    @Test fun new_searches_default_to_songs_and_arbitrary_queries_are_not_rewritten() = runTest {
         val f = fixture()
-        assertEquals(SearchFilter.ALL, f.controller.filter.value)
+        assertEquals(SearchFilter.SONGS, f.controller.filter.value)
         for (query in listOf("mashup sad love 1 hour", "Tamil cover unplugged", "भजन nonstop 3 hours", "podcast live remix",
             "Teri meri kahani instrumental", "Teri meri kahani instumental", "Teri meri kahani Instagram version",
             "Teri meri kahani cover by another creator", "karaoke no vocals piano", "slowed reverb 8D remix")) {
             f.controller.search(query); runCurrent()
-            assertEquals(query to SearchFilter.ALL, f.source.searches.last())
+            assertEquals(query to SearchFilter.SONGS, f.source.searches.last())
             assertEquals(listOf(query), f.controller.ids())
         }
     }
@@ -310,14 +310,14 @@ class SearchControllerTest {
         assertEquals(listOf("video0", "video1", "video2"), f.controller.ids())
     }
 
-    @Test fun clearing_a_narrow_query_resets_all_for_the_next_search_without_erasing_history() = runTest {
+    @Test fun clearing_a_narrow_query_resets_songs_for_the_next_search_without_erasing_history() = runTest {
         val f = fixture()
         f.controller.search("Old", SearchFilter.SONGS); runCurrent()
         f.controller.clear(); runCurrent()
-        assertEquals(SearchFilter.ALL, f.controller.filter.value)
+        assertEquals(SearchFilter.SONGS, f.controller.filter.value)
         assertEquals(listOf(SavedSearch("Old", SearchFilter.SONGS)), f.history.state.value.entries)
         f.controller.search("New long mix"); runCurrent()
-        assertEquals("New long mix" to SearchFilter.ALL, f.source.searches.last())
+        assertEquals("New long mix" to SearchFilter.SONGS, f.source.searches.last())
     }
 
     @Test fun broadening_a_music_query_keeps_exact_text_and_saves_both_explicit_scopes() = runTest {
@@ -489,11 +489,11 @@ class SearchControllerTest {
         f.source.find = { _, _ -> SearchPage(listOf(song("instrumental-upload")), correction = SearchCorrection(suggested)) }
         f.controller.search(typed); runCurrent()
         assertEquals(typed, f.controller.query.value)
-        assertEquals(typed to SearchFilter.ALL, f.source.searches.single())
-        assertEquals(listOf(SavedSearch(typed, SearchFilter.ALL)), f.history.state.value.entries)
+        assertEquals(typed to SearchFilter.SONGS, f.source.searches.single())
+        assertEquals(listOf(SavedSearch(typed, SearchFilter.SONGS)), f.history.state.value.entries)
         assertEquals(SearchCorrection(suggested), f.controller.correction.value)
         f.controller.search(suggested); runCurrent()
-        assertEquals(suggested to SearchFilter.ALL, f.source.searches.last())
+        assertEquals(suggested to SearchFilter.SONGS, f.source.searches.last())
         assertEquals(listOf(suggested, typed), f.history.state.value.entries.map { it.query })
     }
 
@@ -519,4 +519,68 @@ class SearchControllerTest {
         assertEquals(MAX_SEARCH_LENGTH, f.source.searches.single().first.length)
         assertEquals(MAX_SEARCH_LENGTH, f.history.state.value.entries.single().query.length)
     }
+
+    @Test fun radio_intent_is_only_published_with_completed_submitted_results_not_typing_or_loading() = runTest {
+        val f = fixture()
+        f.source.find = { _, _ -> delay(50); SearchPage(listOf(song("selected"))) }
+        f.controller.typed("  Hindi   sad songs  "); runCurrent()
+        assertEquals("", f.controller.playbackHint.value)
+        f.controller.search(); runCurrent()
+        assertEquals("", f.controller.playbackHint.value)
+        advanceTimeBy(50); runCurrent()
+        assertEquals("Hindi sad songs", f.controller.playbackHint.value)
+        f.controller.typed("english party"); runCurrent()
+        assertEquals("", f.controller.playbackHint.value)
+        assertNull(f.controller.results.value)
+    }
+
+    @Test fun an_uncancellable_old_response_cannot_replace_the_new_radio_intent() = runTest {
+        val f = fixture()
+        f.source.find = { query, _ ->
+            withContext(NonCancellable) { delay(if (query == "hindi sad") 100 else 5) }
+            SearchPage(listOf(song(query)))
+        }
+        f.controller.search("hindi sad"); runCurrent()
+        f.controller.search("english party"); runCurrent(); advanceTimeBy(5); runCurrent()
+        assertEquals("english party", f.controller.playbackHint.value)
+        advanceTimeBy(95); runCurrent()
+        assertEquals("english party", f.controller.playbackHint.value)
+        assertEquals(listOf("english party"), f.controller.ids())
+    }
+
+    @Test fun provider_correction_changes_radio_intent_only_when_results_were_actually_corrected() = runTest {
+        for (corrected in listOf(false, true)) {
+            val f = fixture()
+            f.source.find = { _, _ -> SearchPage(listOf(song("selected")), correction = SearchCorrection("hindi sad", corrected)) }
+            f.controller.search("hindi sda"); runCurrent()
+            assertEquals(if (corrected) "hindi sad" else "hindi sda", f.controller.playbackHint.value)
+            assertEquals("hindi sda", f.controller.query.value)
+            assertEquals("hindi sda", f.history.state.value.entries.single().query)
+        }
+    }
+
+    @Test fun pagination_keeps_submitted_radio_intent_instead_of_reclassifying_the_queue_from_a_later_page() = runTest {
+        val f = fixture()
+        f.source.find = { _, _ -> SearchPage(listOf(song("one")), Token("next")) }
+        f.source.next = { SearchPage(listOf(song("two")), correction = SearchCorrection("unrelated", true)) }
+        f.controller.search("hindi chill"); runCurrent()
+        f.controller.loadMore(); runCurrent()
+        assertEquals(listOf("one", "two"), f.controller.ids())
+        assertEquals("hindi chill", f.controller.playbackHint.value)
+        assertEquals(1, f.storage.writes)
+    }
+
+    @Test fun clear_and_failed_or_loading_filter_changes_never_retain_previous_radio_intent() = runTest {
+        val f = fixture()
+        f.controller.search("hindi sad"); runCurrent()
+        assertEquals("hindi sad", f.controller.playbackHint.value)
+        f.source.find = { _, _ -> delay(10); throw IOException("offline") }
+        f.controller.setFilter(SearchFilter.ALL); runCurrent()
+        assertEquals("", f.controller.playbackHint.value)
+        advanceTimeBy(10); runCurrent()
+        assertEquals("", f.controller.playbackHint.value)
+        f.controller.clear(); runCurrent()
+        assertEquals("", f.controller.playbackHint.value)
+    }
+
 }

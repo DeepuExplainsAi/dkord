@@ -5,7 +5,13 @@ import app.dkord.data.auth.CookieSource
 import app.dkord.data.auth.SapisidHash
 import app.dkord.data.net.Http
 import app.dkord.data.stream.StreamError
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -42,6 +48,51 @@ class InnerTubeClient(
             put("enablePersistentPlaylistPanel", true)
             put("tunerSettingValue", "AUTOMIX_SETTING_NORMAL")
         }
+
+    // Metadata only: no stream resolution/download, cookies, visitor tokens or fallback client chain.
+    private val radioHttp = http.newBuilder().cookieJar(okhttp3.CookieJar.NO_COOKIES)
+        .authenticator(okhttp3.Authenticator.NONE).callTimeout(8, java.util.concurrent.TimeUnit.SECONDS).build()
+
+    internal suspend fun radioMetadata(videoId: String): JsonElement = withContext(Dispatchers.IO) {
+        val payload = buildJsonObject {
+            put("context", buildJsonObject {
+                put("client", buildJsonObject {
+                    put("clientName", CLIENT_NAME); put("clientVersion", CLIENT_VERSION)
+                    put("hl", "en"); put("gl", locale().country.ifEmpty { "US" })
+                })
+            })
+            put("videoId", videoId)
+        }
+        val request = Request.Builder().url("$BASE/player?prettyPrint=false")
+            .header("User-Agent", WEB_UA).header("Origin", SapisidHash.ORIGIN)
+            .post(payload.toString().toRequestBody(Http.JSON)).build()
+        coroutineScope {
+            val call = radioHttp.newCall(request)
+            val cancel = launch(start = CoroutineStart.UNDISPATCHED) {
+                try { awaitCancellation() } finally { call.cancel() }
+            }
+            try {
+                call.execute().use { response ->
+                    if (!response.isSuccessful) throw IOException("Radio metadata unavailable")
+                    val text = response.body.charStream().use { reader ->
+                        val out = StringBuilder()
+                        val chars = CharArray(8192)
+                        while (out.length <= 1024 * 1024) {
+                            currentCoroutineContext().ensureActive()
+                            val count = reader.read(chars)
+                            if (count < 0) break
+                            out.append(chars, 0, count)
+                        }
+                        if (out.length > 1024 * 1024) throw IOException("Radio metadata too large")
+                        out.toString()
+                    }
+                    currentCoroutineContext().ensureActive()
+                    lenientJson.parseToJsonElement(text)
+                }
+            } catch (e: IOException) { currentCoroutineContext().ensureActive(); throw e }
+            finally { cancel.cancel() }
+        }
+    }
 
     suspend fun accountMenu(): JsonElement = call("account/account_menu") {}
 

@@ -1,5 +1,7 @@
 package app.dkord.data.lyrics
 
+import app.dkord.core.isLocalAudioId
+
 import app.dkord.core.DebugLog
 import app.dkord.core.Track
 import app.dkord.data.net.Http
@@ -49,6 +51,7 @@ class LyricsRepository {
 
     /** Null when nothing was found. Network errors propagate so the UI can offer a retry. */
     suspend fun load(track: Track): Lyrics? {
+        if (isLocalAudioId(track.id)) return null
         cache[track.id]?.let { return it }
         return withContext(Dispatchers.IO) {
             val title = clean(track.title); val artist = track.artist.removeSuffix(" - Topic")

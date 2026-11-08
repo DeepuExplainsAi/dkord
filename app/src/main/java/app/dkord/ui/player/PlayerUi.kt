@@ -1,5 +1,7 @@
 package app.dkord.ui.player
 
+import app.dkord.core.isLocalAudioId
+
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -13,6 +15,8 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -142,7 +146,7 @@ fun MiniPlayer(state: PlayerUiState, controller: PlayerController, onOpen: () ->
 private enum class Panel { ART, LYRICS, QUEUE }
 
 /** Full-screen player. Swipe down closes; swipe sideways on the art changes track. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun FullPlayer(state: PlayerUiState, onClose: () -> Unit, onAddToPlaylist: (Track) -> Unit, onPlayVideo: (Track) -> Unit, onListenTogether: () -> Unit) {
     val actions: Actions = koinInject()
@@ -186,7 +190,7 @@ fun FullPlayer(state: PlayerUiState, onClose: () -> Unit, onAddToPlaylist: (Trac
                     IconButton({ moreOpen = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.more)) }
                     DropdownMenu(moreOpen, { moreOpen = false }) {
                         DropdownMenuItem(text = { Text(stringResource(R.string.listen_together)) },
-                            onClick = { moreOpen = false; onListenTogether() })
+                            onClick = { moreOpen = false; onListenTogether() }, enabled = !isLocalAudioId(track.id))
                     }
                 }
             }
@@ -208,7 +212,7 @@ fun FullPlayer(state: PlayerUiState, onClose: () -> Unit, onAddToPlaylist: (Trac
                 }
                 val ctx = LocalContext.current
                 val savedMsg = stringResource(R.string.download_started)
-                IconButton({ actions.download(listOf(track)); Toast.makeText(ctx, savedMsg, Toast.LENGTH_SHORT).show() }) {
+                if (!isLocalAudioId(track.id)) IconButton({ actions.download(listOf(track)); Toast.makeText(ctx, savedMsg, Toast.LENGTH_SHORT).show() }) {
                     Icon(Icons.Default.Download, stringResource(R.string.download))
                 }
                 val liked = track.id in likedIds
@@ -237,23 +241,25 @@ fun FullPlayer(state: PlayerUiState, onClose: () -> Unit, onAddToPlaylist: (Trac
                         tint = if (state.repeatMode != Player.REPEAT_MODE_OFF) MaterialTheme.colorScheme.primary else LocalContentColorOrDefault())
                 }
             }
-            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                TextButton({ sheet = "speed" }) { Icon(Icons.Default.Speed, null); Text("  ${state.speed}x") }
+            FlowRow(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                TextButton({ sheet = "speed" }) { Icon(Icons.Default.Speed, null); Text("  ${state.speed}x", maxLines = 1, softWrap = false) }
                 TextButton({ sheet = "sleep" }) {
                     Icon(Icons.Default.Bedtime, null, tint = if (sleep != SleepState.Off) MaterialTheme.colorScheme.primary else LocalContentColorOrDefault())
                     Text("  " + when (val s = sleep) {
                         SleepState.Off -> stringResource(R.string.sleep_timer)
                         SleepState.EndOfTrack -> stringResource(R.string.end_of_track)
                         is SleepState.Countdown -> formatTime(s.remainingMs)
-                    })
+                    }, maxLines = 1, softWrap = false)
                 }
                 val st by settingsRepo.settings.collectAsState()
                 TextButton({ settingsRepo.setAutoplay(!st.autoplay) }) {
                     Icon(Icons.Default.AutoAwesome, null, tint = if (st.autoplay) MaterialTheme.colorScheme.primary else LocalContentColorOrDefault())
-                    Text("  " + stringResource(R.string.autoplay), color = if (st.autoplay) MaterialTheme.colorScheme.primary else LocalContentColorOrDefault())
+                    Text("  " + stringResource(R.string.autoplay), maxLines = 1, softWrap = false, color = if (st.autoplay) MaterialTheme.colorScheme.primary else LocalContentColorOrDefault())
                 }
-                TextButton({ onAddToPlaylist(track) }) { Text(stringResource(R.string.add_to_playlist)) }
-                TextButton({ onPlayVideo(track) }) { Text(stringResource(R.string.play_video)) }
+                TextButton({ onAddToPlaylist(track) }) { Text(stringResource(R.string.add_to_playlist), maxLines = 1, softWrap = false) }
+                if (!isLocalAudioId(track.id)) TextButton({ onPlayVideo(track) }) { Text(stringResource(R.string.play_video), maxLines = 1, softWrap = false) }
             }
         }
     }

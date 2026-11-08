@@ -13,8 +13,9 @@ android {
         applicationId = "app.dkord"
         minSdk = 26
         targetSdk = 37
-        versionCode = 9
-        versionName = "0.8.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionCode = 13
+        versionName = "0.9.1"
     }
 
     // One stable key for every build, so a new APK installs over the old one and keeps user data.
@@ -66,6 +67,7 @@ dependencies {
     implementation(libs.compose.icons.extended)
     debugImplementation(libs.compose.ui.tooling)
 
+    implementation(libs.media3.transformer)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)
     implementation(libs.media3.ui)
@@ -89,6 +91,12 @@ dependencies {
     implementation(libs.security.crypto)
     implementation(libs.coroutines.android)
     implementation(libs.serialization.json)
+
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    debugImplementation(libs.compose.ui.test.manifest)
 
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)

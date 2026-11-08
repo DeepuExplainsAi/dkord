@@ -1,5 +1,7 @@
 package app.dkord.data.stream
 
+import app.dkord.core.isLocalAudioId
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
@@ -15,6 +17,7 @@ import java.io.IOException
 /** Resolves a muxed video stream plus subtitles through the extractor. Does not touch the audio resolver chain or its cache. */
 class VideoResolver {
     suspend fun resolve(videoId: String): ResolvedVideo = withContext(Dispatchers.IO) {
+        if (isLocalAudioId(videoId)) throw NoVideoException("Local audio has no provider video")
         try {
             val ex = ServiceList.YouTube.getStreamExtractor("https://www.youtube.com/watch?v=$videoId")
             ex.fetchPage()

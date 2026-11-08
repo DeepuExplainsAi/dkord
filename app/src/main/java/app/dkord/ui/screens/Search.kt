@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,6 +30,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,7 +69,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.dkord.R
 import app.dkord.core.BrowseItem
-import app.dkord.core.ItemKind
 import app.dkord.core.Track
 import app.dkord.data.search.MAX_PINNED_SEARCHES
 import app.dkord.data.search.MusicSearchSource
@@ -89,6 +88,7 @@ import app.dkord.ui.common.Loading
 import app.dkord.ui.common.koinVm
 import app.dkord.ui.common.softClickable
 import app.dkord.ui.search.SearchController
+import app.dkord.ui.search.searchPlaybackQueue
 import kotlinx.coroutines.flow.collect
 import org.koin.compose.koinInject
 
@@ -101,6 +101,7 @@ class SearchViewModel(repo: MusicRepository, history: SearchHistoryRepository) :
     val suggestionsLoading = controller.suggestionsLoading
     val suggestionsFailed = controller.suggestionsFailed
     val correction = controller.correction
+    val playbackHint = controller.playbackHint
     val hasMore = controller.hasMore
     val loadingMore = controller.loadingMore
     val moreFailed = controller.moreFailed
@@ -121,6 +122,7 @@ fun SearchScreen(
     onMenu: (Track) -> Unit,
     modifier: Modifier = Modifier,
     onMessage: (String) -> Unit = {},
+    onRelated: ((Track, String) -> Unit)? = null,
 ) {
     val repo: MusicRepository = koinInject()
     val saved: SearchHistoryRepository = koinInject()
@@ -132,6 +134,7 @@ fun SearchScreen(
     val suggestionsLoading by vm.suggestionsLoading.collectAsState()
     val suggestionsFailed by vm.suggestionsFailed.collectAsState()
     val correction by vm.correction.collectAsState()
+    val playbackHint by vm.playbackHint.collectAsState()
     val history by saved.state.collectAsState()
     val hasMore by vm.hasMore.collectAsState()
     val loadingMore by vm.loadingMore.collectAsState()
@@ -173,25 +176,28 @@ fun SearchScreen(
         suggestions.filter { searchIdentity(it) !in local }
     }
 
-    Column(modifier.fillMaxSize().imePadding()) {
-        OutlinedTextField(
-            field, { next ->
-                val limited = limitSearchInput(next.text)
-                field = if (limited == next.text) next else TextFieldValue(limited, TextRange(limited.length))
-                vm.typed(limited)
-            },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).focusRequester(focusRequester),
-            placeholder = { Text(stringResource(R.string.search_hint)) },
-            leadingIcon = { IconButton({ submitted { vm.search() } }, enabled = query.isNotBlank()) {
+    Column(modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                field, { next ->
+                    val limited = limitSearchInput(next.text)
+                    field = if (limited == next.text) next else TextFieldValue(limited, TextRange(limited.length))
+                    vm.typed(limited)
+                },
+                modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                placeholder = { Text(stringResource(R.string.search_hint), maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) },
+                trailingIcon = { if (query.isNotEmpty()) IconButton({ field = TextFieldValue(); vm.clear() }) {
+                    Icon(Icons.Default.Clear, stringResource(R.string.clear))
+                } },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { submitted { vm.search() } }),
+            )
+            FilledIconButton({ submitted { vm.search() } }, Modifier.size(48.dp), enabled = query.isNotBlank()) {
                 Icon(Icons.Default.Search, stringResource(R.string.search_submit))
-            } },
-            trailingIcon = { if (query.isNotEmpty()) IconButton({ field = TextFieldValue(); vm.clear() }) {
-                Icon(Icons.Default.Clear, stringResource(R.string.clear))
-            } },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { submitted { vm.search() } }),
-        )
+            }
+        }
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(SearchFilter.entries, key = { it.name }) { value ->
                 FilterChip(filter == value, {
@@ -220,7 +226,6 @@ fun SearchScreen(
                             snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
                                 .collect { if (it >= result.value.size + prefixRows - 4) vm.loadMore() }
                         }
-                        val songs = remember(result.value) { result.value.mapNotNull { it.track } }
                         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                             correction?.let { suggestion -> item("correction") {
                                 TextButton({ submitted { vm.search(suggestion.query) } }, Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
@@ -228,10 +233,7 @@ fun SearchScreen(
                                 }
                             } }
                             items(result.value, key = { "${it.kind.name}:${it.id}" }) { item ->
-                                BrowseRow(item, onClick = {
-                                    if (item.kind == ItemKind.SONG) onPlay(songs, songs.indexOfFirst { it.id == item.id }.coerceAtLeast(0))
-                                    else onItem(item)
-                                }, onMenu = item.track?.let { track -> { onMenu(track) } })
+                                SearchPlaybackRow(item, playbackHint, onItem, onPlay, onMenu, onRelated)
                             }
                             if (result.value.isEmpty()) item("none") {
                                 Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -262,6 +264,25 @@ fun SearchScreen(
         confirmButton = { TextButton({ confirmClear = false; saved.clearAll() }) { Text(stringResource(R.string.search_clear_all)) } },
         dismissButton = { TextButton({ confirmClear = false }) { Text(stringResource(R.string.cancel)) } },
     )
+}
+
+/** The actual result row, also exercised on Android without repository/DI or live networking. */
+@Composable
+internal fun SearchPlaybackRow(
+    item: BrowseItem,
+    contextHint: String,
+    onItem: (BrowseItem) -> Unit,
+    onPlay: (List<Track>, Int) -> Unit,
+    onMenu: (Track) -> Unit,
+    onRelated: ((Track, String) -> Unit)? = null,
+) {
+    BrowseRow(item, onClick = {
+        val selected = searchPlaybackQueue(item)
+        if (selected.isNotEmpty()) {
+            if (onRelated != null) onRelated(selected.single(), contextHint)
+            else onPlay(selected, 0)
+        } else onItem(item)
+    }, onMenu = item.track?.let { track -> { onMenu(track) } })
 }
 
 /** Keep the broad-upload route visible even when an old/narrow search returns some results. */

@@ -1,5 +1,7 @@
 package app.dkord.ui.screens
 
+import androidx.compose.material.icons.filled.ContentCut
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -72,6 +74,7 @@ fun LibraryScreen(
     onItem: (BrowseItem) -> Unit,
     onMessage: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenStudio: () -> Unit = {},
 ) {
     val actions: Actions = koinInject()
     val library = actions.library
@@ -109,6 +112,7 @@ fun LibraryScreen(
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
         item("quick") {
             Column {
+                NavRow(Icons.Default.ContentCut, stringResource(R.string.studio_title), onOpenStudio)
                 NavRow(Icons.Default.Favorite, stringResource(R.string.liked_songs), onOpenLiked)
                 NavRow(Icons.Default.History, stringResource(R.string.recently_played), onOpenRecent)
             }
