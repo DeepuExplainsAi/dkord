@@ -50,7 +50,7 @@ def main():
             bundle.extractall(temp)
         source=temp/('FFmpeg-'+COMMIT)
         env={**os.environ,'DKORD_MSVC_BIN':str(Path(compiler).parent),'DKORD_FFMPEG_SOURCE':str(source),
-             'DKORD_FFMPEG_FLAGS':json.dumps(FLAGS),'MSYS2_ARG_CONV_EXCL':'*','MSYS_NO_PATHCONV':'1'}
+             'DKORD_FFMPEG_FLAGS':json.dumps(FLAGS),'MSYS2_ARG_CONV_EXCL':'/std:'}
         # Use the inherited MSYS2 environment supplied by CI. Prepend the actual MSVC
         # x86 bin directory so Unix coreutils/link cannot shadow Microsoft's linker.
         script='''set -euo pipefail
@@ -60,8 +60,15 @@ which cl; which link; which make
 '''
         import shlex
         script+='sh ./configure '+ ' '.join(shlex.quote(flag) for flag in FLAGS)+'\nmake -j4\n'
-        result=subprocess.run(['bash','--noprofile','--norc','-c',script],env=env)
+        result=subprocess.run(['bash','--noprofile','--norc','-c',script],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace')
+        print(result.stdout,flush=True)
         if result.returncode:
+            # Keep the actual configure/make failure separate from expected failed
+            # optional-feature probes (e.g. stdbit.h); a config tail alone hides it.
+            details=result.stdout[-16000:]
+            for start in range(0,len(details),4000):
+                part=details[start:start+4000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+                print('::error title=FFmpeg32 configure/make diagnostics::'+part,flush=True)
             config=source/'ffbuild/config.log'
             if config.exists():print(config.read_text(errors='replace')[-14000:],flush=True)
             raise RuntimeError('Current native FFmpeg x86 compilation failed')
