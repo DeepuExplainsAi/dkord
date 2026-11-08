@@ -33,7 +33,8 @@ FLAGS=[
     # mov/matroska build the CBS support unit even without a video decoder.
     # MSVC C17 rejects its unsized empty table; one real metadata helper makes
     # that upstream table nonempty without patching source or enabling video decode.
-    '--enable-bsf=h264_metadata',
+    # lavformat/cbs.h explicitly disables H264 CBS; AV1 is shared by both units.
+    '--enable-bsf=av1_metadata',
     '--enable-filter=atrim,asetpts,aresample,aformat,concat,anull,abuffer,abuffersink',
     '--extra-cflags=-D_WIN32_WINNT=0x0A00',
 ]

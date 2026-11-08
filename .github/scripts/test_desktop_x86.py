@@ -38,7 +38,7 @@ class DesktopX86Test(unittest.TestCase):
         text=(ROOT/'desktop/packaging/build_ffmpeg_x86.py').read_text()
         self.assertIn("VERSION='8.1.3'",text)
         self.assertIn("ARCHIVE_SHA256='a406fe831cbb605f5fe50e43eb566e502ae63ff3b3206bfa744e4b31b8bb73ac'",text)
-        for required in ('--toolchain=msvc','--arch=x86','--disable-network','--enable-protocol=file,pipe','--enable-bsf=h264_metadata','pcm_s16be','require_pe_architecture(binary,\'x86\')','COPYING.GPLv3'):
+        for required in ('--toolchain=msvc','--arch=x86','--disable-network','--enable-protocol=file,pipe','--enable-bsf=av1_metadata','pcm_s16be','require_pe_architecture(binary,\'x86\')','COPYING.GPLv3'):
             self.assertIn(required,text)
         self.assertNotIn('ffmpeg-win32-v4.2.2.exe',text)
     def test_x86_shortcuts_and_install_payload_do_not_overwrite_existing_x64(self):
