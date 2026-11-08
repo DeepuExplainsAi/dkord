@@ -62,14 +62,14 @@ class RadioTracksTest {
         assertTrue(searches.isEmpty())
     }
 
-    @Test fun title_search_containing_only_versions_falls_back_to_other_songs_by_the_creator() = runTest {
+    @Test fun title_search_containing_only_versions_never_expands_to_unrestricted_artist_search() = runTest {
         val searches = mutableListOf<String>()
         val result = musicRadioRecommendations(seed, emptyList(), { listOf(track("variant", "SEM CONTROLE (Ultra Slowed)")) }, { query ->
             searches += query
             if (query == seed.artist) listOf(track("different")) else listOf(track("cover", "SEM CONTROLE (Cover)"))
         })
-        assertEquals(listOf("${seed.artist} ${seed.title}", seed.artist), searches)
-        assertEquals(listOf("different"), result.map { it.id })
+        assertEquals(listOf("${seed.artist} ${seed.title}", "${seed.artist} ${seed.title} similar songs"), searches)
+        assertTrue(result.isEmpty())
     }
 
     @Test fun network_failure_can_use_music_search_but_never_invents_tracks() = runTest {

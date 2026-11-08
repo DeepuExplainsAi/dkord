@@ -20,6 +20,8 @@ internal data class AutoplaySnapshot(
     val repeatOff: Boolean = true,
     val idle: Boolean = false,
     val ended: Boolean = false,
+    val radioSeed: Track? = null,
+    val radioHint: String = "",
 ) {
     val eligible: Boolean get() = enabled && playWhenReady && repeatOff && !idle &&
         queue.isNotEmpty() && index in queue.indices && (ended || index >= queue.size - 2)
@@ -28,11 +30,11 @@ internal data class AutoplaySnapshot(
 /** No response from an old selection/session may change or resume a newer queue. UI dispatcher only. */
 internal class AutoplayCoordinator(
     private val scope: CoroutineScope,
-    private val source: suspend (Track, List<Track>) -> List<Track>,
+    private val source: suspend (Track, List<Track>, String) -> List<Track>,
     private val snapshot: () -> AutoplaySnapshot?,
     private val append: (tracks: List<Track>, resumeEnded: Boolean) -> Unit,
 ) {
-    private data class Attempt(val revision: Long, val ids: List<String>, val ended: Boolean)
+    private data class Attempt(val revision: Long, val ids: List<String>, val ended: Boolean, val seedId: String, val hint: String)
     private var revision = 0L
     private var attempted: Attempt? = null
     private var active: Attempt? = null
@@ -55,21 +57,23 @@ internal class AutoplayCoordinator(
         }
         val queue = before.queue.toList()
         val ids = queue.map { it.id }
+        val seed = before.radioSeed ?: queue.last()
         val running = active
-        if (running != null && running.revision == revision && running.ids == ids) return
+        if (running != null && running.revision == revision && running.ids == ids && running.seedId == seed.id && running.hint == before.radioHint) return
         if (running != null) invalidate()
-        val request = Attempt(revision, ids, before.ended)
+        val request = Attempt(revision, ids, before.ended, seed.id, before.radioHint)
         if (attempted == request) return // No event-driven request storm after an empty/failing response.
         attempted = request
         active = request
         val launched = scope.launch(start = CoroutineStart.LAZY) {
             try {
-                val candidates = source(queue.last(), queue)
+                val candidates = source(seed, queue, request.hint)
                 currentCoroutineContext().ensureActive()
                 val now = snapshot()
                 if (active !== request || revision != request.revision || now == null || !now.eligible ||
-                    now.queue.map { it.id } != request.ids) return@launch
-                val fresh = RadioTrackFilter(now.queue.last(), now.queue).select(candidates).take(MAX_AUTOPLAY_TRACKS)
+                    now.queue.map { it.id } != request.ids ||
+                    (now.radioSeed ?: now.queue.last()).id != request.seedId || now.radioHint != request.hint) return@launch
+                val fresh = RadioTrackFilter(seed, now.queue).select(candidates).take(MAX_AUTOPLAY_TRACKS)
                 if (fresh.isEmpty()) return@launch
                 active = null // Host append may synchronously trigger another player event.
                 append(fresh, now.ended && now.playWhenReady)

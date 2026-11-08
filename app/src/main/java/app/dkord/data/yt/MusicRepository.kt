@@ -27,6 +27,11 @@ class SearchResult(
 )
 
 class MusicRepository(private val client: InnerTubeClient) {
+    private val radioFacts = CachedRadioFacts({ track ->
+        val root = client.radioMetadata(track.id)
+        if (root.at("videoDetails", "videoId").str() != track.id) throw java.io.IOException("Radio metadata unavailable")
+        parseRadioFacts(root, track.id)
+    })
 
     // ---- Search & suggestions: NewPipeExtractor (no auth, no PO token needed) ----
 
@@ -48,15 +53,16 @@ class MusicRepository(private val client: InnerTubeClient) {
     }
 
     /**
-     * Autoplay: anonymous YouTube Music Radio for [track], preserving its recommendation order.
+     * Autoplay: anonymous YouTube Music Radio anchored to the user selection, not the queue tail.
      * Falls back to the YouTube Music "songs" search if no usable radio songs remain after filtering.
      * The plain youtube.com watch-page related list is NOT used (it returns vlogs/normal videos).
      */
-    suspend fun related(track: Track, queue: List<Track> = emptyList()): List<Track> = withContext(Dispatchers.IO) {
+    suspend fun related(track: Track, queue: List<Track> = emptyList(), contextHint: String = ""): List<Track> = withContext(Dispatchers.IO) {
         if (isLocalAudioId(track.id)) return@withContext emptyList()
         musicRadioRecommendations(track, queue,
             fetchRadio = { MusicParser.parseWatchNext(client.next(track.id)) },
             searchSongs = { query -> search(query, SearchFilter.SONGS).items.mapNotNull { it.track } },
+            hint = contextHint, factsSource = radioFacts,
         )
     }
 

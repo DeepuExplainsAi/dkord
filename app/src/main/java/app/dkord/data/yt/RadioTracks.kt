@@ -4,6 +4,9 @@ import app.dkord.core.isLocalAudioId
 
 import app.dkord.core.Track
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.text.Normalizer
@@ -34,32 +37,60 @@ internal class RadioTrackFilter(seed: Track, queue: List<Track>) {
     private val ids = (queue + seed).map { it.id }.toMutableSet()
     private val titles = (queue + seed).map { songKey(it.title) }.filter { it.isNotBlank() }.toMutableSet()
 
-    fun select(candidates: List<Track>): List<Track> = candidates.filter { track ->
+    fun accepts(track: Track): Boolean {
         val key = songKey(track.title)
-        track.id.isNotBlank() && track.title.isNotBlank() && key.isNotBlank() &&
+        return track.id.isNotBlank() && track.title.isNotBlank() && key.isNotBlank() &&
             (track.durationSec == 0L || track.durationSec in 60..720) &&
             !compilations.containsMatchIn(foldedTitle(track.title)) &&
-            track.id !in ids && key !in titles && ids.add(track.id) && titles.add(key)
+            track.id !in ids && key !in titles
+    }
+
+    fun select(candidates: List<Track>): List<Track> = candidates.filter { track ->
+        accepts(track) && ids.add(track.id) && titles.add(songKey(track.title))
     }
 }
 
-/** Real anonymous music radio first; music-only fallbacks, never arbitrary videos/long-mix queries. */
+/** Real anonymous music radio; bounded provider facts + context-scoped SONGS fallbacks. */
 internal suspend fun musicRadioRecommendations(
     seed: Track,
     queue: List<Track>,
     fetchRadio: suspend () -> List<Track>,
     searchSongs: suspend (String) -> List<Track>,
+    hint: String = "",
+    factsSource: RadioFactsSource = RadioFactsSource { RadioFacts() },
 ): List<Track> {
     if (seed.id.isBlank() || isLocalAudioId(seed.id)) return emptyList()
     val filter = RadioTrackFilter(seed, queue)
-    val radio = filter.select(radioCandidates(fetchRadio))
+    suspend fun facts(track: Track): RadioFacts {
+        currentCoroutineContext().ensureActive()
+        return try {
+            factsSource.facts(track).also { currentCoroutineContext().ensureActive() }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { currentCoroutineContext().ensureActive(); RadioFacts() }
+    }
+    val context = RadioContextPolicy(seed, radioTraits(seed, facts(seed), hint), hint)
+    var profiled = 0
+    suspend fun select(pool: List<Track>, scopedSearch: Boolean): List<Track> = coroutineScope {
+        // Do not consume song identities before semantic filtering: a rejected English rendition
+        // must not suppress a compatible Hindi rendition in a later pool.
+        val eligible = pool.distinctBy { it.id }.filter(filter::accepts).take(18)
+        val ranked = eligible.mapIndexed { index, track ->
+            val inspect = profiled < 24
+            if (inspect) profiled++
+            async {
+                val score = context.score(track, if (inspect) facts(track) else RadioFacts(), scopedSearch, index)
+                score?.let { track to it }
+            }
+        }.awaitAll().filterNotNull().sortedByDescending { it.second }.map { it.first }
+        filter.select(ranked).take(MAX_AUTOPLAY_TRACKS)
+    }
+    val radio = select(radioCandidates(fetchRadio), scopedSearch = false)
     if (radio.isNotEmpty()) return radio
-    val query = "${seed.artist} ${seed.title}".trim()
-    val matching = if (query.isBlank()) emptyList() else filter.select(radioCandidates { searchSongs(query) })
-    if (matching.isNotEmpty()) return matching
-    // If title search only returned versions of the seed, ask for other songs by its creator.
-    val artist = seed.artist.trim()
-    return if (artist.isNotBlank() && artist != query) filter.select(radioCandidates { searchSongs(artist) }) else emptyList()
+    for (query in context.fallbackQueries()) {
+        val selected = select(radioCandidates { searchSongs(query) }, scopedSearch = true)
+        if (selected.isNotEmpty()) return selected
+    }
+    return emptyList() // Safer than unrelated filler or the same song's other versions.
 }
 
 private suspend fun radioCandidates(fetch: suspend () -> List<Track>): List<Track> {

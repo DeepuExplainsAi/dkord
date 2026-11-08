@@ -27,10 +27,11 @@ class AutoplayCoordinatorTest {
         var state: AutoplaySnapshot? = AutoplaySnapshot(listOf(track("seed")), 0)
         val calls = mutableListOf<Pair<Track, List<Track>>>()
         val appended = mutableListOf<Pair<List<Track>, Boolean>>()
+        val hints = mutableListOf<String>()
         var fetch: suspend (Track, List<Track>) -> List<Track> = { _, _ -> listOf(track("next")) }
         var afterAppend: (() -> Unit)? = null
         val coordinator = AutoplayCoordinator(scope,
-            source = { seed, queue -> calls += seed to queue; fetch(seed, queue) },
+            source = { seed, queue, hint -> calls += seed to queue; hints += hint; fetch(seed, queue) },
             snapshot = { state },
             append = { fresh, resume ->
                 appended += fresh to resume
@@ -229,4 +230,99 @@ class AutoplayCoordinatorTest {
         assertTrue(cancelled)
         assertEquals(listOf("seed", "second"), checkNotNull(h.state).queue.map { it.id })
     }
+
+    @Test fun consecutive_related_batches_keep_the_original_selection_anchor_not_the_queue_tail() = runTest {
+        val h = Harness(backgroundScope)
+        val selected = track("seed")
+        h.state = AutoplaySnapshot(listOf(selected), 0, radioSeed = selected, radioHint = "hindi sad")
+        h.fetch = { _, _ -> listOf(track("related-${h.calls.size}")) }
+        repeat(4) {
+            h.state = checkNotNull(h.state).let { it.copy(index = it.queue.lastIndex) }
+            h.coordinator.update(); runCurrent()
+        }
+        assertEquals(List(4) { "seed" }, h.calls.map { it.first.id })
+        assertEquals(List(4) { "hindi sad" }, h.hints)
+        assertEquals(listOf("seed", "related-1", "related-2", "related-3", "related-4"), checkNotNull(h.state).queue.map { it.id })
+    }
+
+    @Test fun changed_context_for_the_same_song_and_queue_rejects_an_uncancellable_old_response() = runTest {
+        val h = Harness(backgroundScope)
+        val selected = track("seed")
+        h.state = checkNotNull(h.state).copy(radioSeed = selected, radioHint = "hindi sad")
+        h.fetch = { _, _ ->
+            val call = h.calls.size
+            withContext(NonCancellable) { delay(if (call == 1) 100 else 5) }
+            listOf(track("result-$call"))
+        }
+        h.coordinator.update(); runCurrent()
+        h.state = checkNotNull(h.state).copy(radioHint = "hindi party")
+        h.coordinator.update(); runCurrent(); advanceTimeBy(100); runCurrent()
+        assertEquals(listOf("hindi sad", "hindi party"), h.hints)
+        assertEquals(listOf("seed", "result-2"), checkNotNull(h.state).queue.map { it.id })
+    }
+
+    @Test fun result_time_context_guard_works_without_a_separate_invalidation_event() = runTest {
+        val h = Harness(backgroundScope)
+        h.fetch = { _, _ -> delay(100); listOf(track("wrong-context")) }
+        h.state = checkNotNull(h.state).copy(radioHint = "sad")
+        h.coordinator.update(); runCurrent()
+        h.state = checkNotNull(h.state).copy(radioHint = "party")
+        advanceTimeBy(100); runCurrent()
+        assertTrue(h.appended.isEmpty())
+    }
+
+    @Test fun changing_the_explicit_anchor_with_the_same_queue_invalidates_in_flight_context() = runTest {
+        val h = Harness(backgroundScope)
+        h.fetch = { _, _ -> delay(100); listOf(track("wrong-anchor")) }
+        h.state = checkNotNull(h.state).copy(radioSeed = track("seed"))
+        h.coordinator.update(); runCurrent()
+        h.state = checkNotNull(h.state).copy(radioSeed = track("new-anchor"))
+        advanceTimeBy(100); runCurrent()
+        assertTrue(h.appended.isEmpty())
+    }
+
+    @Test fun pause_and_resume_keep_the_session_anchor_without_resuming_an_old_request() = runTest {
+        val h = Harness(backgroundScope)
+        val selected = track("seed")
+        h.state = checkNotNull(h.state).copy(radioSeed = selected, radioHint = "hindi chill")
+        h.coordinator.update(); runCurrent()
+        h.coordinator.invalidate()
+        h.state = checkNotNull(h.state).copy(playWhenReady = false)
+        h.coordinator.update(); runCurrent()
+        assertEquals(1, h.calls.size)
+        h.state = checkNotNull(h.state).let { it.copy(playWhenReady = true, index = it.queue.lastIndex) }
+        h.fetch = { _, _ -> listOf(track("third")) }
+        h.coordinator.update(); runCurrent()
+        assertEquals(listOf("seed", "seed"), h.calls.map { it.first.id })
+        assertEquals(listOf("hindi chill", "hindi chill"), h.hints)
+        assertFalse(h.appended.last().second)
+    }
+
+    @Test fun removing_the_anchor_from_the_visible_queue_does_not_reintroduce_it_or_its_versions() = runTest {
+        val h = Harness(backgroundScope)
+        val original = track("seed")
+        h.state = AutoplaySnapshot(listOf(track("kept")), 0, radioSeed = original)
+        h.fetch = { _, _ -> listOf(original, track("cover", "Song seed (Cover)"), track("fresh")) }
+        h.coordinator.update(); runCurrent()
+        assertEquals("seed", h.calls.single().first.id)
+        assertEquals(listOf("kept", "fresh"), checkNotNull(h.state).queue.map { it.id })
+    }
+
+    @Test fun reentrant_events_with_a_pinned_anchor_still_own_the_next_cancellable_request() = runTest {
+        val h = Harness(backgroundScope)
+        var cancelled = false
+        h.state = checkNotNull(h.state).copy(radioSeed = track("seed"))
+        h.fetch = { _, _ ->
+            if (h.calls.size == 1) listOf(track("second"))
+            else try { delay(1000); listOf(track("third")) } finally { cancelled = true }
+        }
+        h.afterAppend = { h.coordinator.update() }
+        h.coordinator.update(); runCurrent()
+        assertEquals(2, h.calls.size)
+        assertEquals(listOf("seed", "seed"), h.calls.map { it.first.id })
+        h.coordinator.invalidate(); runCurrent()
+        assertTrue(cancelled)
+        assertEquals(listOf("seed", "second"), checkNotNull(h.state).queue.map { it.id })
+    }
+
 }

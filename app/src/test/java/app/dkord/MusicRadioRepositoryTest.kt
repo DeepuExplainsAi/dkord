@@ -50,6 +50,23 @@ class MusicRadioRepositoryTest {
     }
 
     @Test
+    fun radio_metadata_is_a_bounded_anonymous_player_request_not_a_private_context_payload() = runBlocking {
+        var captured: Request? = null
+        client(buildJsonObject {}) { captured = it }.radioMetadata("Abcdefghij1")
+        val request = checkNotNull(captured)
+        check(request.url.host == "music.youtube.com")
+        check(request.url.encodedPath == "/youtubei/v1/player")
+        for (header in listOf("Cookie", "Authorization", "X-Goog-AuthUser", "X-Goog-Visitor-Id")) check(request.header(header) == null)
+        val buffer = Buffer()
+        checkNotNull(request.body).writeTo(buffer)
+        val payload = lenientJson.parseToJsonElement(buffer.readUtf8())
+        check(payload.at("videoId").str() == "Abcdefghij1")
+        check(payload.at("context", "client", "clientName").str() == "WEB_REMIX")
+        check(payload.at("query") == null)
+        check(payload.at("radioHint") == null)
+    }
+
+    @Test
     fun related_keeps_radio_order_and_filters_current_duplicates_and_duration() = runBlocking {
         val result = MusicRepository(client(panel(
             row("seed", title = "Song seed"),

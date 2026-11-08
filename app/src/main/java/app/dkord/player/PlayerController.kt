@@ -60,8 +60,11 @@ class PlayerController(
     private var controller: MediaController? = null
     private var connecting = false
     private val pending = ArrayDeque<(MediaController) -> Unit>()
+    // Session-only recommendation intent; never serialized into MediaItems, Track or rooms.
+    private var radioSeed: Track? = null
+    private var radioHint = ""
     private val autoplay = AutoplayCoordinator(scope,
-        source = { track, queue -> music.related(track, queue) },
+        source = { track, queue, hint -> music.related(track, queue, hint) },
         snapshot = ::autoplaySnapshot,
         append = ::appendAutoplay,
     )
@@ -75,6 +78,7 @@ class PlayerController(
                 override fun onDisconnected(controller: MediaController) {
                     DebugLog.w("controller", "service disconnected")
                     autoplay.invalidate()
+                    radioSeed = null; radioHint = ""
                     this@PlayerController.controller = null
                     _state.value = PlayerUiState()
                 }
@@ -102,17 +106,22 @@ class PlayerController(
     // ---- commands ----
 
     /** Replaces the queue and starts playing [tracks][startIndex]. */
-    fun play(tracks: List<Track>, startIndex: Int = 0) = withController { c ->
+    fun play(tracks: List<Track>, startIndex: Int = 0, contextHint: String = "") = withController { c ->
         if (tracks.isEmpty()) return@withController
         autoplay.invalidate()
+        // Explicit album/playlist/Play all keeps every chosen item; extend its tail only afterwards.
+        radioSeed = tracks.last()
+        radioHint = contextHint.take(200)
         c.setMediaItems(tracks.map { it.toMediaItem() }, startIndex.coerceIn(0, tracks.lastIndex), 0)
         c.prepare(); c.play()
     }
 
     fun playTrack(track: Track) = play(listOf(track))
+    fun playRelated(track: Track, contextHint: String = "") = play(listOf(track), contextHint = contextHint)
 
     fun playNext(track: Track) = withController { c ->
         autoplay.invalidate()
+        if (c.mediaItemCount == 0) { radioSeed = track; radioHint = "" }
         val at = if (c.mediaItemCount == 0) 0 else c.currentMediaItemIndex + 1
         c.addMediaItem(at, track.toMediaItem())
         if (c.mediaItemCount == 1) { c.prepare(); c.play() }
@@ -120,12 +129,17 @@ class PlayerController(
 
     fun addToQueue(track: Track) = withController { c ->
         autoplay.invalidate()
+        if (c.mediaItemCount == 0) { radioSeed = track; radioHint = "" }
         c.addMediaItem(track.toMediaItem())
         if (c.mediaItemCount == 1) { c.prepare(); c.play() }
     }
 
     fun removeFromQueue(index: Int) = withController {
-        if (index in 0 until it.mediaItemCount) { autoplay.invalidate(); it.removeMediaItem(index) }
+        if (index in 0 until it.mediaItemCount) {
+            autoplay.invalidate()
+            if (it.mediaItemCount == 1) { radioSeed = null; radioHint = "" }
+            it.removeMediaItem(index)
+        }
     }
     fun moveInQueue(from: Int, to: Int) = withController {
         if (from != to && from in 0 until it.mediaItemCount && to in 0 until it.mediaItemCount) {
@@ -133,7 +147,11 @@ class PlayerController(
         }
     }
     fun skipTo(index: Int) = withController {
-        if (index in 0 until it.mediaItemCount) { autoplay.invalidate(); it.seekToDefaultPosition(index); it.play() }
+        if (index in 0 until it.mediaItemCount) {
+            autoplay.invalidate()
+            radioSeed = it.getMediaItemAt(index).toTrack(); radioHint = ""
+            it.seekToDefaultPosition(index); it.play()
+        }
     }
 
     fun togglePlay() = withController {
@@ -160,7 +178,7 @@ class PlayerController(
         }
     }
     fun setSpeed(speed: Float) = withController { it.setPlaybackSpeed(speed.coerceIn(0.25f, 3f)) }
-    fun stop() = withController { autoplay.invalidate(); it.stop(); it.clearMediaItems() }
+    fun stop() = withController { autoplay.invalidate(); radioSeed = null; radioHint = ""; it.stop(); it.clearMediaItems() }
 
     // Sleep timer runs in the app process on the main thread, next to the service's player.
     fun sleepIn(minutes: Int) = sleepTimer.start(minutes)
@@ -186,6 +204,8 @@ class PlayerController(
             repeatOff = c.repeatMode == Player.REPEAT_MODE_OFF,
             idle = c.playbackState == Player.STATE_IDLE,
             ended = c.playbackState == Player.STATE_ENDED,
+            radioSeed = radioSeed ?: c.currentMediaItem?.toTrack(),
+            radioHint = radioHint,
         )
     }
 
@@ -200,6 +220,7 @@ class PlayerController(
     }
 
     private fun refresh(p: Player) {
+        if (radioSeed == null && p.mediaItemCount > 0) radioSeed = p.currentMediaItem?.toTrack()
         val queue = (0 until p.mediaItemCount).map { p.getMediaItemAt(it).toTrack() }
         _state.value = PlayerUiState(
             connected = true,
