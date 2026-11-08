@@ -1,0 +1,60 @@
+name: Verify existing public update identity
+on:
+  push:
+    branches: [arena/a6a6bbda-dkord]
+    paths: [.github/release-preparations/v0.10.1-update-root.json]
+permissions:
+  contents: read
+concurrency:
+  group: public-update-root-v0.10.1
+  cancel-in-progress: false
+jobs:
+  public-root:
+    if: github.repository == 'DeepuExplainsAi/dkord' && github.ref == 'refs/heads/arena/a6a6bbda-dkord'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Require the new explicit public-only metadata request
+        run: python3 -B .github/scripts/validate_update_trust_preparation.py
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Prepare verified public-certificate tooling
+        run: python3 -m pip install --only-binary=:all: cryptography==46.0.3
+      - name: Verify the existing identity against the actual immutable published APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KS: ${{ secrets.DKORD_KEYSTORE_B64 }}
+          DKORD_KEYSTORE_PASS: ${{ secrets.DKORD_KEYSTORE_PASS }}
+        run: |
+          test -n "$KS" && test -n "$DKORD_KEYSTORE_PASS"
+          umask 077
+          keystore="$RUNNER_TEMP/existing-dkord.p12"
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$KS" | base64 --decode > "$keystore"
+          test -s "$keystore"
+          mkdir -p "$RUNNER_TEMP/public-input" "$RUNNER_TEMP/public-output"
+          gh release download v0.10.0 --repo "$GITHUB_REPOSITORY" --pattern Dkord-v0.10.0.apk --dir "$RUNNER_TEMP/public-input"
+          signer=$(python3 - <<'PY'
+          import os,re
+          from pathlib import Path
+          sdk=Path(os.environ.get('ANDROID_HOME') or os.environ['ANDROID_SDK_ROOT'])
+          paths=list((sdk/'build-tools').glob('*/apksigner'))
+          if not paths:raise SystemExit('Android signature verification tools are required')
+          print(max(paths,key=lambda p:tuple(map(int,re.findall(r'\d+',p.parent.name)))))
+          PY
+          )
+          python3 -B .github/scripts/export_existing_update_trust.py --keystore "$keystore" \
+            --apk "$RUNNER_TEMP/public-input/Dkord-v0.10.0.apk" --apksigner "$signer" \
+            --output "$RUNNER_TEMP/public-output/existing-update-root.json"
+      - name: Preserve only the verified PUBLIC root receipt
+        uses: actions/upload-artifact@v7
+        with:
+          name: existing-public-update-root
+          path: ${{ runner.temp }}/public-output/
+          if-no-files-found: error
