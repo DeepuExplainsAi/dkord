@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.MusicVideo
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -74,6 +75,7 @@ import app.dkord.ui.screens.LikedScreen
 import app.dkord.ui.screens.LocalPlaylistScreen
 import app.dkord.ui.screens.RecentScreen
 import app.dkord.ui.screens.SearchScreen
+import app.dkord.ui.screens.ReelsScreen
 import app.dkord.ui.screens.ListenTogetherScreen
 import app.dkord.ui.screens.SettingsScreen
 import kotlinx.coroutines.launch
@@ -183,6 +185,7 @@ private data class TabSpec(val tab: Tab, val icon: androidx.compose.ui.graphics.
 private val tabs = listOf(
     TabSpec(Tab.HOME, Icons.Default.Home, R.string.tab_home),
     TabSpec(Tab.SEARCH, Icons.Default.Search, R.string.tab_search),
+    TabSpec(Tab.REELS, Icons.Default.MusicVideo, R.string.tab_reels),
     TabSpec(Tab.LIBRARY, Icons.Default.LibraryMusic, R.string.tab_library),
     TabSpec(Tab.DOWNLOADS, Icons.Default.Download, R.string.tab_downloads),
 )
@@ -228,6 +231,7 @@ private fun TabContent(
                 when (selected) {
                     Tab.HOME -> HomeScreen(onItem, onPlay, m)
                     Tab.SEARCH -> SearchScreen(onItem, onPlay, onMenu, m, onMessage = say)
+                    Tab.REELS -> ReelsScreen(onPlay, m)
                     Tab.LIBRARY -> LibraryScreen({ push(Dest.Playlist(it)) }, { push(Dest.Liked) }, { push(Dest.Recent) }, onItem, say, m)
                     Tab.DOWNLOADS -> DownloadsScreen(onPlay, onMenu, m)
                 }

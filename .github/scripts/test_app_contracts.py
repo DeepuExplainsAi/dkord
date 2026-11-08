@@ -321,6 +321,23 @@ class AppContractsTest(unittest.TestCase):
         self.assertIn('keyAlias = "dkord"', gradle)
         self.assertRegex(gradle, r'versionName\s*=\s*"\d+\.\d+\.\d+"')
 
+    def test_shorts_use_native_metadata_one_settled_video_and_explicit_song_selection(self):
+        source = read("app/src/main/java/app/dkord/data/shorts/ShortsRepository.kt")
+        screen = read("app/src/main/java/app/dkord/ui/screens/Reels.kt")
+        controller = read("app/src/main/java/app/dkord/ui/shorts/ShortsController.kt")
+        self.assertIn("item.isShortFormContent", source)
+        self.assertIn("StreamType.VIDEO_STREAM", source)
+        self.assertIn("SearchInfo.getMoreItems", source)
+        self.assertIn("VerticalPager", screen)
+        self.assertIn("page == pager.settledPage", screen)
+        self.assertIn("player.release()", screen)
+        self.assertIn("Lifecycle.Event.ON_STOP", screen)
+        self.assertIn("repo.search(submitted, SearchFilter.SONGS)", screen)
+        self.assertIn("choose(track)", screen)
+        self.assertNotIn("tracks.first()", screen)
+        self.assertIn("generation != revision", controller)
+        self.assertIn("currentCoroutineContext().ensureActive()", controller)
+
 
 if __name__ == "__main__":
     unittest.main()

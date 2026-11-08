@@ -259,4 +259,14 @@
     <string name="search_all">All YouTube</string>
     <string name="search_scope_uploads">YouTube uploads: covers, instrumentals and more.</string>
     <string name="search_scope_music_catalogue">YouTube Music catalogue</string>
+    <string name="tab_reels">Shorts</string>
+    <string name="reels_query">Find music clips</string>
+    <string name="reels_full_song">Find full song</string>
+    <string name="reels_choose_song">Choose the full song</string>
+    <string name="reels_attribution_hint">Choose the matching song below. A clip may not identify its original audio; edit the search if needed.</string>
+    <string name="reels_failed">Could not load clips. Check your connection and retry.</string>
+    <string name="reels_empty">No native Shorts found for this query. Try another song or load more.</string>
+    <string name="studio_title">Mashup Studio</string>
+    <string name="studio_exporting">Merging audio…</string>
+    <string name="studio_audio_source">Audio source</string>
 </resources>

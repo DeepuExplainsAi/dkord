@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable
-enum class Tab { HOME, SEARCH, LIBRARY, DOWNLOADS }
+enum class Tab { HOME, SEARCH, REELS, LIBRARY, DOWNLOADS }
 
 /** Screens above the tabs. Serializable so the back stack survives rotation and process death. */
 @Serializable

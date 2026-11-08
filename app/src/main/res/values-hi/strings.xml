@@ -259,4 +259,14 @@
     <string name="search_all">पूरा YouTube</string>
     <string name="search_scope_uploads">कवर, वाद्य संगीत और अन्य YouTube अपलोड।</string>
     <string name="search_scope_music_catalogue">YouTube Music का कैटलॉग</string>
+    <string name="tab_reels">शॉर्ट्स</string>
+    <string name="reels_query">संगीत क्लिप खोजें</string>
+    <string name="reels_full_song">पूरा गाना खोजें</string>
+    <string name="reels_choose_song">पूरा गाना चुनें</string>
+    <string name="reels_attribution_hint">नीचे सही गाना चुनें। क्लिप में मूल गाने की पहचान न हो तो खोज बदलें।</string>
+    <string name="reels_failed">क्लिप लोड नहीं हुईं। कनेक्शन जाँचकर फिर कोशिश करें।</string>
+    <string name="reels_empty">इस खोज के लिए शॉर्ट्स नहीं मिले। दूसरा गाना खोजें या और लोड करें।</string>
+    <string name="studio_title">मैशअप स्टूडियो</string>
+    <string name="studio_exporting">ऑडियो जोड़ा जा रहा है…</string>
+    <string name="studio_audio_source">ऑडियो स्रोत</string>
 </resources>
