@@ -8,8 +8,8 @@ import shutil
 import struct
 import xml.etree.ElementTree as ET
 
-TARGETS = ('windows-x64', 'macos-x64', 'macos-arm64', 'linux-x64', 'linux-arm64')
-KINDS = {'windows-x64': ('exe',), 'macos-x64': ('pkg',), 'macos-arm64': ('pkg',),
+TARGETS = ('windows-x64', 'windows-x86', 'macos-x64', 'macos-arm64', 'linux-x64', 'linux-arm64')
+KINDS = {'windows-x64': ('exe',), 'windows-x86': ('exe',), 'macos-x64': ('pkg',), 'macos-arm64': ('pkg',),
          'linux-x64': ('deb', 'AppImage'), 'linux-arm64': ('deb', 'AppImage')}
 
 
@@ -33,7 +33,7 @@ def digest(path):
 def verify_tests(path):
     root = ET.parse(path).getroot()
     cases = root.findall('.//testcase')
-    if len(cases) < 30:
+    if len(cases) < 35:
         raise ValueError('Missing executed native cases')
     for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest'):
         if not any(cls in c.get('classname', '') for c in cases):
@@ -91,6 +91,23 @@ def verify_and_stage(root, output, sha, version):
         if (data.get('channel') != 'development-preview' or data.get('version') != version or data.get('target') != target
                 or data.get('source') != sha or data.get('trusted_signed_release') is not False or data.get('notarized') is not False):
             raise ValueError('Wrong source/version/target or misleading signing claim')
+        runtime=data.get('runtime',{})
+        x86=target=='windows-x86'
+        if (runtime.get('python_bits')!=(32 if x86 else 64) or runtime.get('qt_binding')!=('PyQt5' if x86 else 'PyQt6')
+                or runtime.get('audio_probe')!=('ffmpeg' if x86 else 'pyav')):
+            raise ValueError('Wrong installed-process bitness/Qt/codec profile')
+        if target.startswith('windows-'):
+            arch='x86' if x86 else 'x64'
+            expected={'application':arch,'node':arch,'ffmpeg':arch}
+            if x86:expected['ffprobe']='x86'
+            if runtime.get('verified_pe_payloads')!=expected:
+                raise ValueError('Missing real application/Node/FFmpeg PE payload proof')
+        if x86:
+            source=data.get('codec_source',{})
+            if (source.get('version')!='8.1.3' or source.get('source_commit')!='1041abdc962f4cc4f394aa8de9dc5236c0c3b9e7'
+                    or source.get('source_archive_sha256')!='a406fe831cbb605f5fe50e43eb566e502ae63ff3b3206bfa744e4b31b8bb73ac'
+                    or source.get('architecture')!='x86'):
+                raise ValueError('Win32 requires a current digest-pinned native codec, not the obsolete wheel')
         if target.startswith('linux-') and data.get('minimum_glibc') != '2.39':
             raise ValueError('Linux preview must declare the conservative glibc2.39 build baseline')
         proof = folder / 'test-results.xml'
@@ -134,7 +151,7 @@ def main():
     parser.add_argument('--version', required=True)
     args = parser.parse_args()
     paths = verify_and_stage(args.root, args.output, args.sha, args.version)
-    print(f'::notice title=Native preview release proof::{len(paths)} native preview files verified for {args.sha}: all5 targets, hashes, formats and actual30-case/all3-class proof. These are NOT trusted signed/notarized releases.')
+    print(f'::notice title=Native preview release proof::{len(paths)} native preview files verified for {args.sha}: all6 targets, hashes, formats and actual35-case/all3-class proof. These are NOT trusted signed/notarized releases.')
 
 if __name__ == '__main__':
     main()

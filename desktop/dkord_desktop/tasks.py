@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 
-from PyQt6.QtCore import QObject, QRunnable, pyqtSignal
+from .qt import QObject, QRunnable, pyqtSignal
 
 from .media import Cancelled
 

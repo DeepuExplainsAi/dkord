@@ -20,7 +20,7 @@ class UpdateTest(unittest.TestCase):
         self.keys={'test':base64.b64encode(public).decode()}
         self.body=b'!<arch>\n'+b'fixture package bytes'*100
         self.payload={'format':1,'channel':'desktop','version':'0.11.0','tag':'desktop-v0.11.0','assets':{}}
-        for target,ext,kind in [('windows-x64','.exe','exe'),('macos-x64','.pkg','pkg'),('macos-arm64','.pkg','pkg'),('linux-x64','.deb','deb'),('linux-arm64','.deb','deb')]:
+        for target,ext,kind in [('windows-x64','.exe','exe'),('windows-x86','.exe','exe'),('macos-x64','.pkg','pkg'),('macos-arm64','.pkg','pkg'),('linux-x64','.deb','deb'),('linux-arm64','.deb','deb')]:
             name=f'Dkord-desktop-v0.11.0-{target}{ext}'
             artifact={'name':name,'kind':kind,'url':f'https://github.com/DeepuExplainsAi/dkord/releases/download/desktop-v0.11.0/{name}','size':len(self.body),'sha256':hashlib.sha256(self.body).hexdigest()}
             self.payload['assets'][target]={'deb':artifact} if target.startswith('linux') else artifact
@@ -28,7 +28,7 @@ class UpdateTest(unittest.TestCase):
         return json.dumps({'payload':self.payload,'keyId':'test','signature':base64.b64encode(self.signer.sign(canonical(self.payload))).decode()}).encode()
     def test_platform_and_cpu_are_exact_never_android_or_another_architecture(self):
         for system,machine,key in [('Windows','AMD64','windows-x64'),('Darwin','arm64','macos-arm64'),('Darwin','x86_64','macos-x64'),('Linux','aarch64','linux-arm64')]:
-            self.assertEqual(key,platform_key(system,machine))
+            self.assertEqual(key,platform_key(system,machine,pointer_bits=64))
             update=verify_manifest(self.signed(),self.keys,target=key,image=False)
             self.assertEqual(key,update.platform);self.assertIn(key,update.name);self.assertNotIn('.apk',update.name)
     def test_missing_platform_is_not_substituted(self):
@@ -109,5 +109,19 @@ class UpdateTest(unittest.TestCase):
                 target.write_bytes(b'corrupt replacement')
                 with self.assertRaises(ValueError):after_release()
                 launch.assert_called_once();self.assertEqual(b'existing user database',sentinel.read_bytes())
+
+    def test_windows32_process_on_a_64bit_host_selects_x86_not_host_cpu(self):
+        self.assertEqual('windows-x86',platform_key('Windows','AMD64',pointer_bits=32))
+        self.assertEqual('windows-x86',platform_key('Windows','x86',pointer_bits=32))
+        self.assertEqual('windows-x64',platform_key('Windows','AMD64',pointer_bits=64))
+        update=verify_manifest(self.signed(),self.keys,target='windows-x86')
+        self.assertEqual('windows-x86',update.platform);self.assertIn('windows-x86.exe',update.name)
+        with self.assertRaises(ValueError):platform_key('Linux','x86_64',pointer_bits=32)
+
+    def test_missing_or_wrong_windows32_asset_is_never_replaced_with_x64(self):
+        self.payload['assets'].pop('windows-x86')
+        self.assertIsNone(verify_manifest(self.signed(),self.keys,target='windows-x86'))
+        self.payload['assets']['windows-x86']=self.payload['assets']['windows-x64']
+        with self.assertRaises(ValueError):verify_manifest(self.signed(),self.keys,target='windows-x86')
 
 if __name__=='__main__':unittest.main()

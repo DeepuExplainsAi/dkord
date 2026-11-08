@@ -8,11 +8,8 @@ from pathlib import Path
 import sys
 from uuid import uuid4
 
-from PyQt6 import sip
-from PyQt6.QtCore import Qt, QThreadPool, QTimer, QUrl, QSize
-from PyQt6.QtGui import QAction, QColor, QFont, QIcon, QKeySequence, QShortcut
-from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
-from PyQt6.QtWidgets import (
+from .qt import (sip, Qt, QThreadPool, QTimer, QUrl, QSize, QAction, QColor, QFont, QIcon, QKeySequence, QShortcut, QAudioOutput, QMediaPlayer)
+from .qt import (
     QApplication, QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDockWidget,
     QDoubleSpinBox, QFileDialog, QFormLayout, QFrame, QHBoxLayout, QHeaderView, QInputDialog,
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPushButton,
@@ -20,6 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 from . import __version__
+from .platforms import WINDOWS_X86
 from .media import MediaLibrary, check_cancel
 from .models import Track, clock, milliseconds
 from .provider import Entry, Provider
@@ -113,7 +111,7 @@ class MainWindow(QMainWindow):
         self.preview_player.setAudioOutput(self.preview_audio)
         self.preview_end = None
         self.preview_player.positionChanged.connect(lambda position: self.preview_player.stop() if self.preview_end and position >= self.preview_end else None)
-        self.setWindowTitle(f"Dkord — Music & Mashup Studio · {__version__} preview")
+        self.setWindowTitle(f"Dkord — Music & Mashup Studio · {__version__} preview" + (" · 32-bit" if WINDOWS_X86 else ""))
         root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
         self.setWindowIcon(QIcon(str(root / "assets" / "dkord.svg")))
         self.resize(1360, 850); self.setMinimumSize(940, 640)

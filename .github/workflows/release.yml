@@ -124,7 +124,7 @@ jobs:
             exit 1
           fi
           gh run watch "$validation_id" --repo "$GITHUB_REPOSITORY" --exit-status --interval 30
-      - name: Require the exact-head five-host native preview build
+      - name: Require the exact-head six-host native preview build
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -177,8 +177,8 @@ jobs:
           PY
           shopt -s nullglob
           assets=("$RUNNER_TEMP/native-release-assets/"*)
-          if [ "${#assets[@]}" -ne 13 ]; then
-            echo "::error::Expected7 native packages,5 provenance manifests and SHA256SUMS."
+          if [ "${#assets[@]}" -ne 15 ]; then
+            echo "::error::Expected8 native packages,6 provenance manifests and SHA256SUMS."
             exit 1
           fi
           gh release create "$TAG" "$RELEASE_APK" "${assets[@]}" --latest --target "$GITHUB_SHA" \

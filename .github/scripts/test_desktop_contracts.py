@@ -1,4 +1,4 @@
-"""Read-only desktop source/build contracts, not a substitute for 5-host native execution."""
+"""Read-only desktop source/build contracts, not a substitute for 6-host native execution."""
 import json
 import hashlib
 from pathlib import Path
@@ -13,16 +13,17 @@ def read(path):return (ROOT/path).read_text()
 class DesktopContractsTest(unittest.TestCase):
     def test_native_validation_covers_all_os_and_cpu_builds_without_publication_or_secrets(self):
         flow=read('.github/workflows/validate-desktop.yml')
-        for target in ('windows-x64','macos-x64','macos-arm64','linux-x64','linux-arm64'):self.assertIn('target: '+target,flow)
-        for required in ('contents: read','--self-test','packaging/build.py','no failures/errors/skips','assert len(cases) >= 30','include-hidden-files: true','packaging/ci_run.py','PYTHONUTF8: 1'):
+        for target in ('windows-x64','windows-x86','macos-x64','macos-arm64','linux-x64','linux-arm64'):self.assertIn('target: '+target,flow)
+        for required in ('contents: read','--self-test','packaging/build.py','no failures/errors/skips','assert len(cases) >= 35','include-hidden-files: true','packaging/ci_run.py','PYTHONUTF8: 1'):
             self.assertIn(required,flow)
         for forbidden in ('secrets.','contents: write','gh release','continue-on-error'):self.assertNotIn(forbidden,flow)
     def test_desktop_has_real_native_widgets_codec_renderer_and_no_mock_browser(self):
         gui=read('desktop/dkord_desktop/ui.py');media=read('desktop/dkord_desktop/media.py')
         for required in ('QMainWindow','QMediaPlayer','QAudioOutput','QTableWidget','QDockWidget'):self.assertIn(required,gui)
-        for required in ('av.open','imageio_ffmpeg.get_ffmpeg_exe','subprocess.Popen','-filter_complex','aresample=48000','-c:a'):
+        for required in ('av.open','ffmpeg_exe()','subprocess.Popen','-filter_complex','aresample=48000','-c:a'):
             self.assertIn(required,media)
         self.assertNotIn('QWebEngineView',gui)
+        self.assertIn('imageio_ffmpeg.get_ffmpeg_exe()',read('desktop/dkord_desktop/codec.py'))
         self.assertIn('test_actual_ffmpeg_merges_mixed_rate_clips_in_order',read('desktop/tests/test_core.py'))
     def test_updates_are_disjoint_from_android_pinned_signed_and_platform_matched(self):
         source=read('desktop/dkord_desktop/updates.py')
@@ -75,4 +76,26 @@ class DesktopContractsTest(unittest.TestCase):
         self.assertIn("['dpkg-deb','--field',deb,'Depends']",build)
         self.assertIn("if 'libc6 (>= 2.39)' not in dependencies",build)
         self.assertIn("preview['minimum_glibc']='2.39'",build)
+    def test_windows32_is_a_real_separate_profile_not_a_renamed_x64_installer(self):
+        flow=read('.github/workflows/validate-desktop.yml');build=read('desktop/packaging/build.py')
+        for expected in ('architecture: x86','build_ffmpeg_x86.py','requirements-windows-x86.txt','--only-binary=:all:','--capture-ui','QT_QPA_PLATFORM: windows'):
+            self.assertIn(expected,flow)
+        self.assertIn('require_pe_architecture(exe',build)
+        self.assertIn("'--exclude-module','av','--exclude-module','imageio_ffmpeg'",build)
+        req=read('desktop/requirements-windows-x86.txt')
+        self.assertIn('PyQt5==5.15.11',req);self.assertNotIn('PyQt6==',req)
+        self.assertNotRegex(req,r'(?m)^(av|imageio-ffmpeg)==')
+        installer=read('desktop/packaging/windows.iss')
+        self.assertIn('AppId=app.dkord.desktop.x86',installer)
+        self.assertIn('DefaultDirName={localappdata}\\Programs\\Dkord-x86',installer)
+        self.assertIn('AppId=app.dkord.desktop\n',installer)
+        self.assertIn('OutputBaseFilename=Dkord-desktop-v{#Version}-{#Target}',installer)
+
+    def test_requested_screenshot_is_real_frozen_ui_and_isolated_not_ai_or_user_data(self):
+        capture=read('desktop/dkord_desktop/capture.py');proof=read('desktop/packaging/screenshot_proof.py')
+        for expected in ('window.grab()','NoNetwork','TemporaryDirectory','generated sine tones','frozen'):
+            self.assertIn(expected,capture)
+        self.assertIn("proof['python_bits']==32",proof)
+        self.assertIn("proof['frozen'] is True",proof)
+        self.assertIn("hashlib.sha256(data).hexdigest()==item['sha256']",proof)
 if __name__=='__main__':unittest.main()

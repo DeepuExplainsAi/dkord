@@ -8,13 +8,22 @@ def main():
     parser=argparse.ArgumentParser(description="Dkord native desktop music player and Mashup Studio")
     parser.add_argument("--data-dir",type=Path,help="Developer/test user-data directory; normal installations use the stable per-user path")
     parser.add_argument("--self-test",action="store_true",help="Run actual native codec/renderer/widget smoke checks without any external provider")
+    parser.add_argument("--capture-ui",type=Path,help="Capture the actual window using isolated generated audio, never normal user data")
     args=parser.parse_args()
-    from PyQt6.QtCore import QLockFile
-    from PyQt6.QtWidgets import QApplication,QMessageBox
+    from .qt import QLockFile, QApplication, QMessageBox
     from platformdirs import user_data_path
     from .store import Store
     from .ui import MainWindow
     app=QApplication(sys.argv[:1]);app.setOrganizationName("Dkord");app.setOrganizationDomain("app.dkord");app.setApplicationName("Dkord")
+    if args.capture_ui:
+        from .capture import capture
+        try:
+            return capture(app,args.capture_ui)
+        except Exception:
+            import traceback
+            args.capture_ui.mkdir(parents=True,exist_ok=True)
+            (args.capture_ui/'capture-error.txt').write_text(traceback.format_exc(),encoding='utf-8')
+            return 1
     if args.self_test:
         from .selftest import run
         return run(app)

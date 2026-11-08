@@ -4,7 +4,6 @@ import base64
 import hashlib
 import json
 import os
-import platform
 import re
 import subprocess
 import sys
@@ -18,6 +17,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from . import __version__
 from .media import check_cancel
+from .platforms import platform_key, TARGETS
 
 REPO = "DeepuExplainsAi/dkord"
 API = f"https://api.github.com/repos/{REPO}"
@@ -31,14 +31,6 @@ def version(value: str) -> tuple[int, int, int]:
     if not match:
         raise ValueError("Only stable three-component desktop versions are accepted")
     return tuple(map(int, match.groups()))
-
-
-def platform_key(system: str | None = None, machine: str | None = None) -> str:
-    os_name = {"Windows": "windows", "Darwin": "macos", "Linux": "linux"}.get(system or platform.system())
-    arch = {"AMD64": "x64", "x86_64": "x64", "arm64": "arm64", "aarch64": "arm64"}.get(machine or platform.machine())
-    if not os_name or not arch:
-        raise ValueError("No supported desktop OS/CPU build for this installation")
-    return f"{os_name}-{arch}"
 
 
 def trusted_url(url: str, tag: str, name: str) -> bool:
@@ -92,6 +84,8 @@ def verify_manifest(raw: bytes, trusted_keys: dict[str, str], installed: str = _
     if payload.get("tag") != tag:
         raise ValueError("Update version/tag mismatch")
     target = target or platform_key()
+    if target not in TARGETS:
+        return None
     artifact = payload.get("assets", {}).get(target)
     if artifact is None:
         return None  # never substitute another OS or architecture
@@ -104,7 +98,7 @@ def verify_manifest(raw: bytes, trusted_keys: dict[str, str], installed: str = _
     kind = artifact["kind"]
     extension = {"windows": ("exe", ".exe"), "macos": ("pkg", ".pkg"), "linux": ("appimage", ".AppImage") if image else ("deb", ".deb")}[target.split("-")[0]]
     name = artifact["name"]
-    if kind != extension[0] or not name.endswith(extension[1]) or not re.fullmatch(r"Dkord-desktop-v[0-9.]+-(windows|macos|linux)-(x64|arm64)\.(exe|pkg|deb|AppImage)", name):
+    if kind != extension[0] or not name.endswith(extension[1]) or not re.fullmatch(r"Dkord-desktop-v[0-9.]+-(windows|macos|linux)-(x64|arm64|x86)\.(exe|pkg|deb|AppImage)", name):
         raise ValueError("Wrong platform installer type/name")
     expected = f"Dkord-desktop-v{current}-{target}{extension[1]}"
     if name != expected or not trusted_url(artifact["url"], tag, name):

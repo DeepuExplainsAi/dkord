@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import platform
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -15,7 +16,8 @@ import urllib.request
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from dkord_desktop import __version__
-from dkord_desktop.updates import platform_key
+from dkord_desktop.platforms import platform_key, WINDOWS_X86
+from dkord_desktop.binaries import require_pe_architecture
 
 OUT=ROOT/'.artifacts'
 DIST=OUT/'bundle'
@@ -32,9 +34,7 @@ def call(args,**kwargs):
 
 
 def resources():
-    from PyQt6.QtWidgets import QApplication
-    from PyQt6.QtSvg import QSvgRenderer
-    from PyQt6.QtGui import QImage,QPainter
+    from dkord_desktop.qt import QApplication,QSvgRenderer,QImage,QPainter
     from PIL import Image
     app=QApplication.instance() or QApplication([])
     image=QImage(1024,1024,QImage.Format.Format_ARGB32);image.fill(0)
@@ -45,8 +45,9 @@ def resources():
     if not node:raise RuntimeError('A matching Node runtime must be bundled, not assumed installed on the user PC')
     reported=subprocess.check_output([node,'--version'],text=True).strip()
     if reported!='v'+NODE_VERSION:raise RuntimeError(f'Need Node{NODE_VERSION}, got{reported}')
-    expected='arm64' if platform.machine().casefold() in {'arm64','aarch64'} else 'x64'
+    expected='ia32' if WINDOWS_X86 else ('arm64' if platform_key().endswith('arm64') else 'x64')
     if subprocess.check_output([node,'-p','process.arch'],text=True).strip()!=expected:raise RuntimeError('JS runtime architecture mismatch')
+    if os.name=='nt':require_pe_architecture(Path(node),'x86' if WINDOWS_X86 else 'x64')
     runtime=ROOT/'.runtime';runtime.mkdir(exist_ok=True)
     target=runtime/('node.exe' if os.name=='nt' else 'node');shutil.copy2(node,target)
     # Matching upstream license, vendored and digest pinned. Parallel hosted builds
@@ -64,7 +65,14 @@ def freeze(node):
          '--add-data',str(ROOT/'assets')+os.pathsep+'assets', '--add-data',str(ROOT.parent/'LICENSE')+os.pathsep+'licenses',
          '--add-data',str(ROOT/'THIRD_PARTY.md')+os.pathsep+'licenses','--add-data',str(ROOT/'.runtime/NODE-LICENSE.txt')+os.pathsep+'licenses',
          '--add-binary',str(node)+os.pathsep+'runtime', '--collect-all','yt_dlp', '--collect-all','yt_dlp_ejs',
-         '--collect-all','imageio_ffmpeg','--collect-all','av']
+         '--collect-submodules','yt_dlp']
+    if WINDOWS_X86:
+        cmd+=['--exclude-module','av','--exclude-module','imageio_ffmpeg',
+              '--add-binary',str(ROOT/'.runtime/ffmpeg.exe')+os.pathsep+'runtime',
+              '--add-binary',str(ROOT/'.runtime/ffprobe.exe')+os.pathsep+'runtime',
+              '--add-data',str(ROOT/'.runtime/FFmpeg-COPYING.GPLv3')+os.pathsep+'licenses',
+              '--add-data',str(ROOT/'.runtime/FFmpeg-source.json')+os.pathsep+'licenses']
+    else:cmd+=['--collect-all','av','--collect-all','imageio_ffmpeg']
     if sys.platform=='darwin':cmd+=['--osx-bundle-identifier','app.dkord.desktop']
     cmd+=[str(ROOT/'packaging/entry.py')];call(cmd,cwd=ROOT)
     if sys.platform=='darwin':
@@ -77,19 +85,25 @@ def freeze(node):
         call(['codesign','--force','--deep','--sign','-',DIST/'Dkord.app'])
         exe=DIST/'Dkord.app/Contents/MacOS/Dkord'
     else:exe=DIST/'Dkord'/('Dkord.exe' if os.name=='nt' else 'Dkord')
+    if os.name=='nt':require_pe_architecture(exe,'x86' if WINDOWS_X86 else 'x64')
     call([exe,'--self-test'])
     bundled_node=(DIST/'Dkord.app/Contents/Frameworks/runtime/node' if sys.platform=='darwin' else DIST/'Dkord/_internal/runtime'/node.name)
-    if bundled_node.exists():call([bundled_node,'-e','console.log("Bundled JS runtime native smoke PASS", process.arch)'])
+    if bundled_node.exists():
+        if os.name=='nt':require_pe_architecture(bundled_node,'x86' if WINDOWS_X86 else 'x64')
+        call([bundled_node,'-e','console.log("Bundled JS runtime native smoke PASS", process.arch)'])
     else:raise RuntimeError('Bundled JS runtime is missing; do not ship an app relying on the build machine PATH')
+    if WINDOWS_X86:
+        require_pe_architecture(DIST/'Dkord/_internal/runtime/ffmpeg.exe','x86')
+        require_pe_architecture(DIST/'Dkord/_internal/runtime/ffprobe.exe','x86')
     return exe
 
 
-def windows():
+def windows(target):
     compiler=shutil.which('ISCC.exe') or r'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
     if not Path(compiler).is_file():raise RuntimeError('Inno Setup native compiler was not found')
     # windows.iss expects the icon adjacent to the source directory.
     shutil.copy2(OUT/'dkord.ico',DIST/'dkord.ico')
-    call([compiler,f'/DVersion={__version__}',f'/DSource={DIST / "Dkord"}',f'/DOutput={OUT}',ROOT/'packaging/windows.iss'])
+    call([compiler,f'/DVersion={__version__}',f'/DTarget={target}',f'/DSource={DIST / "Dkord"}',f'/DOutput={OUT}',ROOT/'packaging/windows.iss'])
 
 
 def macos(target):
@@ -132,7 +146,7 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--target',default=platform_key());args=parser.parse_args()
     if args.target!=platform_key():raise RuntimeError('Native package target must match the actual build host OS/CPU')
     OUT.mkdir(parents=True,exist_ok=True);node=resources();freeze(node)
-    if os.name=='nt':windows()
+    if os.name=='nt':windows(args.target)
     elif sys.platform=='darwin':macos(args.target)
     else:linux(args.target)
     artifacts=[]
@@ -140,8 +154,18 @@ def main():
         if file.suffix in {'.exe','.pkg','.deb','.AppImage'}:
             artifacts.append({'name':file.name,'bytes':file.stat().st_size,'sha256':hashlib.sha256(file.read_bytes()).hexdigest()})
     if not artifacts:raise RuntimeError('No real native packages were produced')
+    from dkord_desktop.qt import BINDING, QtCore
+    if os.name=='nt':
+        from dkord_desktop.codec import ffmpeg_exe
+        require_pe_architecture(Path(ffmpeg_exe()),'x86' if WINDOWS_X86 else 'x64')
     preview={'channel':'development-preview','version':__version__,'target':args.target,'source':os.environ.get('DKORD_SOURCE_SHA','local'),
              'trusted_signed_release':False,'notarized':False,'artifacts':artifacts}
+    preview['runtime']={'python_bits':struct.calcsize('P')*8,'qt_binding':BINDING,'qt_version':QtCore.QT_VERSION_STR,
+                        'audio_probe':'ffmpeg' if WINDOWS_X86 else 'pyav'}
+    if os.name=='nt':preview['runtime']['verified_pe_payloads']={'application':'x86' if WINDOWS_X86 else 'x64','node':'x86' if WINDOWS_X86 else 'x64','ffmpeg':'x86' if WINDOWS_X86 else 'x64'}
+    if WINDOWS_X86:
+        preview['codec_source']=json.loads((ROOT/'.runtime/FFmpeg-source.json').read_text(encoding='utf-8'))
+        preview['runtime']['verified_pe_payloads']['ffprobe']='x86'
     if args.target.startswith('linux-'):preview['minimum_glibc']='2.39'
     (OUT/f'preview-{args.target}.json').write_text(json.dumps(preview,indent=2)+'\n')
     print(json.dumps(preview,indent=2))

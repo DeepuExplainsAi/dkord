@@ -5,9 +5,11 @@ import unittest
 import sys
 from unittest.mock import patch
 from pathlib import Path
-from PyQt6.QtCore import Qt,QTimer,QLockFile
-from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication,QDialog,QLineEdit,QPushButton
+from dkord_desktop.qt import Qt,QTimer,QLockFile,QApplication,QDialog,QLineEdit,QPushButton,BINDING
+if BINDING == "PyQt5":
+    from PyQt5.QtTest import QTest
+else:
+    from PyQt6.QtTest import QTest
 from dkord_desktop.ui import MainWindow
 from dkord_desktop.models import Track
 from dkord_desktop.provider import Entry
@@ -78,7 +80,7 @@ class NativeWidgetTest(unittest.TestCase):
                 window.close();self.app.quit()
             QTimer.singleShot(0,quit)
             return window
-        with patch.object(sys,'argv',['dkord','--data-dir',str(root)]),patch('PyQt6.QtWidgets.QApplication',return_value=self.app),patch('PyQt6.QtWidgets.QMessageBox.critical') as error,patch('dkord_desktop.ui.MainWindow',side_effect=create_window):
+        with patch.object(sys,'argv',['dkord','--data-dir',str(root)]),patch('dkord_desktop.qt.QApplication',return_value=self.app),patch('dkord_desktop.qt.QMessageBox.critical') as error,patch('dkord_desktop.ui.MainWindow',side_effect=create_window):
             code=main()
         self.assertEqual(0,code,str(error.call_args));error.assert_not_called()
         self.assertEqual([(True,'cleanup committed',0,'existing playlists and offline data')],observations)
@@ -91,5 +93,13 @@ class NativeWidgetTest(unittest.TestCase):
         reopened=Store(self.window.store.root)
         self.assertEqual('light',reopened.setting('theme'));self.assertEqual([track],reopened.library('liked'))
         self.assertEqual(before,file.read_bytes());self.assertTrue(self.window.player.source().isEmpty())
+
+    def test_real_player_output_bridge_retains_volume_and_empty_source_semantics(self):
+        self.window.audio.setVolume(.42)
+        self.assertAlmostEqual(.42,self.window.audio.volume(),places=3)
+        self.assertIs(self.window.audio,self.window.player.audioOutput())
+        self.assertTrue(self.window.player.source().isEmpty())
+        if BINDING=='PyQt5':self.assertEqual(42,self.window.player.volume())
+        self.assertEqual(self.window.player.PlaybackState.StoppedState,self.window.player.playbackState())
 
 if __name__=='__main__':unittest.main()

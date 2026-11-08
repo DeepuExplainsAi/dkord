@@ -23,14 +23,22 @@ jobs:
         include:
           - os: windows-latest
             target: windows-x64
+            architecture: x64
+          - os: windows-latest
+            target: windows-x86
+            architecture: x86
           - os: macos-15-intel
             target: macos-x64
+            architecture: x64
           - os: macos-latest
             target: macos-arm64
+            architecture: arm64
           - os: ubuntu-24.04
             target: linux-x64
+            architecture: x64
           - os: ubuntu-24.04-arm
             target: linux-arm64
+            architecture: arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     env:
@@ -47,18 +55,40 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-          architecture: ${{ contains(matrix.target, 'arm64') && 'arm64' || 'x64' }}
+          architecture: ${{ matrix.architecture }}
       - uses: actions/setup-node@v6
         with:
           node-version: '22.22.3'
-          architecture: ${{ contains(matrix.target, 'arm64') && 'arm64' || 'x64' }}
+          architecture: ${{ matrix.architecture }}
       - name: Install native Linux desktop/audio libraries
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgl1 libegl1 libxkbcommon0 libdbus-1-3 libxcb-cursor0 libpulse0 libasound2t64 libx11-xcb1 fonts-noto-core
+      - name: Initialize the real 32-bit MSVC compiler
+        if: matrix.target == 'windows-x86'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86
+      - name: Provide MSYS2 make for the current x86 codec source build
+        if: matrix.target == 'windows-x86'
+        uses: msys2/setup-msys2@v2
+        with:
+          update: false
+          path-type: inherit
+          install: make diffutils
+      - name: Build a current genuine Win32 FFmpeg rather than bundling the obsolete 2019 wheel
+        if: matrix.target == 'windows-x86'
+        shell: msys2 {0}
+        run: python desktop/packaging/ci_run.py codec python desktop/packaging/build_ffmpeg_x86.py
       - name: Install locked native runtime and packaging dependencies
-        run: python -m pip install -r desktop/requirements-build.txt -c desktop/constraints.lock
+        shell: bash
+        run: |
+          if [ "${{ matrix.target }}" = "windows-x86" ]; then
+            python -m pip install --only-binary=:all: -r desktop/requirements-windows-x86.txt -c desktop/constraints-windows-x86.lock
+          else
+            python -m pip install -r desktop/requirements-build.txt -c desktop/constraints.lock
+          fi
       - name: Execute real codec, data, updater and native Qt widget tests
         run: python desktop/packaging/ci_run.py tests python -m pytest desktop/tests -v --junitxml=desktop/.artifacts/test-results.xml
       - name: Check all required native tests actually ran without skips
@@ -72,7 +102,7 @@ jobs:
           cases = root.findall('.//testcase')
           for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest'):
               assert any(cls in c.attrib.get('classname', '') for c in cases), f'Missing {cls}'
-          assert len(cases) >= 30, f'Only {len(cases)} desktop cases'
+          assert len(cases) >= 35, f'Only {len(cases)} desktop cases'
           for case in cases:
               for marker in ('failure','error','skipped'):
                   error=case.find(marker)
@@ -102,3 +132,19 @@ jobs:
             desktop/.artifacts/Dkord-desktop-*.AppImage
             desktop/.artifacts/preview-*.json
             desktop/.artifacts/test-results.xml
+      - name: Capture actual frozen Windows32 UI with generated offline audio, no user data/network
+        if: matrix.target == 'windows-x86'
+        env:
+          QT_QPA_PLATFORM: windows
+        run: python desktop/packaging/ci_run.py screenshot desktop/.artifacts/bundle/Dkord/Dkord.exe --capture-ui desktop/.artifacts/screenshots
+      - name: Publish verifiable screenshot proof for the requested Windows preview
+        if: matrix.target == 'windows-x86'
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots
+      - name: Upload actual Windows app screenshots
+        if: matrix.target == 'windows-x86' && always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-windows-ui-x86
+          retention-days: 7
+          if-no-files-found: error
+          path: desktop/.artifacts/screenshots/

@@ -66,7 +66,7 @@ class NewReleaseRequestTest(unittest.TestCase):
         workflow=(ROOT/'.github/workflows/release.yml').read_text()
         for required in ('branches: [arena/a0209191-dkord]','paths: [.github/release-requests/v0.10.0.json]','fetch-depth: 2',
                          'validate_release_request_v010.py','verify_apk_update.py','--target "$GITHUB_SHA"',
-                         'Require successful full Android validation of this exact release head','Require the exact-head five-host native preview build'):
+                         'Require successful full Android validation of this exact release head','Require the exact-head six-host native preview build'):
             self.assertIn(required,workflow)
         for forbidden in ('--clobber','gh release delete','gh release edit','gh run rerun','continue-on-error'):
             self.assertNotIn(forbidden,workflow)
