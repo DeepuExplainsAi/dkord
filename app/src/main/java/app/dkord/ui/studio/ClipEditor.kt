@@ -9,6 +9,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -42,9 +45,8 @@ internal fun ClipEditor(edit: ClipEdit, repo: StudioRepository, dismiss: () -> U
     val length = parseStudioTime(durationText)
     val end = if (byDuration) runCatching { Math.addExact(requireNotNull(start), requireNotNull(length)) }.getOrNull() else parseStudioTime(endText)
     val valid = start != null && end != null && start >= 0 && end > start && end <= edit.source.durationMs
-    AlertDialog(onDismissRequest = dismiss,
-        title = { Text(stringResource(R.string.studio_edit_clip)) },
-        text = {
+    RangeEditorDialog(stringResource(R.string.studio_edit_clip), valid, dismiss,
+        { if (valid) save(requireNotNull(start), requireNotNull(end)) }) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(edit.source.title)
                 Text(stringResource(R.string.studio_time_hint, studioTime(edit.source.durationMs)))
@@ -70,9 +72,29 @@ internal fun ClipEditor(edit: ClipEdit, repo: StudioRepository, dismiss: () -> U
                     else Text(stringResource(R.string.studio_file_unavailable), color = MaterialTheme.colorScheme.error)
                 }
             }
-        },
-        confirmButton = { TextButton({ if (valid) save(requireNotNull(start), requireNotNull(end)) }, enabled = valid) { Text(stringResource(R.string.save)) } },
-        dismissButton = { TextButton(dismiss) { Text(stringResource(R.string.cancel)) } })
+        }
+}
+
+/** A separate Window needs its own single safe-area owner. Keep actions outside the scroll body
+ * and constrain the whole card above the real IME, including narrow/large-font Hindi layouts. */
+@Composable
+private fun RangeEditorDialog(title: String, valid: Boolean, dismiss: () -> Unit, save: () -> Unit, content: @Composable () -> Unit) {
+    Dialog(onDismissRequest = dismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Box(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp), contentAlignment = Alignment.Center) {
+            Surface(Modifier.widthIn(max = 560.dp).fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh, tonalElevation = 6.dp) {
+                Column(Modifier.padding(24.dp)) {
+                    Text(title, style = MaterialTheme.typography.headlineSmall)
+                    Spacer(Modifier.height(16.dp))
+                    Box(Modifier.weight(1f, fill = false)) { content() }
+                    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
+                        TextButton(dismiss) { Text(stringResource(R.string.cancel)) }
+                        TextButton(save, enabled = valid) { Text(stringResource(R.string.save)) }
+                    }
+                }
+            }
+        }
+    }
 }
 
 internal fun clippedItem(file: java.io.File, start: Long, end: Long): MediaItem = MediaItem.Builder()
