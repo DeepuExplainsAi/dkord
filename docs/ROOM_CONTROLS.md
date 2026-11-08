@@ -1,6 +1,6 @@
-# Listen Together: creator and co-host controls (0.10.0 source)
+# Listen Together: creator and co-host controls (Androidv0.10.0)
 
-**Unpublished Android feature.** Execution proof belongs to the exact source/run recorded in HANDOFF.md, not to a source-only test count. This feature is not implemented in the desktop preview.
+**Published in Androidv0.10.0.** [Exact release/432JVM/38emulator proof](releases/v0.10.0-publication.md); physical multi-phone/live-relay acceptance remains unchecked. Execution proof belongs to the exact source/run, not to a source-only test count. This feature is not implemented in the desktop preview.
 
 ## Use it
 

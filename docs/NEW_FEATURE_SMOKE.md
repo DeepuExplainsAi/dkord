@@ -1,6 +1,6 @@
 # v0.9.1 phone/live acceptance checks — unexecuted; not a pass report
 
-v0.9.1/code13 is [published](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.9.1). CI and phone/live-provider checks are different. Exact completed run proof is in `HANDOFF.md`; this checklist is **not** a record of phone passes. Never uninstall/reset data to test an update; official APKs must use the existing package/key and a fresh greater version code.
+The historicalv0.9.1/code13 APK remains [published and unchanged](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.9.1); current Androidv0.10.0/code14 is [now published](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.0), with [exact execution/publication proof](releases/v0.10.0-publication.md). CI and phone/live-provider checks are different. Exact completed run proof is in `HANDOFF.md`; this checklist is **not** a record of phone passes. Never uninstall/reset data to test an update; official APKs must use the existing package/key and a fresh greater version code.
 
 ## Search keyboard / navigation
 - English and explicitly selected Hindi; narrow portrait, landscape and larger system fonts.
@@ -25,7 +25,7 @@ v0.9.1/code13 is [published](https://github.com/DeepuExplainsAi/dkord/releases/t
 - Empty history offers real Search; local read/write failure offers Retry/error without clearing storage or fabricating recent tracks. Playback/source errors must never be misreported as successful listening.
 
 ## Real Mashup Studio
-- **Stable0.9.1:** open Library → Mashup Studio or a song menu → Use in Mashup Studio. Its online songs require a completed/readable download first. **New unpublished0.10.0 source:** choose an ordinary online song directly; preparation is private and must not add a Downloads/public Music entry. See [new-platform/storage acceptance](PLATFORM_ACCEPTANCE.md) for explicit destinations, migration, cancellation and desktop/update checks.
+- **Older0.9.1:** open Library → Mashup Studio or a song menu → Use in Mashup Studio. Its online songs require a completed/readable download first. **Published Android0.10.0:** choose an ordinary online song directly; preparation is private and must not add a Downloads/public Music entry. See [new-platform/storage acceptance](PLATFORM_ACCEPTANCE.md) for explicit destinations, migration, cancellation and desktop/update checks.
 - Import multiple accessible phone/downloaded formats, plus a deliberately unsupported/unreadable source. Originals must not be edited/deleted. Errors must preserve previously committed projects/sources.
 - Choose different millisecond start/end or start/duration ranges, including multiple occurrences from one song. Test boundaries, zero/reversed/past-end/overflow rejection, long valid durations, reorder/remove and preview of both clip and arrangement. No silent fixed 15/30-second preset limit.
 - Preview pauses normal audio, stops on leaving/backgrounding, and uses the selected ranges/order. Large-font Hindi fields remain scrollable with a visible Save action while the real IME is open.
@@ -42,7 +42,7 @@ v0.9.1/code13 is [published](https://github.com/DeepuExplainsAi/dkord/releases/t
 Android 35 emulator checks do not establish physical-phone/provider behavior or every Android 8–14 storage/foreground-service edge case. Record actual observations separately before authorizing a fresh signed release.
 
 
-## Android co-host rooms (unpublished 0.10.0)
+## Android co-host rooms (published0.10.0, physical checks still unexecuted)
 Exact5ca30b1 source earned [Android432 JVM +38 device](https://github.com/DeepuExplainsAi/dkord/actions/runs/42496445156), all mandatory classes/zero skips. This is protocol/widget/Android-crypto actor proof, not the physical checks below.
 
 - [ ] Three real updated phones: default host-only, one selected co-host, two selected, Everyone and a late joiner; unauthorized local commands never change the room.

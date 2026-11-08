@@ -1,6 +1,6 @@
 # New storage, online Studio and desktop acceptance — not an executed phone/install report
 
-Android0.10.0/code14 is unpublished. Published0.9.1 and older assets remain immutable. Do **not** uninstall, reset, clear data or replace the original signing key to test an upgrade. Native desktop preview is not a finished/trusted Android-parity release. Record actual device/OS/version/results separately; fixture/native CI and packaging proof are not install-over, OEM, live-provider or signing/notarization acceptance.
+Android0.10.0/code14 is [published](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.0); [exact publication/CI/hash receipt](releases/v0.10.0-publication.md). Windows/macOS/Linux installers there are explicitly development previews. Previous0.9.1 and older assets remain untouched (no overwrite/tag reset). Do **not** uninstall, reset, clear data or replace the original signing key to test an upgrade. Native desktop preview is not a finished/trusted Android-parity release. Record actual device/OS/version/results separately; fixture/native CI and packaging proof are not install-over, OEM, live-provider or signing/notarization acceptance.
 
 ## Android existing data and destination intent
 - Before an authorized signed upgrade, record real playlists/likes/history/queue/position, downloaded primary URIs/file hashes, public Music copies, settings and Studio source/projects/exports. Install over the existing original-key package, without uninstalling. Verify old records/file hashes/access remain, including legacy DONE/public and PAUSED partial rows.
@@ -31,7 +31,7 @@ Android0.10.0/code14 is unpublished. Published0.9.1 and older assets remain immu
 - There is no automatic phone-to-PC/cloud audio synchronization. JSON moves metadata, not audio; do not record cross-device sync as passed.
 
 
-## Room co-host addition (Android 0.10.0, unpublished)
+## Room co-host addition (published Android0.10.0; physical acceptance still unchecked)
 - [ ] On at least three real updated devices, creator selects exactly one, then two members; each can play/pause/change song/seek for all opted-in followers. Non-selected member controls remain local.
 - [ ] Everyone also admits a newly joined updated member; co-hosts cannot administer permissions. Creator unticks one, reclaims all with Only me, and continues controlling playback.
 - [ ] Grant/revoke never opts listeners into audio; verify Sync & play/Follow off, explicit consent, Hindi/large font, duplicate nicknames/IDs and narrow-screen scrolling.

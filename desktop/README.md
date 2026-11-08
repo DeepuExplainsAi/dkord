@@ -4,6 +4,8 @@
 
 This is a separate **native Qt/Python desktop client**, not an Android APK in a browser frame. It is under active development; it is **not yet a finished Android-parity, signed or notarized public release**. The Android app and existing official APK/update feed are unchanged by desktop packaging.
 
+**Public development downloads:** [v0.10.0 exe/pkg/deb/AppImage previews](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.0). All5 real OS/CPU builds and30 native cases each passed; [exact source/package/hash receipt](../docs/releases/v0.10.0-publication.md). These are NOT trusted signed production updates; desktop parity/trust gaps below remain open.
+
 ## Implemented
 - PC sidebar, resizable music tables, queue dock, timeline, native media playback, volume/speed/repeat/shuffle/sleep, saved queue and real local history.
 - Real anonymous YouTube Music songs/albums/artists/playlists and explicit broader YouTube search. Song selection is separate from explicit Play all shown; provider errors never become fake demo results.
@@ -33,7 +35,7 @@ python packaging/build.py
 
 Packaged Linux previews are built on Ubuntu24.04 and require glibc2.39+ on both x64 and arm64, system GL/EGL, DBus, xkbcommon/XCB, and a supported audio/display stack. CI installs these explicitly and executes real native widget and codec tests. macOS baseline13+; Windows10/11 x64. Unsupported OS/CPU updates are refused, not silently replaced with another build.
 
-Preview native outputs are built in read-only pull-request CI for Windows x64, macOS x64/arm64 and Linux x64/arm64. `.exe`/`.pkg`/`.deb`/`.AppImage` files, reports and hashes belong in Actions artifacts, **never Git**. A successful source test alone is not proof these packages built or installed; see the exact workflow run before claiming readiness.
+Preview native outputs are built in read-only pull-request CI for Windows x64, macOS x64/arm64 and Linux x64/arm64. `.exe`/`.pkg`/`.deb`/`.AppImage` files, reports and hashes belong in Actions artifacts, **never Git**. A separately authorized release pipeline promoted verified same-head v0.10.0 previews to durable release assets; PR validation itself remains read-only and does not publish. A successful source test alone is not proof these packages built or installed; see the exact workflow run before claiming readiness.
 
 ## Local data and updates
 `platformdirs.user_data_path("Dkord", "Dkord", roaming=False)` is stable across versions: Windows LocalAppData, macOS Application Support, Linux XDG data. SQLite/WAL, metadata and audio live there, outside the executable installation folder. Corrupt/newer schemas are refused without reset. Installers do not contain user-data delete scripts. Do not uninstall/clear data to test an update.
