@@ -5,7 +5,7 @@ import android.content.Context
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.provider.Settings
-import androidx.compose.ui.test.ComposeTestRule
+import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat

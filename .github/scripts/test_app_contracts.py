@@ -340,6 +340,7 @@ class AppContractsTest(unittest.TestCase):
         for command in ("KEYCODE_WAKEUP", "dismiss-keyguard", "screen_off_timeout", "ime list -s -a", "ime enable", "ime set", "show_ime_with_hard_keyboard"):
             self.assertIn(command, setup)
         helper = read("app/src/androidTest/java/app/dkord/RealImeTestEnvironment.kt")
+        self.assertIn("import androidx.compose.ui.test.junit4.ComposeTestRule", helper)
         self.assertIn("activity.hasWindowFocus()", helper)
         self.assertIn("isVisible(WindowInsetsCompat.Type.ime())", helper)
         self.assertNotIn("Thread.sleep", helper)
