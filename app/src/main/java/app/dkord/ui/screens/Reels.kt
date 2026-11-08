@@ -67,7 +67,7 @@ internal class ReelsViewModel(source: ShortsSource) : ViewModel() {
 }
 
 @Composable
-fun ReelsScreen(onPlay: (List<Track>, Int) -> Unit, modifier: Modifier = Modifier) {
+fun ReelsScreen(onPlay: (List<Track>, Int) -> Unit, modifier: Modifier = Modifier, active: Boolean = true) {
     val source: ShortsRepository = koinInject()
     val actions: Actions = koinInject()
     val vm = koinVm { ReelsViewModel(source) }
@@ -83,8 +83,9 @@ fun ReelsScreen(onPlay: (List<Track>, Int) -> Unit, modifier: Modifier = Modifie
     LaunchedEffect(state.query, state.clips.firstOrNull()?.id) { if (state.clips.isNotEmpty()) pager.scrollToPage(0) }
     val currentId = state.clips.getOrNull(pager.settledPage)?.id
     LaunchedEffect(currentId) {
-        if (currentId != null) { paused = false; actions.player.pause() }
+        if (active && currentId != null) { paused = false; actions.player.pause() }
     }
+    LaunchedEffect(active) { if (!active) { paused = true; songClip = null } }
     // Appending a page must NOT resume the clip or pause a full song the user just chose.
     LaunchedEffect(pager.settledPage, state.clips.size) {
         if (state.clips.isNotEmpty() && pager.settledPage >= state.clips.size - 3) vm.controller.more()
@@ -107,7 +108,7 @@ fun ReelsScreen(onPlay: (List<Track>, Int) -> Unit, modifier: Modifier = Modifie
                 val clip = state.clips[page]
                 Box(Modifier.fillMaxSize()) {
                     AsyncImage(clip.thumbnail, null, Modifier.fillMaxSize())
-                    if (page == pager.settledPage) ClipVideo(clip.id, paused || songClip != null, { paused = true })
+                    if (active && page == pager.settledPage) ClipVideo(clip.id, paused || songClip != null, { paused = true })
                     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, Color.Black))))
                     IconButton({ paused = !paused }, Modifier.align(Alignment.TopEnd)) {
                         Icon(if (paused) Icons.Default.PlayArrow else Icons.Default.Pause,

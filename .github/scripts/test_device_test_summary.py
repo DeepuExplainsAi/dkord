@@ -29,3 +29,13 @@ class DeviceTestSummaryTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             Path(root, 'TEST-one.xml').write_text('<testsuite tests="2" skipped="1"><testcase classname="Required" name="skipped"><skipped/></testcase><testcase classname="Required" name="ok"/></testsuite>')
             self.assertFalse(summary.summarize(root, ["Required"])[3])
+
+    def test_nested_namespaced_agp_reports_expose_required_classes_and_actual_failure(self):
+        with tempfile.TemporaryDirectory() as root:
+            Path(root, 'TEST-device.xml').write_text('<testsuites xmlns="urn:junit" tests="2" failures="1"><testsuite name="Required"><testcase name="good"/><testcase name="broken"><failure message="actual AAC failed"/></testcase></testsuite></testsuites>')
+            result = summary.summarize(root, ["Required"])
+            self.assertFalse(result[3]); self.assertEqual(set(), result[2]); self.assertIn('Required.broken', result[1][0])
+    def test_aggregate_success_cannot_hide_testcase_failure(self):
+        with tempfile.TemporaryDirectory() as root:
+            Path(root, 'TEST-device.xml').write_text('<testsuites tests="1" failures="0"><testsuite name="Required"><testcase name="broken"><failure/></testcase></testsuite></testsuites>')
+            self.assertFalse(summary.summarize(root, ['Required'])[3])

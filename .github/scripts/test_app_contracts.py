@@ -352,6 +352,8 @@ class AppContractsTest(unittest.TestCase):
         self.assertIn("DownloadState.DONE", worker)
         self.assertIn("MediaStore.Audio.Media.IS_PENDING", worker)
         self.assertIn("cleanUnreferencedSources", repo)
+        self.assertIn("if (mutable.value.loading || mutable.value.failed) return", repo)
+        self.assertIn("require(source != destination)", repo)
         self.assertIn("StudioRenderRequest(id, snapshot)", repo)
         self.assertIn("AtomicFile", repo)
         self.assertIn("importing", read("app/src/main/java/app/dkord/ui/studio/StudioViewModel.kt"))
@@ -388,6 +390,7 @@ class AppContractsTest(unittest.TestCase):
         for case in ("SearchKeyboardViewportTest", "StudioAudioExportTest", "StudioClipEditorTest", "StudioExportPublicationTest"):
             self.assertIn("--required-class app.dkord." + case, workflow)
         self.assertIn("summarize_device_tests.py", workflow)
+        self.assertIn("bash -o pipefail -c './gradlew connectedDebugAndroidTest", workflow)
         self.assertNotIn("continue-on-error:", workflow)
 
 

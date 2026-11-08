@@ -135,7 +135,7 @@ fun App() {
                     MiniPlayer(state, player, onOpen = { playerOpen = true })
                     if (top == null) NavigationBar {
                         tabs.forEach { (t, icon, label) ->
-                            NavigationBarItem(tab == t, { tab = t }, { Icon(icon, null) }, label = { Text(stringResource(label)) })
+                            NavigationBarItem(tab == t, { tab = t }, { Icon(icon, null) }, label = { Text(stringResource(label), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) })
                         }
                     }
                 }
@@ -157,7 +157,7 @@ fun App() {
                 label = "dest",
             ) { entries ->
                 when (val dest = entries.lastOrNull()) {
-                    null -> TabContent(tab, savedTabs, ::say, { push(Dest.Settings) }, ::push, ::onItem, ::play, { menuTrack = it })
+                    null -> TabContent(tab, savedTabs, ::say, { push(Dest.Settings) }, ::push, ::onItem, ::play, { menuTrack = it }, active = top == null && !playerOpen)
                     is Dest.Detail -> DetailScreen(dest.toItem(), ::pop, ::onItem, ::play, { menuTrack = it }, { pickTracks = it })
                     is Dest.Playlist -> LocalPlaylistScreen(dest.id, ::pop, ::play) { menuTrack = it }
                     Dest.Liked -> LikedScreen(::pop, ::play) { menuTrack = it }
@@ -209,6 +209,7 @@ private fun TabContent(
     onItem: (app.dkord.core.BrowseItem) -> Unit,
     onPlay: (List<Track>, Int) -> Unit,
     onMenu: (Track) -> Unit,
+    active: Boolean,
 ) {
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -239,7 +240,7 @@ private fun TabContent(
                 when (selected) {
                     Tab.HOME -> HomeScreen(onItem, onPlay, m)
                     Tab.SEARCH -> SearchScreen(onItem, onPlay, onMenu, m, onMessage = say)
-                    Tab.REELS -> ReelsScreen(onPlay, m)
+                    Tab.REELS -> ReelsScreen(onPlay, m, active = active && selected == tab)
                     Tab.LIBRARY -> LibraryScreen({ push(Dest.Playlist(it)) }, { push(Dest.Liked) }, { push(Dest.Recent) }, onItem, say, m, onOpenStudio = { push(Dest.Studio()) })
                     Tab.DOWNLOADS -> DownloadsScreen(onPlay, onMenu, m)
                 }

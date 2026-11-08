@@ -122,8 +122,7 @@ jobs:
           script: |
             adb shell settings put secure show_ime_with_hard_keyboard 1
             chmod +x gradlew
-            set -o pipefail
-            ./gradlew connectedDebugAndroidTest --stacktrace 2>&1 | tee "$RUNNER_TEMP/dkord-device-build.log"
+            bash -o pipefail -c './gradlew connectedDebugAndroidTest --stacktrace 2>&1 | tee "$RUNNER_TEMP/dkord-device-build.log"'
       - name: Surface Android device-build diagnostics
         if: always()
         run: python3 -B .github/scripts/annotate_android_build.py "$RUNNER_TEMP/dkord-device-build.log"

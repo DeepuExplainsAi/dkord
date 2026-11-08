@@ -42,6 +42,7 @@ internal class StudioRepository(private val context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
     private val mutex = Mutex()
     private val pendingImports = ConcurrentHashMap.newKeySet<String>()
+    private val pendingCopies = ConcurrentHashMap.newKeySet<String>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutable = MutableStateFlow(StudioLibrary())
     val state: StateFlow<StudioLibrary> = mutable
@@ -82,6 +83,7 @@ internal class StudioRepository(private val context: Context) {
         val changed = transform(current).copy(updatedAt = System.currentTimeMillis()).validate()
         require(changed.id == id)
         persist(mutable.value.projects.map { if (it.id == id) changed else it })
+        runCatching { cleanUnreferencedSources() }
     } }
     suspend fun delete(id: String) = withContext(Dispatchers.IO) { mutex.withLock {
         ready(); persist(mutable.value.projects.filterNot { it.id == id }); cleanUnreferencedSources()
@@ -127,9 +129,14 @@ internal class StudioRepository(private val context: Context) {
         } finally { if (!committed) file.delete(); pendingImports.remove(file.name) }
     }
     suspend fun copyAudio(source: Uri, destination: Uri) = withContext(Dispatchers.IO) {
+        require(source != destination)
+        // A SAF URI can alias a MediaStore file. Read fully before opening the destination for
+        // truncation, otherwise Save a copy over the same path can destroy its own input.
+        val staged = File(temporary, "${studioId()}.copy")
+        pendingCopies.add(staged.name)
         try {
             requireNotNull(context.contentResolver.openInputStream(source)).use { input ->
-                requireNotNull(context.contentResolver.openOutputStream(destination, "wt")).use { output ->
+                staged.outputStream().use { output ->
                     val buffer = ByteArray(64 * 1024)
                     while (true) {
                         currentCoroutineContext().ensureActive()
@@ -138,7 +145,15 @@ internal class StudioRepository(private val context: Context) {
                     }
                 }
             }
-        } catch (e: Exception) { runCatching { context.contentResolver.delete(destination, null, null) }; throw e }
+            currentCoroutineContext().ensureActive()
+            // Once the user-selected destination is opened, finish this copy without a partial
+            // cancellation. Never delete an arbitrary existing document selected by the user.
+            withContext(NonCancellable + Dispatchers.IO) {
+                requireNotNull(context.contentResolver.openOutputStream(destination, "wt")).use { output ->
+                    staged.inputStream().use { it.copyTo(output) }
+                }
+            }
+        } finally { staged.delete(); pendingCopies.remove(staged.name) }
     }
     fun sourceFile(source: StudioSource): File {
         require(source.fileName == "${source.id}.audio" && UUID.fromString(source.id).toString() == source.id)
@@ -188,10 +203,14 @@ internal class StudioRepository(private val context: Context) {
             val info = work.getWorkInfoById(UUID.fromString(id)).get()
             if (info == null || info.state.isFinished) { AtomicFile(file).delete(); File(temporary, "$id.m4a").delete() }
         }
-        temporary.listFiles()?.filter { it.extension == "import" && it.name !in pendingImports }?.forEach(File::delete)
+        temporary.listFiles()?.filter {
+            (it.extension == "import" && it.name !in pendingImports) || (it.extension == "copy" && it.name !in pendingCopies)
+        }?.forEach(File::delete)
         cleanUnreferencedSources()
     }
     private fun cleanUnreferencedSources() {
+        // Unknown/corrupt catalog != empty library. Never garbage-collect potentially recoverable audio.
+        if (mutable.value.loading || mutable.value.failed) return
         // Render snapshots pin their inputs even if a project is changed/deleted while encoding.
         val pinned = requests.listFiles()?.filter { it.extension == "json" }?.flatMap {
             json.decodeFromString<StudioRenderRequest>(AtomicFile(it).readFully().decodeToString()).project.sources.map(StudioSource::fileName)

@@ -58,7 +58,7 @@ internal fun StudioScreen(initialTrack: Track?, onPlay: (List<Track>, Int) -> Un
     var edit by remember { mutableStateOf<ClipEdit?>(null) }
     var preview by remember { mutableStateOf(false) }
     var importProject by rememberSaveable { mutableStateOf<String?>(null) }
-    var copyTrack by remember { mutableStateOf<Track?>(null) }
+    var copyTrack by rememberSaveable { mutableStateOf<String?>(null) }
     val pickAudio = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         val id = importProject
         if (id != null && uris.isNotEmpty()) vm.importAudio(id, uris)
@@ -105,130 +105,131 @@ internal fun StudioScreen(initialTrack: Track?, onPlay: (List<Track>, Int) -> Un
     }
 
     Column(modifier.fillMaxSize()) {
-    TopAppBar(title = { Text(stringResource(R.string.studio_title), maxLines = 1, overflow = TextOverflow.Ellipsis) }, navigationIcon = {
-        IconButton({ if (selected != null) selected = null else onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
-    })
-    LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (library.loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-        else if (library.failed) item {
-            Text(stringResource(R.string.studio_read_failed))
-            TextButton(repo::reload) { Text(stringResource(R.string.retry)) }
-        } else if (project == null) {
-            item {
-                Text(stringResource(R.string.studio_intro))
-                Button({ create = true }, enabled = !busy) { Text(stringResource(R.string.studio_new)) }
-                if (initialTrack != null) Text(stringResource(R.string.studio_choose_project, initialTrack.title))
-            }
-            items(library.projects, key = { it.id }) { saved -> OutlinedCard(Modifier.fillMaxWidth().clickable { selected = saved.id }) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(saved.name, style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.studio_total, studioTime(saved.durationMs)))
+        TopAppBar(title = { Text(stringResource(R.string.studio_title), maxLines = 1, overflow = TextOverflow.Ellipsis) }, navigationIcon = {
+            IconButton({ if (selected != null) selected = null else onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
+        })
+        LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (library.loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+            else if (library.failed) item {
+                Text(stringResource(R.string.studio_read_failed))
+                TextButton(repo::reload) { Text(stringResource(R.string.retry)) }
+            } else if (project == null) {
+                item {
+                    Text(stringResource(R.string.studio_intro))
+                    Button({ create = true }, enabled = !busy) { Text(stringResource(R.string.studio_new)) }
+                    if (initialTrack != null) Text(stringResource(R.string.studio_choose_project, initialTrack.title))
                 }
-            } }
-        } else {
-            item {
-                TextButton({ selected = null }) { Text(stringResource(R.string.studio_projects)) }
-                Text(project.name, style = MaterialTheme.typography.headlineSmall)
-                Text(stringResource(R.string.studio_total, studioTime(project.durationMs)))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton({ rename = true }, enabled = !busy) { Text(stringResource(R.string.rename)) }
-                    TextButton({ deleting = true }, enabled = !busy) { Text(stringResource(R.string.delete)) }
-                }
-                Text(stringResource(R.string.studio_sources_hint), style = MaterialTheme.typography.bodySmall)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton({ importProject = project.id; pickAudio.launch(arrayOf("audio/*")) }, enabled = !busy) { Text(stringResource(R.string.studio_device_audio)) }
-                    OutlinedButton({ downloadedPicker = true }, enabled = !busy) { Text(stringResource(R.string.studio_downloads)) }
-                }
-            }
-            if (initialTrack != null) item {
-                val status = entries.firstOrNull { it.track.id == initialTrack.id }?.download?.state
-                OutlinedCard {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(initialTrack.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Button({ vm.useTrack(project.id, initialTrack) }, enabled = !busy && status !in setOf(DownloadState.QUEUED, DownloadState.RUNNING)) {
-                            Text(stringResource(if (status == DownloadState.DONE) R.string.studio_add_source else if (status in setOf(DownloadState.QUEUED, DownloadState.RUNNING)) R.string.downloading else R.string.studio_download_source))
-                        }
+                items(library.projects, key = { it.id }) { saved -> OutlinedCard(Modifier.fillMaxWidth().clickable { selected = saved.id }) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(saved.name, style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.studio_total, studioTime(saved.durationMs)))
+                    }
+                } }
+            } else {
+                item {
+                    TextButton({ selected = null }) { Text(stringResource(R.string.studio_projects)) }
+                    Text(project.name, style = MaterialTheme.typography.headlineSmall)
+                    Text(stringResource(R.string.studio_total, studioTime(project.durationMs)))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton({ rename = true }, enabled = !busy) { Text(stringResource(R.string.rename)) }
+                        TextButton({ deleting = true }, enabled = !busy) { Text(stringResource(R.string.delete)) }
+                    }
+                    Text(stringResource(R.string.studio_sources_hint), style = MaterialTheme.typography.bodySmall)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton({ importProject = project.id; pickAudio.launch(arrayOf("audio/*")) }, enabled = !busy) { Text(stringResource(R.string.studio_device_audio)) }
+                        OutlinedButton({ downloadedPicker = true }, enabled = !busy) { Text(stringResource(R.string.studio_downloads)) }
                     }
                 }
-            }
-            if (importing) item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(24.dp)); Text(stringResource(R.string.studio_importing), Modifier.weight(1f).padding(8.dp))
-                    TextButton(vm::cancelImport) { Text(stringResource(R.string.cancel)) }
-                }
-            }
-            item { Text(stringResource(R.string.studio_sources), style = MaterialTheme.typography.titleMedium) }
-            items(project.sources, key = { "source-${it.id}" }) { source ->
-                OutlinedCard(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(source.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text(studioTime(source.durationMs), style = MaterialTheme.typography.bodySmall)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton({ edit = ClipEdit(source) }, enabled = !busy) { Text(stringResource(R.string.studio_add_clip)) }
-                            TextButton({ vm.change(project.id) { p -> p.copy(sources = p.sources.filterNot { it.id == source.id }, clips = p.clips.filterNot { it.sourceId == source.id }) } }, enabled = !busy) {
-                                Text(stringResource(R.string.remove))
+                if (initialTrack != null) item {
+                    val status = entries.firstOrNull { it.track.id == initialTrack.id }?.download?.state
+                    OutlinedCard {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(initialTrack.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Button({ vm.useTrack(project.id, initialTrack) }, enabled = !busy && status !in setOf(DownloadState.QUEUED, DownloadState.RUNNING)) {
+                                Text(stringResource(if (status == DownloadState.DONE) R.string.studio_add_source else if (status in setOf(DownloadState.QUEUED, DownloadState.RUNNING)) R.string.downloading else R.string.studio_download_source))
                             }
                         }
                     }
                 }
-            }
-            item { Text(stringResource(R.string.studio_clips), style = MaterialTheme.typography.titleMedium) }
-            if (project.clips.isEmpty()) item { Text(stringResource(R.string.studio_no_clips)) }
-            items(project.clips, key = { "clip-${it.id}" }) { clip ->
-                val source = project.sources.first { it.id == clip.sourceId }
-                val index = project.clips.indexOf(clip)
-                ElevatedCard(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(stringResource(R.string.studio_clip_title, index + 1, source.title), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text(stringResource(R.string.studio_clip_times, studioTime(clip.startMs), studioTime(clip.endMs), studioTime(clip.durationMs)), style = MaterialTheme.typography.bodySmall)
-                        FlowRow(verticalArrangement = Arrangement.Center) {
-                            TextButton({ edit = ClipEdit(source, clip) }, enabled = !busy) { Text(stringResource(R.string.studio_edit_clip)) }
-                            IconButton({ vm.change(project.id) { it.moveClip(clip.id, -1) } }, enabled = !busy && index > 0) { Icon(Icons.Default.ArrowUpward, stringResource(R.string.move_up)) }
-                            IconButton({ vm.change(project.id) { it.moveClip(clip.id, 1) } }, enabled = !busy && index < project.clips.lastIndex) { Icon(Icons.Default.ArrowDownward, stringResource(R.string.move_down)) }
-                            IconButton({ vm.change(project.id) { it.copy(clips = it.clips.filterNot { c -> c.id == clip.id }) } }, enabled = !busy) { Icon(Icons.Default.Close, stringResource(R.string.remove)) }
+                if (importing) item {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(Modifier.size(24.dp)); Text(stringResource(R.string.studio_importing), Modifier.weight(1f).padding(8.dp))
+                        TextButton(vm::cancelImport) { Text(stringResource(R.string.cancel)) }
+                    }
+                }
+                item { Text(stringResource(R.string.studio_sources), style = MaterialTheme.typography.titleMedium) }
+                items(project.sources, key = { "source-${it.id}" }) { source ->
+                    OutlinedCard(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(source.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(studioTime(source.durationMs), style = MaterialTheme.typography.bodySmall)
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TextButton({ edit = ClipEdit(source) }, enabled = !busy) { Text(stringResource(R.string.studio_add_clip)) }
+                                TextButton({ vm.change(project.id) { p -> p.copy(sources = p.sources.filterNot { it.id == source.id }, clips = p.clips.filterNot { it.sourceId == source.id }) } }, enabled = !busy) {
+                                    Text(stringResource(R.string.remove))
+                                }
+                            }
                         }
                     }
                 }
-            }
-            item {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton({ preview = true }, enabled = project.clips.isNotEmpty() && !busy) { Text(stringResource(R.string.studio_preview)) }
-                    Button({ vm.export(project.id) }, enabled = project.clips.isNotEmpty() && !busy && !exporting) { Text(stringResource(R.string.studio_merge)) }
-                }
-                if (work != null) {
-                    val info = requireNotNull(work)
-                    when (info.state) {
-                        WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> {
-                            Text(stringResource(R.string.studio_exporting))
-                            val fraction = info.progress.getInt("progress", -1)
-                            if (fraction >= 0) {
-                                LinearProgressIndicator(progress = { fraction / 100f }, modifier = Modifier.fillMaxWidth())
-                                Text(stringResource(R.string.studio_progress, fraction))
-                            } else LinearProgressIndicator(Modifier.fillMaxWidth())
-                            TextButton({ requestId?.let(repo::cancelExport) }) { Text(stringResource(R.string.cancel)) }
-                            Text(stringResource(R.string.studio_snapshot_hint), style = MaterialTheme.typography.bodySmall)
-                        }
-                        WorkInfo.State.FAILED -> Text(stringResource(R.string.studio_export_failed), color = MaterialTheme.colorScheme.error)
-                        WorkInfo.State.CANCELLED -> Text(stringResource(R.string.studio_cancelled))
-                        WorkInfo.State.SUCCEEDED -> Text(stringResource(R.string.studio_saved))
-                    }
-                }
-                if (exporting && work?.state?.isFinished != false) Text(stringResource(R.string.studio_other_export))
-            }
-            project.lastExport?.let { output -> item {
-                OutlinedCard(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(output.title, style = MaterialTheme.typography.titleMedium)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton({ onPlay(listOf(output), 0) }) { Text(stringResource(R.string.play)) }
-                            TextButton({ copyTrack = output; saveCopy.launch(DownloadStorage.safeName("", output.title, "m4a")) }) { Text(stringResource(R.string.studio_save_copy)) }
-                            TextButton({ shareTrack(context, output) }) { Text(stringResource(R.string.share)) }
-                            IconButton({ onMenu(output) }) { Icon(Icons.Default.MoreVert, stringResource(R.string.more)) }
+                item { Text(stringResource(R.string.studio_clips), style = MaterialTheme.typography.titleMedium) }
+                if (project.clips.isEmpty()) item { Text(stringResource(R.string.studio_no_clips)) }
+                items(project.clips, key = { "clip-${it.id}" }) { clip ->
+                    val source = project.sources.first { it.id == clip.sourceId }
+                    val index = project.clips.indexOf(clip)
+                    ElevatedCard(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(stringResource(R.string.studio_clip_title, index + 1, source.title), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(stringResource(R.string.studio_clip_times, studioTime(clip.startMs), studioTime(clip.endMs), studioTime(clip.durationMs)), style = MaterialTheme.typography.bodySmall)
+                            FlowRow(verticalArrangement = Arrangement.Center) {
+                                TextButton({ edit = ClipEdit(source, clip) }, enabled = !busy) { Text(stringResource(R.string.studio_edit_clip)) }
+                                IconButton({ vm.change(project.id) { it.moveClip(clip.id, -1) } }, enabled = !busy && index > 0) { Icon(Icons.Default.ArrowUpward, stringResource(R.string.move_up)) }
+                                IconButton({ vm.change(project.id) { it.moveClip(clip.id, 1) } }, enabled = !busy && index < project.clips.lastIndex) { Icon(Icons.Default.ArrowDownward, stringResource(R.string.move_down)) }
+                                IconButton({ vm.change(project.id) { it.copy(clips = it.clips.filterNot { c -> c.id == clip.id }) } }, enabled = !busy) { Icon(Icons.Default.Close, stringResource(R.string.remove)) }
+                            }
                         }
                     }
                 }
-            } }
+                item {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton({ preview = true }, enabled = project.clips.isNotEmpty() && !busy) { Text(stringResource(R.string.studio_preview)) }
+                        Button({ vm.export(project.id) }, enabled = project.clips.isNotEmpty() && !busy && !exporting) { Text(stringResource(R.string.studio_merge)) }
+                    }
+                    if (work != null) {
+                        val info = requireNotNull(work)
+                        when (info.state) {
+                            WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> {
+                                Text(stringResource(R.string.studio_exporting))
+                                val fraction = info.progress.getInt("progress", -1)
+                                if (fraction >= 0) {
+                                    LinearProgressIndicator(progress = { fraction / 100f }, modifier = Modifier.fillMaxWidth())
+                                    Text(stringResource(R.string.studio_progress, fraction))
+                                } else LinearProgressIndicator(Modifier.fillMaxWidth())
+                                TextButton({ requestId?.let(repo::cancelExport) }) { Text(stringResource(R.string.cancel)) }
+                                Text(stringResource(R.string.studio_snapshot_hint), style = MaterialTheme.typography.bodySmall)
+                            }
+                            WorkInfo.State.FAILED -> Text(stringResource(R.string.studio_export_failed), color = MaterialTheme.colorScheme.error)
+                            WorkInfo.State.CANCELLED -> Text(stringResource(R.string.studio_cancelled))
+                            WorkInfo.State.SUCCEEDED -> Text(stringResource(R.string.studio_saved))
+                        }
+                    }
+                    if (exporting && work?.state?.isFinished != false) Text(stringResource(R.string.studio_other_export))
+                }
+                project.lastExport?.let { output -> item {
+                    OutlinedCard(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(output.title, style = MaterialTheme.typography.titleMedium)
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TextButton({ onPlay(listOf(output), 0) }) { Text(stringResource(R.string.play)) }
+                                TextButton({ copyTrack = output.id; saveCopy.launch(DownloadStorage.safeName("", output.title, "m4a")) }, enabled = !busy) { Text(stringResource(R.string.studio_save_copy)) }
+                                TextButton({ shareTrack(context, output) }) { Text(stringResource(R.string.share)) }
+                                IconButton({ onMenu(output) }) { Icon(Icons.Default.MoreVert, stringResource(R.string.more)) }
+                            }
+                        }
+                    }
+                } }
+            }
         }
-    }
+
     }
 }

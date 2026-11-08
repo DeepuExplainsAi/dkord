@@ -56,8 +56,8 @@ internal class StudioViewModel(val repo: StudioRepository, private val downloads
     }
     fun export(id: String) = run(R.string.studio_export_failed) { repo.export(id) }
     fun cancelImport() { if (importing.value) operation?.cancel() }
-    fun copyOutput(track: Track, destination: Uri) = run(R.string.studio_copy_failed) {
-        val uri = downloads.localUri(track.id) ?: throw FileNotFoundException()
+    fun copyOutput(id: String, destination: Uri) = run(R.string.studio_copy_failed) {
+        val uri = downloads.localUri(id) ?: throw FileNotFoundException()
         repo.copyAudio(Uri.parse(uri), destination)
         messages.emit(R.string.studio_copy_saved)
     }

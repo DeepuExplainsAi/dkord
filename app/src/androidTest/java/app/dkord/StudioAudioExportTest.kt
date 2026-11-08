@@ -112,6 +112,12 @@ class StudioAudioExportTest {
             val third = StudioRepository(isolated)
             assertTrue(withTimeout(10_000) { third.state.first { !it.loading } }.failed)
             try { third.create("Must not erase"); fail("Corrupt storage cannot be replaced") } catch (_: IllegalStateException) { }
+            val imported = second.sourceFile(restored.projects.single().sources.single())
+            third.finishRequest(studioId())
+            assertTrue("Failed catalog recovery must never purge private audio", imported.exists())
+            try { second.copyAudio(android.net.Uri.fromFile(imported), android.net.Uri.fromFile(imported)); fail("Cannot truncate a copy source") }
+            catch (_: IllegalArgumentException) { }
+            assertTrue(imported.length() > 44)
             assertEquals("not valid project JSON", catalog.readText())
         } finally { dir.deleteRecursively() }
     }
