@@ -1,4 +1,6 @@
-"""Phone-owned presentation contract, consumed by both Qt6 and real Win32 Qt5."""
+"""Phone-owned presentation contract, consumed by both Qt6 and real Win32 Qt5.QLabel {{ background: transparent; }}
+QPushButton[iconOnly="true"] {{ padding: 0; min-width: 0; }}
+"""
 from __future__ import annotations
 from functools import lru_cache
 import json

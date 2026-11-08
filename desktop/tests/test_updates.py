@@ -125,3 +125,87 @@ class UpdateTest(unittest.TestCase):
         with self.assertRaises(ValueError):verify_manifest(self.signed(),self.keys,target='windows-x86')
 
 if __name__=='__main__':unittest.main()
+
+class ModernUpdateIdentityTest(unittest.TestCase):
+    def setUp(self):
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from dkord_desktop.updates import UPDATE_DOMAIN
+        self.domain=UPDATE_DOMAIN;self.signer=rsa.generate_private_key(public_exponent=65537,key_size=2048)  # ephemeral TEST identity only
+        self.keys={'fixture-rsa':{'algorithm':'rsa-pkcs1-sha256','publicKey':base64.b64encode(self.signer.public_key().public_bytes(
+            serialization.Encoding.DER,serialization.PublicFormat.SubjectPublicKeyInfo)).decode(),
+            'certificateSha256':hashlib.sha256(b'public certificate fixture only').hexdigest()}}
+        self.payload={'format':2,'channel':'desktop','version':'0.11.0','tag':'v0.11.0','assets':{}}
+        for target,ext,kind in [('windows-x64','.exe','exe'),('windows-x86','.exe','exe'),('macos-x64','.pkg','pkg'),('macos-arm64','.pkg','pkg'),('linux-x64','.deb','deb'),('linux-arm64','.deb','deb')]:
+            name=f'Dkord-desktop-v0.11.0-{target}{ext}'
+            artifact={'name':name,'kind':kind,'url':f'https://github.com/DeepuExplainsAi/dkord/releases/download/v0.11.0/{name}','size':2048,'sha256':hashlib.sha256(b'installer fixture').hexdigest()}
+            self.payload['assets'][target]={'deb':artifact} if target.startswith('linux') else artifact
+
+    def signed(self,domain=None):
+        from cryptography.hazmat.primitives.asymmetric import padding
+        from cryptography.hazmat.primitives import hashes
+        signature=self.signer.sign((self.domain if domain is None else domain)+canonical(self.payload),padding.PKCS1v15(),hashes.SHA256())
+        return json.dumps({'payload':self.payload,'keyId':'fixture-rsa','signature':base64.b64encode(signature).decode()}).encode()
+
+    def test_one_common_android_pc_release_is_still_cpu_os_and_package_exact(self):
+        for target in self.payload['assets']:
+            update=verify_manifest(self.signed(),self.keys,target=target,image=False)
+            self.assertEqual('v0.11.0',update.tag);self.assertEqual(target,update.platform);self.assertNotIn('.apk',update.name)
+        self.assertIsNone(verify_manifest(self.signed(),self.keys,target='windows-arm64'))
+
+    def test_signature_is_domain_separated_not_a_raw_android_room_or_generic_signature(self):
+        for domain in (b'',b'DKORD-ROOM',b'APK Signature Scheme v2'):
+            with self.assertRaises(Exception):verify_manifest(self.signed(domain),self.keys,target='windows-x86')
+        raw=json.loads(self.signed());raw['payload']['version']='9.0.0'
+        with self.assertRaises(Exception):verify_manifest(json.dumps(raw).encode(),self.keys,target='windows-x86')
+        with self.assertRaises(Exception):verify_manifest(self.signed(),{},target='windows-x86')
+
+    def test_algorithm_downgrade_wrong_root_or_format_cannot_be_used(self):
+        for algorithm in ('none','ed25519','ecdsa-p256-sha256'):
+            keys={'fixture-rsa':dict(self.keys['fixture-rsa'],algorithm=algorithm)}
+            with self.assertRaises(Exception):verify_manifest(self.signed(),keys,target='windows-x64')
+        self.payload['format']=1
+        with self.assertRaises(Exception):verify_manifest(self.signed(),self.keys,target='windows-x64')
+        self.payload['format']=2;self.payload['tag']='desktop-v0.11.0'
+        with self.assertRaises(Exception):verify_manifest(self.signed(),self.keys,target='windows-x64')
+
+    def test_apk_wrong_cpu_host_or_oversized_package_is_refused_even_with_valid_identity(self):
+        original=json.loads(json.dumps(self.payload['assets']['windows-x86']))
+        for patching in ({'name':'Dkord-v0.11.0.apk'},{'url':'https://attacker.test/installer.exe'},
+                         {'name':'Dkord-desktop-v0.11.0-windows-x64.exe'},{'size':2**40}):
+            self.payload['assets']['windows-x86']=original|patching
+            with self.assertRaises(Exception):verify_manifest(self.signed(),self.keys,target='windows-x86')
+
+    def test_installed_public_root_is_the_verified_original_apk_identity_not_a_generated_key(self):
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        root=Path(__file__).resolve().parents[1]/'assets'
+        receipt=json.loads((root/'update-trust-provenance.json').read_text())
+        expected='5e6e923094761325e1ba251ebd8058077934131ed89f293215ce5876da211a61'
+        self.assertIs(False,receipt['privateKeyExported']);self.assertEqual('v0.10.0',receipt['verifiedAgainst']['tag'])
+        self.assertEqual(expected,receipt['verifiedAgainst']['certificateSha256']);self.assertEqual(receipt['keys'],Updater.production_keys())
+        self.assertEqual(1,len(receipt['keys']))
+        for key in receipt['keys'].values():
+            self.assertEqual(expected,key['certificateSha256']);self.assertEqual('rsa-pkcs1-sha256',key['algorithm'])
+            public=serialization.load_der_public_key(base64.b64decode(key['publicKey'],validate=True))
+            self.assertIsInstance(public,rsa.RSAPublicKey);self.assertGreaterEqual(public.key_size,2048)
+
+    def test_discovery_finds_the_signed_desktop_manifest_inside_the_common_release_not_the_apk(self):
+        raw=self.signed();name='Dkord-desktop-v0.11.0-manifest.json';url='https://github.com/DeepuExplainsAi/dkord/releases/download/v0.11.0/'+name
+        releases=[{'tag_name':'v0.11.0','draft':False,'prerelease':False,'assets':[
+            {'name':'Dkord-v0.11.0.apk','browser_download_url':url.replace(name,'Dkord-v0.11.0.apk'),'size':10000},
+            {'name':name,'browser_download_url':url,'size':len(raw)}]}]
+        calls=[]
+        class Response:
+            def __init__(self,manifest=False):self.manifest=manifest
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def raise_for_status(self):pass
+            def json(self):return releases
+            def iter_content(self,size):yield raw
+        class Session:
+            def __init__(self):self.headers={}
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def get(self,location,**kwargs):calls.append(location);return Response(location==url)
+        with tempfile.TemporaryDirectory() as temp,patch('dkord_desktop.updates.requests.Session',Session):
+            update=Updater(Path(temp),self.keys).check()
+        self.assertEqual('v0.11.0',update.tag);self.assertEqual(platform_key(),update.platform);self.assertEqual(2,len(calls));self.assertEqual(url,calls[-1])

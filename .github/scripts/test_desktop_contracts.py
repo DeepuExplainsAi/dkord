@@ -30,12 +30,20 @@ class DesktopContractsTest(unittest.TestCase):
         for required in ('Ed25519PublicKey','key.verify','desktop-v','artifact["sha256"]','platform_key()','Package content is not the expected native installer type'):
             self.assertIn(required,source)
         self.assertNotIn('/releases/latest',source)
-        self.assertEqual({},json.loads(read('desktop/assets/update-keys.json')))
-        self.assertIn('not yet a finished Android-parity',read('desktop/README.md'))
+        keys=json.loads(read('desktop/assets/update-keys.json'))
+        receipt=json.loads(read('desktop/assets/update-trust-provenance.json'))
+        self.assertEqual(receipt['keys'],keys);self.assertIs(False,receipt['privateKeyExported'])
+        self.assertEqual('v0.10.0',receipt['verifiedAgainst']['tag'])
+        self.assertEqual('5e6e923094761325e1ba251ebd8058077934131ed89f293215ce5876da211a61',receipt['verifiedAgainst']['certificateSha256'])
+        self.assertIn('UPDATE_DOMAIN',source);self.assertIn('rsa-pkcs1-sha256',source)
+        for key in keys.values():
+            self.assertEqual(receipt['verifiedAgainst']['certificateSha256'],key['certificateSha256'])
+        self.assertIn('Physical install-over',read('desktop/README.md'))
     def test_stable_user_data_is_outside_installation_and_uninstall_has_no_data_delete(self):
         entry=read('desktop/dkord_desktop/__main__.py');installer=read('desktop/packaging/windows.iss')
         self.assertIn('user_data_path("Dkord","Dkord",roaming=False)',entry)
-        self.assertLess(entry.index('window.pool.waitForDone()'),entry.index('lock.unlock()'))
+        self.assertLess(entry.index('pool.waitForDone()'),entry.index('lock.unlock()'))
+        for pool in ('window.pool','window.download_pool','window.home_pool','window.artwork_cache.pool'):self.assertIn(pool,entry)
         self.assertLess(entry.index('lock.unlock()'),entry.index('window.restart_after_close()'))
         update=read('desktop/dkord_desktop/updates.py')
         self.assertIn('return relaunch',update)

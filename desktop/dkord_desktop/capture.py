@@ -27,7 +27,7 @@ from .ui import MainWindow
 class NoNetwork(Provider):
     def unavailable(self,*args,**kwargs):
         raise AssertionError('Screenshot mode cannot fetch or invent live catalogue results')
-    search=home=browse=related=resolve=unavailable
+    search=home=browse=related=resolve=home_page=catalogue_page=suggestions=resolve_video=search_page=search_more=unavailable
 
 
 def tone(path, hz):
@@ -73,7 +73,9 @@ def capture(app, output: Path):
             if not image.save(str(path),'PNG'):raise ValueError('Could not capture the actual Qt window')
             data=path.read_bytes()
             records.append({'name':name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'width':image.width(),'height':image.height(),'page':page})
-        window.close();window.pool.waitForDone();window.download_pool.waitForDone();app.processEvents()
+        window.close()
+        for pool in (window.pool,window.download_pool,window.home_pool,window.artwork_cache.pool):pool.waitForDone()
+        app.processEvents()
     proof={'format':1,'application':'Dkord','version':__version__,'source':os.environ.get('DKORD_SOURCE_SHA','local'),
            'platform':platform_key(),'os':platform.system(),'python_bits':struct.calcsize('P')*8,
            'qt_binding':BINDING,'qt_version':QtCore.QT_VERSION_STR,'frozen':bool(getattr(sys,'frozen',False)),

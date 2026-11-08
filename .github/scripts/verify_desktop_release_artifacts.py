@@ -9,6 +9,7 @@ import struct
 import xml.etree.ElementTree as ET
 
 TARGETS = ('windows-x64', 'windows-x86', 'macos-x64', 'macos-arm64', 'linux-x64', 'linux-arm64')
+PARITY_CLASSES = ('CoreTest','UpdateTest','NativeWidgetTest','RoomProtocolTest','LyricsTest','PhoneContractTest','NewReleasesTest','DiagnosticsTest','ModernUpdateIdentityTest','PublicUpdateIdentityTest','CatalogueTest')
 KINDS = {'windows-x64': ('exe',), 'windows-x86': ('exe',), 'macos-x64': ('pkg',), 'macos-arm64': ('pkg',),
          'linux-x64': ('deb', 'AppImage'), 'linux-arm64': ('deb', 'AppImage')}
 
@@ -30,12 +31,12 @@ def digest(path):
     return value.hexdigest()
 
 
-def verify_tests(path):
+def verify_tests(path, minimum=36, classes=('CoreTest', 'UpdateTest', 'NativeWidgetTest')):
     root = ET.parse(path).getroot()
     cases = root.findall('.//testcase')
-    if len(cases) < 36:
+    if len(cases) < minimum:
         raise ValueError('Missing executed native cases')
-    for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest'):
+    for cls in classes:
         if not any(cls in c.get('classname', '') for c in cases):
             raise ValueError('Missing native test class ' + cls)
     if any(root.findall('.//' + marker) for marker in ('failure', 'error', 'skipped')):
@@ -113,7 +114,10 @@ def verify_and_stage(root, output, sha, version):
         proof = folder / 'test-results.xml'
         if proof.is_symlink() or not proof.is_file() or proof.stat().st_size > 4 * 1024 * 1024:
             raise ValueError('Missing/bounded native JUnit proof')
-        verify_tests(proof)
+        if tuple(map(int,version.split('.'))) >= (0,10,1):
+            verify_tests(proof,113,PARITY_CLASSES)
+        else:
+            verify_tests(proof)
         expected = {f'Dkord-desktop-v{version}-{target}.{kind}': kind for kind in KINDS[target]}
         entries = data.get('artifacts')
         if not isinstance(entries, list) or len(entries) != len(expected):

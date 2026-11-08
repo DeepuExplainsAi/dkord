@@ -94,20 +94,19 @@ class ArtworkCache:
                         clipped = True; break
                 ancestor = ancestor.parentWidget()
             if not clipped:
-                widget._requested = True
-                self.request(widget.url, lambda pixmap, widget=widget, url=widget.url: widget.loaded(pixmap, url))
+                widget._requested = self.request(widget.url, lambda pixmap, widget=widget, url=widget.url: widget.loaded(pixmap, url))
 
     def request(self, url, callback):
         url = supported_url(url)
         if not url or self.closed or url in self.failed:
-            return
+            return True
         if url in self.images:
-            self.images.move_to_end(url); callback(self.images[url]); return
+            self.images.move_to_end(url); callback(self.images[url]); return True
         if url in self.pending:
-            self.pending[url].append(callback); return
+            self.pending[url].append(callback); return True
         # Bound callbacks/work when rapidly paging through large libraries.
         if len(self.pending) >= 64:
-            return
+            return False
         self.pending[url] = [callback]
         task = Task(lambda cancel, progress: fetch_image(url, cancel)); self.tasks.add(task)
         def ready(image):
@@ -126,6 +125,7 @@ class ArtworkCache:
             self.tasks.discard(task); self.pending.pop(url, None)
         task.signals.result.connect(ready); task.signals.error.connect(error); task.signals.finished.connect(finished)
         self.pool.start(task)
+        return True
 
     def close(self):
         self.closed = True; self.timer.stop()
@@ -173,7 +173,7 @@ class Cover(QLabel):
             pixmap = self.pixmap_data.scaled(self.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
             painter.drawPixmap((self.width()-pixmap.width())//2, (self.height()-pixmap.height())//2, pixmap)
         else:
-            p = palette(self.cache.parent.store.setting('theme', 'dark'))
+            p = palette(self.cache.parent.effective_theme())
             painter.fillRect(self.rect(), QColor(p['surfaceVariant']))
             font = painter.font(); font.setPixelSize(max(18, self.width()//3)); painter.setFont(font)
             painter.setPen(QColor(p['onSurfaceVariant'])); painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, '♪')

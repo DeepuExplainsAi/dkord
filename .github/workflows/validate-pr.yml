@@ -43,6 +43,7 @@ jobs:
         env:
           ANDROID_BUILD_OUTCOME: ${{ steps.android_build.outcome }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REQUIRED_ANDROID_CLASSES: app.dkord.DesktopRoomInteropTest
         run: |
           python3 - <<'PY'
           import os
@@ -64,6 +65,7 @@ jobs:
                       message = f"{case.attrib.get('classname', suite.attrib.get('name', ''))}.{case.attrib.get('name', '')}: {' '.join(detail)[:600]}"
                       message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
                       print('::error title=Android JUnit failure::' + message)
+          classes={case.attrib.get('classname','') for report in reports for case in ET.parse(report).getroot().findall('testcase')}
           passed = totals['tests'] - totals['failures'] - totals['errors'] - totals['skipped']
           if reports:
               message = (f"{totals['tests']} JUnit test cases: {passed} passed, "
@@ -78,6 +80,9 @@ jobs:
               summary.write(f"Checked merge commit: `{os.environ['GITHUB_SHA']}`\n\n")
               summary.write('Validation only. No release/tag or installable APK artifact is published. '
                             'Official updates still require the manual Release APK signing/install-over gates.\n')
+          missing=set(os.environ.get('REQUIRED_ANDROID_CLASSES','').split())-classes
+          if os.environ.get('ANDROID_BUILD_OUTCOME') == 'success' and missing:
+              raise SystemExit('Missing required Android classes: '+', '.join(sorted(missing)))
           if os.environ.get('ANDROID_BUILD_OUTCOME') == 'success' and (
                   not reports or passed <= 0 or totals['failures'] or totals['errors']):
               raise SystemExit('A successful Android build must have real passing JUnit reports and no failed tests.')

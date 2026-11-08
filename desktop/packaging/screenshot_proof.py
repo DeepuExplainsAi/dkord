@@ -13,10 +13,13 @@ import struct
 import sys
 
 
-def main(folder, source=None, emit=True, batch=None):
+DEFAULT_VERSION=re.search(r'__version__\s*=\s*"([^"]+)"', (Path(__file__).resolve().parents[1]/'dkord_desktop/__init__.py').read_text())[1]
+
+
+def main(folder, source=None, emit=True, batch=None, version=None):
     proof=json.loads((folder/'windows-x86-screenshot-proof.json').read_text(encoding='utf-8'))
     assert proof['platform']=='windows-x86' and proof['os']=='Windows' and proof['python_bits']==32 and proof['qt_binding']=='PyQt5' and proof['frozen'] is True
-    assert proof['format']==1 and proof['application']=='Dkord' and proof['version']=='0.10.0'
+    assert proof['format']==1 and proof['application']=='Dkord' and proof['version']==(version or DEFAULT_VERSION)
     assert re.fullmatch('[0-9a-f]{40}',proof['source']) and int(proof['source'],16)>0
     assert proof['qt_version'].startswith('5.15.')
     assert len(proof['images'])==2 and {x['name'] for x in proof['images']}=={'windows-x86-player.png','windows-x86-studio.png'}
@@ -42,5 +45,5 @@ def main(folder, source=None, emit=True, batch=None):
 
 if __name__=='__main__':
     import argparse
-    parser=argparse.ArgumentParser();parser.add_argument('folder',type=Path);parser.add_argument('--source');parser.add_argument('--verify-only',action='store_true');parser.add_argument('--batch',type=int,choices=range(6))
-    args=parser.parse_args();main(args.folder,args.source,not args.verify_only,args.batch)
+    parser=argparse.ArgumentParser();parser.add_argument('folder',type=Path);parser.add_argument('--source');parser.add_argument('--verify-only',action='store_true');parser.add_argument('--batch',type=int,choices=range(6));parser.add_argument('--version')
+    args=parser.parse_args();main(args.folder,args.source,not args.verify_only,args.batch,args.version)

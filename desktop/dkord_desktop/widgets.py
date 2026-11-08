@@ -26,7 +26,8 @@ def label(value, style=None):
 
 
 def button(value, callback, primary=False):
-    result = QPushButton(translated(value)); result.clicked.connect(callback)
+    result = QPushButton(translated(value)); result.clicked.connect(callback); result.setIconSize(QSize(24,24))
+    if not value: result.setProperty('iconOnly',True)
     if primary:
         result.setProperty('primary', True)
     result.setCursor(Qt.CursorShape.PointingHandCursor)

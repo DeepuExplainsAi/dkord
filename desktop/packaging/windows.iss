@@ -12,13 +12,13 @@
 #endif
 [Setup]
 #if Target == "windows-x86"
-#define DisplayName "Dkord Desktop Preview (32-bit)"
+#define DisplayName "Dkord (32-bit)"
 #define ShortcutName "Dkord (32-bit)"
 AppId=app.dkord.desktop.x86
 DefaultDirName={localappdata}\Programs\Dkord-x86
 ArchitecturesAllowed=x86compatible
 #elif Target == "windows-x64"
-#define DisplayName "Dkord Desktop Preview"
+#define DisplayName "Dkord"
 #define ShortcutName "Dkord"
 AppId=app.dkord.desktop
 DefaultDirName={localappdata}\Programs\Dkord
@@ -30,7 +30,6 @@ ArchitecturesInstallIn64BitMode=x64compatible
 AppName={#DisplayName}
 AppVersion={#Version}
 AppPublisher=DeepuGupta
-AppPublisherURL=https://github.com/DeepuExplainsAi/dkord
 DefaultGroupName={#ShortcutName}
 PrivilegesRequired=lowest
 DisableProgramGroupPage=yes

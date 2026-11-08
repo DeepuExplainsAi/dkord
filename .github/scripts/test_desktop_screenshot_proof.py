@@ -27,7 +27,7 @@ class DesktopScreenshotProofTest(unittest.TestCase):
     def tearDown(self):self.temp.cleanup()
     def run_proof(self,proof=None,source=None):
         (self.root/'windows-x86-screenshot-proof.json').write_text(json.dumps(self.proof if proof is None else proof))
-        with contextlib.redirect_stdout(io.StringIO()) as out:proof_module.main(self.root,self.source if source is None else source,False)
+        with contextlib.redirect_stdout(io.StringIO()) as out:proof_module.main(self.root,self.source if source is None else source,False,version='0.10.0')
         self.assertEqual('',out.getvalue())
     def test_valid_synthetic_unit_fixture_checks_silently_without_encoding_private_files(self):self.run_proof()
     def test_notice_transport_survives_the_observed_4096_character_check_message_limit(self):
@@ -37,7 +37,7 @@ class DesktopScreenshotProofTest(unittest.TestCase):
         for item in self.proof['images']:
             (self.root/item['name']).write_bytes(data);item['bytes']=len(data);item['sha256']=hashlib.sha256(data).hexdigest()
         (self.root/'windows-x86-screenshot-proof.json').write_text(json.dumps(self.proof))
-        with contextlib.redirect_stdout(io.StringIO()) as out:proof_module.main(self.root,self.source,True)
+        with contextlib.redirect_stdout(io.StringIO()) as out:proof_module.main(self.root,self.source,True,version='0.10.0')
         parts=[]
         for line in out.getvalue().splitlines():
             message=line.split('::',2)[2];self.assertLessEqual(len(message),3800)
@@ -45,7 +45,7 @@ class DesktopScreenshotProofTest(unittest.TestCase):
         self.assertGreater(len(parts),1);self.assertEqual(data,base64.b64decode(''.join(parts),validate=True))
         expected=out.getvalue().splitlines();actual=[]
         for batch in range(6):
-            with contextlib.redirect_stdout(io.StringIO()) as emitted:proof_module.main(self.root,self.source,True,batch)
+            with contextlib.redirect_stdout(io.StringIO()) as emitted:proof_module.main(self.root,self.source,True,batch,version='0.10.0')
             lines=emitted.getvalue().splitlines();self.assertLessEqual(len(lines),8);actual+=lines
         self.assertEqual(expected,actual)
         workflow=(ROOT/'.github/workflows/validate-desktop.yml').read_text()

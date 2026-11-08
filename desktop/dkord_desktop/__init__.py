@@ -1,2 +1,2 @@
-"""Dkord desktop. Independent native client; never modifies the Android application data."""
-__version__ = "0.10.0"
+"""Dkord phone experience, rendered natively on PC with stable local user data."""
+__version__ = "0.10.1"

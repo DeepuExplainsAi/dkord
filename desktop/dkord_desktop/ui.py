@@ -25,6 +25,7 @@ from .store import Store
 from .streaming import AudioProxy
 from .tasks import Task
 from .updates import Updater
+from .diagnostics import Diagnostics
 
 from .phone_ui import PhoneExperience
 from .widgets import label, button, icon, translated
@@ -43,6 +44,7 @@ class MainWindow(PhoneExperience, QMainWindow):
         self.download_pool = QThreadPool(self); self.download_pool.setMaxThreadCount(1)
         self.download_running = False
         self.closing = False
+        self.diagnostics = Diagnostics()
         self.restart_after_close = None
         self.epoch = 0
         self.revision = 0
@@ -52,6 +54,7 @@ class MainWindow(PhoneExperience, QMainWindow):
         self.search_epoch = 0
         self.search_limit = 20
         self.search_task = None
+        self.search_supports_cursor = False; self.search_cursor = None; self.search_result = None
         self.more_task = None
         self.more_epoch = 0
         self.route_epoch = 0
@@ -60,7 +63,7 @@ class MainWindow(PhoneExperience, QMainWindow):
         self.page = "Home"
         self.queue: list[Track] = []
         self.index = 0
-        self.sleep_at = None
+        self.sleep_at = None; self.sleep_end_of_track = False; self.sleep_original_volume = None
         self.last_history = 0.0
         self.entries: list[Entry] = []
         self.proxy = AudioProxy()
@@ -72,7 +75,7 @@ class MainWindow(PhoneExperience, QMainWindow):
         self.player.durationChanged.connect(self.duration_changed)
         self.player.playbackStateChanged.connect(self.playback_changed)
         self.player.mediaStatusChanged.connect(self.media_status)
-        self.player.errorOccurred.connect(lambda error, text: self.notify("Playback unavailable. " + text) if error != QMediaPlayer.Error.NoError and self.loaded_epoch == self.epoch else None)
+        self.player.errorOccurred.connect(lambda error, text: self.playback_failed(text, self.epoch) if error != QMediaPlayer.Error.NoError and self.loaded_epoch == self.epoch else None)
         self.preview_player = QMediaPlayer(self); self.preview_audio = QAudioOutput(self)
         self.preview_player.setAudioOutput(self.preview_audio)
         self.preview_end = None
@@ -91,6 +94,7 @@ class MainWindow(PhoneExperience, QMainWindow):
     def run(self, call, done=None, progress=None, failed=None, download=False, finished=None, background=False) -> Task:
         task = Task(call); self.tasks.add(task)
         task.signals.result.connect(lambda result: done(result) if done and not self.closing else None)
+        task.signals.error.connect(lambda _: self.diagnostics.record('download' if download else 'background', 'failed') if not self.closing else None)
         task.signals.error.connect(lambda text: (failed or self.notify)(text) if not self.closing else None)
         if progress:
             task.signals.progress.connect(lambda value: progress(value) if not self.closing else None)
@@ -140,7 +144,7 @@ class MainWindow(PhoneExperience, QMainWindow):
     def search_for(self, text):
         self.query.setText(text); self.scope.setCurrentText("Songs"); self.search()
 
-    def search(self):
+    def search(self, exact=False):
         query = " ".join(self.query.text().split())
         if not query:
             self.navigate("Search"); return
@@ -155,20 +159,37 @@ class MainWindow(PhoneExperience, QMainWindow):
         self.search_epoch += 1; owner = self.search_epoch
         if self.search_task:
             self.search_task.cancel.set()
-        self.reset_content(query, f"{scope} · results keep provider order; different uploads remain separate")
-        self.content_layout.addWidget(label("Searching the real catalogue…"))
-        self.search_task = self.run(lambda event, progress: self.provider.search(query, scope, 20),
-            lambda entries: self.show_entries(entries, "Search", query, scope) if owner == self.search_epoch and self.page == "Search" else None)
+        self.search_supports_cursor = callable(getattr(self.provider, 'search_page', None)) and scope not in {'Videos','All YouTube'}
+        self.search_cursor = None; self.search_result = None
+        supports_cursor = self.search_supports_cursor
+        self.reset_content(query, self.tr(self.scope_labels.get(scope,'songs')))
+        self.content_layout.addWidget(label(self.tr('loading')))
+        route = self.route_epoch
+        def ready(result):
+            if owner == self.search_epoch and self.page == "Search" and route == self.route_epoch:
+                if self.search_supports_cursor:
+                    self.search_result = result; self.search_cursor = result.cursor; entries = list(result.entries)
+                else:
+                    entries = result
+                self.show_entries(entries, "Search", query, scope)
+        self.search_task = self.run(lambda event, progress: self.provider.search_page(query,scope,bool(exact)) if supports_cursor else self.provider.search(query,scope,20),ready)
 
     def show_entries(self, entries, page, query=None, scope=None):
         self.entries = entries
-        self.reset_content(query or "Discover music", (scope + " · " if scope else "") + "Select one song to play it. Play all is a separate, explicit queue action.")
+        titles = {'Listen Again':'recently_played','Liked songs':'liked_songs','Search':'tab_search'}
+        self.reset_content(query or self.tr(titles.get(page,'tab_home')), self.tr('search_scope_uploads' if scope in {'Videos','All YouTube'} else 'search_scope_music_catalogue') if query else '')
+        if query and self.search_result and self.search_result.suggested_query:
+            result = self.search_result
+            self.content_layout.addWidget(label(self.tr('search_showing_results_for' if result.corrected else 'search_did_you_mean',result.suggested_query),'muted'))
+            def original():
+                self.query.setText(query);self.search(exact=True)
+            self.content_layout.addWidget(button(query if result.corrected else result.suggested_query,original if result.corrected else lambda:self.search_for(result.suggested_query)))
         controls = QWidget(); row = QHBoxLayout(controls); row.setContentsMargins(0, 0, 0, 0)
         tracks = [e.track for e in entries if e.track]
         row.addWidget(button("Play all shown", lambda: self.play_queue(tracks)))
         row.addWidget(button("Download selected", self.download_selected))
         row.addStretch(1)
-        if query and self.search_limit < 200:
+        if query and (self.search_cursor is not None if self.search_supports_cursor else self.search_limit < 200):
             row.addWidget(button("Load more", lambda: self.more(query, scope)))
         self.content_layout.addWidget(controls)
         self.song_table(entries)
@@ -181,16 +202,23 @@ class MainWindow(PhoneExperience, QMainWindow):
         self.more_epoch += 1
         request = self.more_epoch
         owner = self.search_epoch
+        cursor = self.search_cursor; route = self.route_epoch; supports_cursor = self.search_supports_cursor
+        if self.search_supports_cursor and cursor is None:
+            return
         limit = min(200, self.search_limit + 20)
         self.notify("Loading more… Existing results are kept if this page fails.")
-        def ready(entries):
-            if owner == self.search_epoch and self.page == "Search":
+        def ready(result):
+            if owner == self.search_epoch and self.page == "Search" and route == self.route_epoch:
+                if self.search_supports_cursor:
+                    self.search_cursor = result.cursor; entries = self.entries + list(result.entries)
+                else:
+                    entries = result
                 self.search_limit = limit
                 self.show_entries(entries, "Search", query, scope)
         def finished():
             if request == self.more_epoch:
                 self.more_task = None
-        self.more_task = self.run(lambda event, progress: self.provider.search(query, scope, limit), ready, finished=finished)
+        self.more_task = self.run(lambda event, progress: self.provider.search_more(cursor) if supports_cursor else self.provider.search(query, scope, limit), ready, finished=finished)
 
     def saved_queries(self):
         listing = QListWidget(); listing.setObjectName("search-history")
@@ -413,7 +441,9 @@ class MainWindow(PhoneExperience, QMainWindow):
             self.queue=[Track.parse(t) for t in session.get("queue",[])]
             self.index=max(0,min(session.get("index",0),len(self.queue)-1))
             self.pending_seek=max(0,int(session.get("position",0)))
-            if track:=self.current():self.now.setText(track.title);self.now_artist.setText(track.artist);self.mini_cover.set_url(track.thumbnail);self.elapsed.setText(clock(self.pending_seek))
+            if track:=self.current():
+                self.now.setText(track.title);self.now_artist.setText(track.artist);self.mini_cover.set_url(track.thumbnail);self.elapsed.setText(clock(self.pending_seek))
+                for slider in (self.seek,self.mini_seek):slider.setRange(0,max(1,track.durationSec*1000));slider.setValue(self.pending_seek)
             self.refresh_queue()
         except Exception:
             self.session_writable=False
@@ -451,12 +481,20 @@ class MainWindow(PhoneExperience, QMainWindow):
         if self.full_player:self.full_player.refresh(force=True)
         local=self.library.local_file(track)
         if local:self.set_media(QUrl.fromLocalFile(str(local)),owner);return
-        if track.local:self.notify("Local export is missing. Export it again; it cannot be resolved online.");self.desired_playing=False;return
+        if track.local:self.playback_failed("Local export is missing. Export it again; it cannot be resolved online.",owner);return
         def resolved(result):
             if owner==self.epoch:
                 url,headers=result;self.set_media(QUrl(self.proxy.register(url,headers)),owner)
         self.run(lambda event,progress:self.provider.resolve(track),resolved,
-                 failed=lambda text:self.notify(text) if owner==self.epoch else None)
+                 failed=lambda text:self.playback_failed(text,owner))
+
+    def playback_failed(self, text, owner):
+        if owner != self.epoch or self.closing:
+            return
+        self.desired_playing=False;self.update_play_button();self.diagnostics.record('playback','prepare_failed')
+        from .models import public_error
+        self.notify(self.tr('room_playback_error') if self.rooms.remote_loading else public_error(Exception(text)))
+        self.rooms.playback_failed()
 
     def set_media(self,url,owner):
         if owner!=self.epoch:return
@@ -470,6 +508,8 @@ class MainWindow(PhoneExperience, QMainWindow):
             self.pending_seek=0;self.seek.setEnabled(True)
             if self.desired_playing:self.player.play()
         elif status==QMediaPlayer.MediaStatus.EndOfMedia and self.desired_playing:
+            if self.sleep_end_of_track:
+                self.cancel_sleep();self.desired_playing=False;self.update_play_button();self.room_local_intent();return
             if self.repeat.currentIndex()==1:self.play_index(self.index,user=False)
             elif self.index+1<len(self.queue):self.next_track(1,user=False)
             elif self.repeat.currentIndex()==2:self.play_index(0,user=False)
@@ -550,12 +590,43 @@ class MainWindow(PhoneExperience, QMainWindow):
         if playing and self.current() and self.loaded_epoch==self.epoch:self.store.history(self.current(),self.player.position())
 
     def tick(self):
-        if self.sleep_at is not None and time.monotonic()>=self.sleep_at:
-            self.sleep_at=None;self.desired_playing=False;self.player.pause();self.preview_player.stop();self.update_play_button();self.room_local_intent();self.notify("Sleep timer ended. Playback will not resume automatically.")
+        if self.store.setting('theme','dark')=='system' and self.effective_theme()!=getattr(self,'_applied_theme',None):
+            self.apply_theme('system')
+        if self.sleep_at is not None:
+            remaining=self.sleep_at-time.monotonic()
+            if remaining<=0:
+                self.cancel_sleep();self.desired_playing=False;self.player.pause();self.preview_player.stop();self.update_play_button();self.room_local_intent()
+            else:
+                self.sleep_button.setText(clock(round(remaining*1000)))
+                if remaining<8:
+                    if self.sleep_original_volume is None:self.sleep_original_volume=self.audio.volume()
+                    self.audio.setVolume(self.sleep_original_volume*remaining/8)
+
+    def cancel_sleep(self):
+        self.sleep_at=None;self.sleep_end_of_track=False
+        if hasattr(self,'sleep_button'):self.sleep_button.setText(self.tr('sleep_timer'))
+        if self.sleep_original_volume is not None:
+            self.audio.setVolume(self.sleep_original_volume);self.sleep_original_volume=None
+
+    def start_sleep(self,minutes=None,end=False):
+        if not end and (type(minutes) is not int or not 1<=minutes<=1440):
+            raise ValueError('Sleep minutes must be between 1 and 1440')
+        self.cancel_sleep()
+        if end:self.sleep_end_of_track=True;self.sleep_button.setText(self.tr('end_of_track'))
+        else:self.sleep_at=time.monotonic()+minutes*60;self.sleep_button.setText(clock(minutes*60000))
 
     def sleep_timer(self):
-        minutes,ok=QInputDialog.getInt(self,"Sleep timer","Minutes (0 cancels the timer)",30,0,1440)
-        if ok:self.sleep_at=time.monotonic()+minutes*60 if minutes else None;self.notify(f"Sleep timer: {minutes} minutes" if minutes else "Sleep timer cancelled")
+        dialog=QDialog(self);dialog.setWindowTitle(self.tr('sleep_timer'));layout=QVBoxLayout(dialog)
+        for minutes in (5,15,30,45,60):
+            layout.addWidget(button(self.tr('minutes_n',minutes),lambda checked=False,minutes=minutes:(self.start_sleep(minutes),dialog.accept())))
+        layout.addWidget(button(self.tr('end_of_track'),lambda:(self.start_sleep(end=True),dialog.accept())))
+        def custom():
+            minutes,ok=QInputDialog.getInt(dialog,self.tr('sleep_timer'),self.tr('minutes_n',1),30,1,1440)
+            if ok:self.start_sleep(minutes);dialog.accept()
+        layout.addWidget(button(self.tr('custom'),custom))
+        if self.sleep_at is not None or self.sleep_end_of_track:
+            layout.addWidget(button(self.tr('turn_off'),lambda:(self.cancel_sleep(),dialog.accept())))
+        layout.addWidget(button(self.tr('close'),dialog.reject));dialog.exec()
 
     def clear_history(self):
         if QMessageBox.question(self,"Clear listening history?","Remove history entries only? Likes, playlists, queue and downloads remain.")==QMessageBox.StandardButton.Yes:
@@ -742,7 +813,7 @@ class MainWindow(PhoneExperience, QMainWindow):
         self.run(lambda event,progress:self.updater.check(),checked)
 
     def closeEvent(self,event):
-        self.closing=True;self.timer.stop();self.desired_playing=False
+        self.closing=True;self.timer.stop();self.desired_playing=False;self.cancel_sleep()
         self.rooms.close();self.artwork_cache.close();self.cancel_home()
         if self.full_player:self.full_player.hide()
         if self.video_window:self.video_window.close()

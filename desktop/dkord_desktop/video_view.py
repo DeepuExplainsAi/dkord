@@ -56,6 +56,7 @@ class VideoPlayer(QDialog):
 
     def failed(self):
         if not sip.isdeleted(self) and not self.closing:
+            self.owner.diagnostics.record('video','unavailable')
             self.status.setText(self.owner.tr('video_failed')); self.player.stop()
 
     def position_changed(self, position):

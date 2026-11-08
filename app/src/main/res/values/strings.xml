@@ -387,4 +387,5 @@
     <string name="video_playback">Video playback</string>
     <string name="video_disabled">Enable video playback in Settings to watch a video.</string>
     <string name="check_update">Check for updates</string>
+    <string name="custom">Custom</string>
 </resources>

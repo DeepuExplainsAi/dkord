@@ -1,58 +1,119 @@
-# Dkord Desktop — native preview
+# Dkord for PC
 
-**Music, a private offline library and a real Mashup Studio, built for a laptop screen.**
+**The Dkord phone experience, rendered natively for Windows, macOS and Linux.**
 
-This is a separate **native Qt/Python desktop client**, not an Android APK in a browser frame. It is under active development; it is **not yet a finished Android-parity, signed or notarized public release**. The Android app and existing official APK/update feed are unchanged by desktop packaging.
+The phone owns the design: five destinations, the same red/near-black Material
+palette, English/Hindi resources, Roboto/Devanagari fonts, music shelves and
+mini/full player. PC widths use a navigation rail or sidebar; compact windows use
+bottom navigation. This is a real Qt application, not an APK, website or mockup.
 
-**Original development downloads (preserved):** [v0.10.0 exe/pkg/deb/AppImage previews](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.0). All5 real OS/CPU builds and30 native cases each passed; [exact source/package/hash receipt](../docs/releases/v0.10.0-publication.md). These are NOT trusted signed production updates; desktop parity/trust gaps below remain open.
+## Version 0.10.1
 
-## Windows32 x86 compatibility preview
-A genuine **windows-x86** target is now [published in Desktop Preview2](https://github.com/DeepuExplainsAi/dkord/releases/tag/desktop-v0.10.0-preview.2), separately from the original x64 installer. It uses **32-bit Python3.11 +Qt5.15.2/PyQt5 +Node22 ia32**, with **FFmpeg/ffprobe8.1.3 built from digest-pinned source for x86**. Qt6/PyAV do not publish Win32 wheels; the old imageio Win32 FFmpeg4.2.2 is deliberately excluded. The five existing64-bit targets keep their Qt6/PyAV profiles.
+This version is being prepared for the requested **Android + PC release**. Release
+publication requires passing exact-source Android tests, six native OS/CPU builds,
+actual frozen Windows32 captures and the original Android signing identity. The
+release page is [Dkord releases](https://github.com/DeepuExplainsAi/dkord/releases).
+Historical v0.10.0 and Desktop Preview2 assets are preserved, not replaced.
 
-Target **Windows10 32-bit** (or an x86 process under WoW64), not Windows7/8. CI runs a real32-bit process on a64-bit Windows runner; it does not replace physical32-bit OS/audio/update acceptance. The installer uses a separate `Dkord-x86` directory/ID/shortcuts so it cannot mix Qt5/Qt6 DLLs or overwrite the original64-bit program. Stable per-user library storage/format stays shared and protected by the existing single-instance lock. Never uninstall/clear data to test it.
+### Included
 
-[Download the genuine Windows32 installer](https://github.com/DeepuExplainsAi/dkord/releases/download/desktop-v0.10.0-preview.2/Dkord-desktop-v0.10.0-windows-x86.exe) (63,117,131 bytes). **36 tests perhost×6 native targets +432 JVM/38 Android emulator cases and exact frozen/package/screenshot publication gates passed**; [source/hash/publication receipt](../docs/releases/desktop-v0.10.0-preview.2-publication.md). It is a **separate desktop prerelease**, not a replacement of Androidv0.10.0/latest. Full parity and production signing/update trust remain open.
+- Phone-derived Home/chips/curated shelves, search scopes/suggestions/corrections
+  and music continuations, collection headers/queues, dated New Releases with the
+  same category and 24-hour/7-day/10-day windows.
+- Library, likes, playlists, Listen Again, Downloads and Mashup Studio. Online
+  catalogue songs go directly into Studio preparation; no manual download first.
+  Device files and existing private downloads also work. Real FFmpeg handles
+  millisecond ranges, ordered clips, mixed sample rates and AAC/M4A export.
+- **Download in Dkord** keeps a managed private copy; **Download to device** adds an
+  explicitly chosen accessible copy. Removing a private copy does not remove
+  independent device copies or original Studio inputs.
+- A global **Listen Together** hub, also reachable from Library and the player.
+  Rooms apply to supported songs and playlists, not a special song. Host-only
+  default; creator grants/revokes selected members or everyone. Permission grants
+  do not opt listeners in or start audio. Shared public test vectors exercise
+  Android/native canonical JSON, Unicode, P-256/DER signatures and two-member grants.
+- Artwork, timed lyric highlighting/seeking, queue management, shuffle/repeat,
+  speed, volume, saved playback position, the phone's sleep presets/fade/end-of-track
+  option, and a separate optional native video player. Closing video never
+  automatically resumes background music.
+- Local-only **Copy playback diagnostics**, with no repository/issue navigation,
+  upload, song titles, signed URLs, file paths, queries or room codes. About is
+  concise and includes **© 2026 dKORD**.
 
-Native CI also captures **the real frozen Windows32 window** (player/library and Studio) with clearly identified generated offline audio. No AI image, fake live catalogue or private user-data screenshot is substituted. PNG and source/bitness/frozen/hash receipts accompany the preview.
+### Updates and data
 
-[Actual Windows player/library screenshot](https://github.com/DeepuExplainsAi/dkord/releases/download/desktop-v0.10.0-preview.2/windows-x86-player.png) · [Actual Windows Studio screenshot](https://github.com/DeepuExplainsAi/dkord/releases/download/desktop-v0.10.0-preview.2/windows-x86-studio.png)
+Use the installer matching the **installed app's OS/CPU profile**. Install over the
+old app; do **not** uninstall or clear data. Windows x86 and x64 retain their own
+existing installation directories/IDs, avoiding mixed Qt5/Qt6 DLLs. The library
+remains at `platformdirs.user_data_path("Dkord", "Dkord", roaming=False)`, protected
+by the same single-instance lock. SQLite, settings, queues, playlists, downloads
+and Studio sources are outside the executable directory. Corrupt/newer data is
+refused without a destructive reset.
 
-## Implemented
-- PC sidebar, resizable music tables, queue dock, timeline, native media playback, volume/speed/repeat/shuffle/sleep, saved queue and real local history.
-- Real anonymous YouTube Music songs/albums/artists/playlists and explicit broader YouTube search. Song selection is separate from explicit Play all shown; provider errors never become fake demo results.
-- Likes, playlists, local search history/pins, Android-compatible Dkord playlist/likes JSON import/export. JSON contains **metadata, not offline audio**.
-- **Download in Dkord**: managed user-data folder, not public Music. **Download to device**: additionally save an explicit accessible copy. Already-local bytes are reused offline, failures retain private sources, and removing the private download keeps independent device copies.
-- Online Studio sources without manually downloading first, device files or existing offline audio; durable private project sources, millisecond clip ranges/order/preview and **actual FFmpeg AAC/M4A merging**, including different sample rates/channel layouts. Source files are never edited in place; active render snapshots pin their inputs.
-- Separate desktop-only update channel with pinned Ed25519 signatures, SHA-256/size/native-format checks and **OS + CPU + installer-kind** routing. No APK substitution or downgrade. Installation does not delete the stable user-data directory.
+The old PC previews shipped with **no trusted update key**. They cannot learn a
+new trust root through their existing updater: the first 0.10.1 PC setup must be
+run once **over the old installation**. No reinstall/data deletion is required.
 
-## Not production-ready / not yet equivalent to Android
-- **No official signed desktop release/update key/channel is configured.** `assets/update-keys.json` is intentionally empty. Preview builds refuse untrusted updates; hashes alone are not described as publisher authentication. Windows Authenticode and Apple Developer ID signing/notarization must be configured and verified before trusted public distribution. Never disable OS security to call a preview production-ready.
-- Listen Together protocol interoperability, enhanced Android language/mood/era radio ranking, optional in-app video, synchronized lyric highlighting and full EN/HI desktop UI/OS-media integration remain acceptance gaps. Native desktop currently has plain/synchronized LRC text, English controls and Unicode search/file/clip input. Account sign-in is intentionally unavailable on both Android and desktop; no cookie-copy login is offered.
-- Live-provider/guest restrictions, physical OS installation/update-over/data retention and Linux audio/display compatibility require actual acceptance tests. Fixtures/native CI are not a live music-provider pass.
-- There is **no cloud or automatic phone-to-PC audio sync**. Each device keeps its own files; updates retain that device's local data. Desktop managed storage is a private *per-user* folder, not an Android-style per-app sandbox against other apps running as the same user.
+0.10.1 pins the **existing v0.10.0 APK's public signing identity**, verified against
+its immutable APK SHA-256 and `apksigner` report. No replacement key is generated.
+`assets/update-trust-provenance.json` records the public-only verification receipt.
+Future common `vX.Y.Z` releases can carry a format-2 desktop manifest signed by
+that same protected identity, with explicit desktop-protocol domain separation.
+The app verifies signature, exact OS/CPU/installer kind, version, bounded size,
+SHA-256 and native file format before a consent-based install. It never offers an
+APK as a PC update. Legacy pinned Ed25519 desktop channels remain verified and
+separate. All four worker pools drain before update restart releases the data lock.
 
-## Development
-Python3.11, Qt6.10.2, real FFmpeg/PyAV, yt-dlp+bundled EJS and a matching Node22 runtime (included by native packaging). No external music API key, paid service or browser login capture.
+**Application update verification is not Windows Authenticode or Apple Developer
+ID/notarization.** Those OS publisher certificates are not configured; do not
+bypass OS security warnings or describe these packages as notarized.
+
+### Supported native profiles
+
+| Profile | Runtime | Package |
+|---|---|---|
+| Windows x64, Windows 10/11 | Python 3.11, Qt6/PyQt6, PyAV | `.exe` |
+| Windows x86, Windows 10 / WoW64 | Genuine 32-bit Python 3.11, Qt5/PyQt5, Node22 ia32; FFmpeg/ffprobe8.1.3 from pinned source | `.exe` |
+| macOS Intel / Apple Silicon, macOS13+ | Matching native Qt6/PyAV | Separate `.pkg` |
+| Linux x64 / arm64, glibc2.39+ | Matching native Qt6/PyAV | Separate `.deb` and `.AppImage` |
+
+Windows7/8 and unlisted CPUs are not claimed. The genuine Win32 profile does not
+bundle unavailable Qt6/PyAV Win32 wheels or the obsolete 2019 FFmpeg4.2.2 wheel.
+Linux needs system GL/EGL, DBus, xkbcommon/XCB and an appropriate audio/display stack.
+
+## Acceptance boundaries
+
+**Physical install-over**, heard audio/video, live-provider restrictions,
+OS-specific media-key integration and live multi-phone/PC relay sessions still
+need device acceptance. Native fixture/codec/UI tests and cross-language vectors
+are not a physical-device or live-provider pass. Enhanced phone language/mood/era
+radio-ranking equivalence is still being validated; anonymous-provider availability
+is not guaranteed. Account sign-in is intentionally unavailable on both clients.
+
+There is **no cloud or automatic phone-to-PC audio sync**. JSON import/export is
+metadata, not music bytes. Each device retains its own data. Desktop private data
+is a per-user folder, not an Android-style sandbox against other apps of that user.
+
+## Development and proof
 
 ```sh
 python -m venv .venv
-# activate .venv for your shell
+# Activate it, then use the matching profile/lock file.
 python -m pip install -r requirements-build.txt -c constraints.lock
-python -m dkord_desktop
-python -m pytest tests --junitxml=dist/tests.xml
+PYTHONPATH=. python -m dkord_desktop
+python -m pytest tests --junitxml=.artifacts/test-results.xml
 python -m dkord_desktop --self-test
-python packaging/build.py
+python scripts/export_phone_contract.py --check
+python packaging/build.py --help
 ```
 
-Packaged Linux previews are built on Ubuntu24.04 and require glibc2.39+ on both x64 and arm64, system GL/EGL, DBus, xkbcommon/XCB, and a supported audio/display stack. CI installs these explicitly and executes real native widget and codec tests. macOS baseline13+; Windows10/11 x64. Unsupported OS/CPU updates are refused, not silently replaced with another build.
+Six-host PR CI is read-only: no signing secrets, release/tag writes or fake search
+results. It tests real Qt widgets/codecs, packages native binaries and captures
+the actual frozen Win32 app with explicitly labelled generated audio. Source,
+bitness, frozen status and image hashes accompany the images. Only a separately
+authorized publication job promotes exact-source validated packages. Build outputs,
+installers and generated captures belong in artifacts, **never Git**.
 
-Preview native outputs are built in read-only pull-request CI for Windows x64/x86, macOS x64/arm64 and Linux x64/arm64. `.exe`/`.pkg`/`.deb`/`.AppImage` files, reports and hashes belong in Actions artifacts, **never Git**. A separately authorized release pipeline promoted verified same-head v0.10.0 previews to durable release assets; PR validation itself remains read-only and does not publish. A successful source test alone is not proof these packages built or installed; see the exact workflow run before claiming readiness.
-
-## Local data and updates
-`platformdirs.user_data_path("Dkord", "Dkord", roaming=False)` is stable across versions: Windows LocalAppData, macOS Application Support, Linux XDG data. SQLite/WAL, metadata and audio live there, outside the executable installation folder. Corrupt/newer schemas are refused without reset. Installers do not contain user-data delete scripts. Do not uninstall/clear data to test an update.
-
-A future official desktop tag is `desktop-vX.Y.Z`, distinct from Android's `vX.Y.Z`. The signed manifest must list each real native artifact, exact version/platform/architecture/installer type/size/digest. AppImage relaunch is deferred until the old Qt loop has exited, cancelled workers have drained and the real data lock has been released. The copied image is reverified before launch with a fresh PyInstaller environment; this still needs actual update-over acceptance.
-
-Publishing requires fresh owner authorization, verified native packages, corresponding-source/license distribution, protected signing secrets and the installed public key. **No publication or signing is performed by the PR-validation workflow.**
-
-Copyright/platform terms still apply: import/download/edit only audio you have permission to use. Dependencies and native runtimes have their own license/source notices; see [THIRD_PARTY.md](THIRD_PARTY.md). No measured search-volume or similarity guarantees are claimed.
+Copyright/platform terms apply: import/download/edit only audio you may use.
+Bundled Material icons, fonts, Qt and native runtimes retain their licenses and
+corresponding-source notices; see [THIRD_PARTY.md](THIRD_PARTY.md).

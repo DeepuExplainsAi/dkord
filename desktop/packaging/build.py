@@ -79,7 +79,7 @@ def freeze(node):
         import plistlib
         path=DIST/'Dkord.app/Contents/Info.plist'
         with path.open('rb') as file:info=plistlib.load(file)
-        info.update(CFBundleShortVersionString=__version__,CFBundleVersion=__version__,LSMinimumSystemVersion='13.0',CFBundleDisplayName='Dkord Desktop Preview')
+        info.update(CFBundleShortVersionString=__version__,CFBundleVersion=__version__,LSMinimumSystemVersion='13.0',CFBundleDisplayName='Dkord')
         with path.open('wb') as file:plistlib.dump(info,file)
         # Ad-hoc local preview signature only, NOT Developer ID / notarization / a trusted public release.
         call(['codesign','--force','--deep','--sign','-',DIST/'Dkord.app'])
@@ -117,10 +117,10 @@ def linux(target):
         stage=Path(temp)/'deb';install=stage/'opt/Dkord';install.parent.mkdir(parents=True);shutil.copytree(DIST/'Dkord',install)
         control=stage/'DEBIAN';control.mkdir()
         glibc='2.39' # Both binaries are built on Ubuntu24.04, never promise an untested older libc.
-        (control/'control').write_text(f'Package: dkord\nVersion: {__version__}\nSection: sound\nPriority: optional\nArchitecture: {arch}\nMaintainer: DeepuGupta\nDepends: libc6 (>= {glibc}), libgl1, libegl1, libdbus-1-3, libxkbcommon0, libxcb-cursor0, libpulse0\nDescription: Dkord native desktop music and Mashup Studio preview\n')
+        (control/'control').write_text(f'Package: dkord\nVersion: {__version__}\nSection: sound\nPriority: optional\nArchitecture: {arch}\nMaintainer: DeepuGupta\nDepends: libc6 (>= {glibc}), libgl1, libegl1, libdbus-1-3, libxkbcommon0, libxcb-cursor0, libpulse0\nDescription: Dkord music and Mashup Studio\n')
         binary=stage/'usr/bin';binary.mkdir(parents=True);launcher=binary/'dkord';launcher.write_text('#!/bin/sh\nexec /opt/Dkord/Dkord "$@"\n');launcher.chmod(0o755)
         desktop=stage/'usr/share/applications';desktop.mkdir(parents=True)
-        text='[Desktop Entry]\nType=Application\nName=Dkord Desktop Preview\nComment=Music, private offline audio and Mashup Studio\nExec=dkord\nIcon=dkord\nTerminal=false\nCategories=AudioVideo;Audio;Music;\nKeywords=Music;YouTube Music;Offline;Audio editor;Mashup;Choliwood;\n'
+        text='[Desktop Entry]\nType=Application\nName=Dkord\nComment=Music, private offline audio and Mashup Studio\nExec=dkord\nIcon=dkord\nTerminal=false\nCategories=AudioVideo;Audio;Music;\nKeywords=Music;YouTube Music;Offline;Audio editor;Mashup;Choliwood;\n'
         (desktop/'app.dkord.desktop').write_text(text)
         icons=stage/'usr/share/icons/hicolor/256x256/apps';icons.mkdir(parents=True);shutil.copy2(OUT/'dkord.png',icons/'dkord.png')
         deb=OUT/f'Dkord-desktop-v{__version__}-{target}.deb'

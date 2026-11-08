@@ -203,5 +203,19 @@ class RoomProtocolTest(unittest.TestCase):
         self.assertEqual(128, connection.events.maxsize); self.assertEqual(1, connection.outgoing.maxsize)
 
 
+    def test_shared_public_vectors_are_verified_and_use_identical_kotlin_canonical_bytes(self):
+        import base64
+        from pathlib import Path
+        path=Path(__file__).resolve().parents[2]/'app/src/test/resources/desktop-room-vectors.json'
+        vectors=json.loads(path.read_text(encoding='utf-8'))
+        self.assertIs(True,vectors['testOnly']);state=wire.decode_state(json.dumps(vectors['state'],ensure_ascii=False))
+        policy=wire.decode_control(json.dumps(vectors['policy'],ensure_ascii=False))
+        self.assertTrue(wire.verify_state(state,vectors['code']));self.assertIsNotNone(policy)
+        self.assertEqual('SELECTED',policy['mode']);self.assertEqual(2,len(policy['selected']))
+        self.assertEqual(wire.owner_code(state['authority']['publicKey']),vectors['code'])
+        self.assertEqual(wire.member_id(state['authority']['publicKey']),vectors['memberId'])
+        self.assertEqual(base64.b64decode(vectors['stateSigningBase64'],validate=True),wire.state_bytes(state))
+        self.assertEqual(base64.b64decode(vectors['policySigningBase64'],validate=True),wire.control_bytes(policy))
+
 if __name__ == '__main__':
     unittest.main()

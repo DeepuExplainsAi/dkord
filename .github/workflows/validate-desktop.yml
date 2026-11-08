@@ -107,10 +107,10 @@ jobs:
           import xml.etree.ElementTree as ET
           root = ET.parse('desktop/.artifacts/test-results.xml').getroot()
           cases = root.findall('.//testcase')
-          for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest', 'RoomProtocolTest', 'LyricsTest', 'PhoneContractTest'):
+          for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest', 'RoomProtocolTest', 'LyricsTest', 'PhoneContractTest', 'NewReleasesTest', 'DiagnosticsTest', 'ModernUpdateIdentityTest', 'PublicUpdateIdentityTest', 'CatalogueTest'):
               assert any(cls in c.attrib.get('classname', '') for c in cases), f'Missing {cls}'
           assert len(cases) >= 36, f'Only {len(cases)} desktop cases'
-          assert len(cases) >= 66, f'New phone/desktop parity regressions missing: {len(cases)} cases'
+          assert len(cases) >= 113, f'New phone/desktop parity regressions missing: {len(cases)} cases'
           for case in cases:
               for marker in ('failure','error','skipped'):
                   error=case.find(marker)
@@ -119,7 +119,7 @@ jobs:
                       text=f"{case.get('classname')}.{case.get('name')}: {detail}".replace('%','%25').replace('\r','%0D').replace('\n','%0A')
                       print('::error title=Native desktop testcase::'+text)
           assert not root.findall('.//failure') and not root.findall('.//error') and not root.findall('.//skipped')
-          print(f'::notice title=Native desktop tests::{len(cases)} cases passed; all3 classes; no failures/errors/skips.')
+          print(f'::notice title=Native desktop tests::{len(cases)} cases passed; all required classes; no failures/errors/skips.')
           PY
       - name: Native app entry-point smoke
         run: python desktop/packaging/ci_run.py entry python -m dkord_desktop --self-test

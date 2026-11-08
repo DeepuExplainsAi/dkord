@@ -186,4 +186,97 @@ class NativeWidgetTest(unittest.TestCase):
         called=[];task=Task(lambda cancel,progress:called.append(True));task.cancel.set();task.run()
         self.assertEqual([],called)
 
+    def test_diagnostic_copy_is_local_private_and_contains_no_repository_or_song_metadata(self):
+        self.window.queue=[Track('online00001','Private song title','Private artist')]
+        self.window.diagnostics.record('playback','prepare_failed');self.window.copy_diagnostics()
+        report=self.app.clipboard().text()
+        self.assertIn('Dkord playback diagnostics',report);self.assertIn('playback: prepare_failed',report)
+        for value in ('Private song title','Private artist','https://','github','online00001'):
+            self.assertNotIn(value,report)
+        self.assertEqual([],self.provider.calls);self.assertIsNone(self.window.rooms.session)
+
+    def test_inline_new_releases_uses_the_actual_selected_window_and_choliwood_category(self):
+        class Repository:
+            def __init__(self):self.calls=[]
+            def songs(self,window,category,refresh,cancel):
+                self.calls.append((window,category,refresh));return [Track('online00001','Dated release','Artist')]
+        repository=Repository();self.window.releases_repository=repository;self.window.new_releases_page()
+        self.wait(lambda:self.window.release_tracks is not None)
+        self.assertEqual([('LAST_7_DAYS','ALL',False)],repository.calls)
+        self.window.select_release('CHOLIWOOD',True);self.wait(lambda:self.window.release_tracks is not None)
+        self.window.select_release('LAST_24_HOURS');self.wait(lambda:self.window.release_tracks is not None)
+        self.assertEqual(('LAST_24_HOURS','CHOLIWOOD',False),repository.calls[-1])
+        buttons=self.window.findChildren(QPushButton,'release-choliwood');self.assertTrue(any(b.isVisible() and b.isChecked() for b in buttons))
+        self.assertEqual('Home',self.window.page);self.assertEqual([],self.provider.calls)
+        self.window.new_releases_page();self.assertFalse(self.window.release_expanded)
+
+    def test_optional_video_has_a_separate_native_player_and_never_auto_resumes_music_on_close(self):
+        from dkord_desktop.video_view import VideoPlayer
+        video=VideoPlayer(self.window,Track('online00001','Video','Artist'),autoload=False)
+        self.assertIsNot(video.player,self.window.player);video.show();self.app.processEvents();video.close()
+        self.assertTrue(video.closing);self.assertFalse(self.window.desired_playing)
+        self.assertTrue(self.window.player.source().isEmpty());self.assertEqual([],self.provider.calls)
+
+    def test_stale_cover_result_cannot_replace_new_song_and_capacity_rejection_is_retryable(self):
+        from dkord_desktop.artwork import Cover
+        from dkord_desktop.qt import QPixmap,QColor
+        cache=self.window.artwork_cache;cache.timer.stop()
+        old='https://i.ytimg.com/vi/abcdefghijk/a.jpg';new='https://i.ytimg.com/vi/lmnopqrstuv/b.jpg'
+        cover=Cover(cache,old);cover.set_url(new);image=QPixmap(8,8);image.fill(QColor('#ff2d2d'))
+        cover.loaded(image,old);self.assertIsNone(cover.pixmap_data)
+        cover.loaded(image,new);self.assertIsNotNone(cover.pixmap_data)
+        cache.pending={f'https://i.ytimg.com/{index}.jpg':[] for index in range(64)}
+        self.assertIs(False,cache.request('https://i.ytimg.com/retry.jpg',lambda _:None))
+        self.assertIs(True,cache.request('http://untrusted.test/image.jpg',lambda _:None))
+        self.assertEqual(0,cache.pool.activeThreadCount());cover.deleteLater()
+
+    def test_failed_preparation_keeps_the_queue_but_clears_play_intent_and_records_only_an_event_code(self):
+        def fail(track):raise RuntimeError('Fixture unavailable https://private.test/?token=not-for-ui')
+        self.provider.resolve=fail;self.window.play_queue([Track('online00001','Keep this song','Artist')])
+        self.wait(lambda:not self.window.desired_playing)
+        self.assertEqual('online00001',self.window.current().id);self.assertEqual('play',self.window.play_button.accessibleName().lower())
+        self.assertTrue(any(kind=='playback' and code=='prepare_failed' for _,kind,code in self.window.diagnostics.events))
+        self.assertNotIn('https://',self.window.statusBar().currentMessage())
+
+    def test_music_search_loads_a_real_cursor_page_once_without_researching_or_dropping_existing_rows(self):
+        from dkord_desktop.provider import SearchPage,SearchCursor
+        one=Track('abcdefghijk','First','Artist');two=Track('lmnopqrstuv','Second','Artist');calls=[]
+        cursor=SearchCursor('Original','Songs','opaque_cursor','params')
+        def first(query,scope,exact):calls.append(('first',query,scope,exact));return SearchPage((Entry('song',one.id,one.title,one.artist,one),),cursor,'Corrected',True)
+        def more(actual):calls.append(('more',actual));return SearchPage((Entry('song',two.id,two.title,two.artist,two),))
+        self.provider.search_page=first;self.provider.search_more=more
+        self.window.query.setText('Original');self.window.search();self.wait(lambda:self.window.table is not None)
+        self.assertTrue(self.window.search_result.corrected);self.assertEqual('Corrected',self.window.search_result.suggested_query)
+        self.window.more('Original','Songs');self.window.more('Original','Songs')
+        self.wait(lambda:self.window.more_task is None)
+        self.assertEqual([one.id,two.id],[entry.id for entry in self.window.entries]);self.assertIsNone(self.window.search_cursor)
+        self.assertEqual([('first','Original','Songs',False),('more',cursor)],calls);self.assertTrue(self.window.player.source().isEmpty())
+
+    def test_only_deliberate_player_intents_reach_room_controls_not_remote_seek_or_auto_queue(self):
+        self.window.queue=[Track('online00001','One','Artist'),Track('online00002','Two','Artist')]
+        with patch.object(self.window.rooms,'user_intent') as intent,patch.object(self.window,'run'):
+            self.window.play_index(0,user=False);self.window.user_seek(1234,user=False);self.window.next_track(1,user=False)
+            intent.assert_not_called()
+            self.window.user_seek(4321);intent.assert_called_once()
+            self.window.play_index(0,user=True);self.assertEqual(2,intent.call_count)
+
+    def test_phone_sleep_timer_fades_last_eight_seconds_restores_volume_and_never_autoplays(self):
+        self.window.audio.setVolume(.8)
+        with patch('dkord_desktop.ui.time.monotonic',return_value=100):self.window.start_sleep(1)
+        self.window.desired_playing=True
+        with patch('dkord_desktop.ui.time.monotonic',return_value=156):self.window.tick()
+        self.assertAlmostEqual(.4,self.window.audio.volume(),places=5);self.assertTrue(self.window.desired_playing)
+        with patch('dkord_desktop.ui.time.monotonic',return_value=160):self.window.tick()
+        self.assertAlmostEqual(.8,self.window.audio.volume(),places=5);self.assertFalse(self.window.desired_playing)
+        self.assertIsNone(self.window.sleep_at);self.assertTrue(self.window.player.source().isEmpty());self.assertEqual([],self.provider.calls)
+
+    def test_sleep_at_end_of_track_preempts_repeat_and_queue_advance(self):
+        from dkord_desktop.qt import QMediaPlayer
+        self.window.queue=[Track('online00001','Song','Artist')];self.window.desired_playing=True
+        self.window.loaded_epoch=self.window.epoch;self.window.repeat.setCurrentIndex(1);self.window.start_sleep(end=True)
+        with patch.object(self.window,'play_index') as advance:
+            self.window.media_status(QMediaPlayer.MediaStatus.EndOfMedia)
+        advance.assert_not_called();self.assertFalse(self.window.desired_playing);self.assertFalse(self.window.sleep_end_of_track)
+        self.assertEqual([],self.provider.calls)
+
 if __name__=='__main__':unittest.main()

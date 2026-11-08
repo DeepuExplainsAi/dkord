@@ -49,10 +49,10 @@ def main():
         return 1
     try:
         window=MainWindow(Store(root));window.show();result=app.exec()
-        if window.restart_after_close:
-            # closeEvent has cancelled work. Finish its bounded cleanup/SQLite writes
-            # before another process can acquire the user-data library.
-            window.pool.waitForDone();window.download_pool.waitForDone()
+        # closeEvent cancelled work. Drain every owner before the data lock can
+        # move to another process, including Home/artwork/dated-release tasks.
+        for pool in (window.pool,window.download_pool,window.home_pool,window.artwork_cache.pool):
+            pool.waitForDone()
         lock.unlock()
         if window.restart_after_close:window.restart_after_close()
         return result

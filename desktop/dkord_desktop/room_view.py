@@ -77,8 +77,16 @@ class RoomBridge(QObject):
         window = self.window
         if self.remote_epoch is not None and self.remote_epoch == window.epoch and window.loaded_epoch != window.epoch:
             # Do not stop ordinary local audio, but a left room cannot start a late resolver.
-            window.epoch += 1; window.desired_playing = False
+            window.epoch += 1; window.desired_playing = False; window.update_play_button()
         self.remote_epoch = None
+
+    @property
+    def remote_loading(self):
+        return self.remote_epoch is not None and self.remote_epoch == self.window.epoch
+
+    def playback_failed(self):
+        if self.session and self.remote_loading:
+            self.session.error = 'PLAYBACK'; self.changed.emit()
 
     def user_intent(self):
         if self.session and not self.applying:
@@ -101,6 +109,8 @@ class RoomBridge(QObject):
         window = self.window
         tracks = wire.state_tracks(frame)
         position = wire.synchronized_position(frame, time.time_ns()//1_000_000)
+        if not tracks:
+            return
         current = window.current()
         same_prefix = [t.id for t in window.queue[window.index:window.index+len(tracks)]] == [t.id for t in tracks]
         self.applying = True
@@ -110,11 +120,11 @@ class RoomBridge(QObject):
                     window.user_seek(position, user=False)
                 window.desired_playing = frame['playing']
                 (window.player.play if frame['playing'] else window.player.pause)()
-                window.save_session()
+                window.save_session(); window.update_play_button()
             else:
                 window.queue = tracks; window.index = 0; window.revision += 1
+                self.remote_epoch = window.epoch + 1
                 window.play_index(0, position, user=False, playing=frame['playing'])
-                self.remote_epoch = window.epoch
         except Exception:
             self.session.error = 'PLAYBACK'
         finally:

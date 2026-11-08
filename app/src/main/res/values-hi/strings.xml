@@ -387,4 +387,5 @@
     <string name="video_playback">वीडियो प्लेबैक</string>
     <string name="video_disabled">वीडियो देखने के लिए सेटिंग्स में वीडियो प्लेबैक चालू करें।</string>
     <string name="check_update">अपडेट जाँचें</string>
+    <string name="custom">कस्टम</string>
 </resources>

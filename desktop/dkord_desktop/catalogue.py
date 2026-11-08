@@ -9,7 +9,7 @@ from dataclasses import dataclass, replace
 import re
 
 from .models import Track, VIDEO_ID
-from .provider import Entry
+from .provider import Entry, SearchCursor, SearchPage
 
 
 @dataclass(frozen=True)
@@ -229,3 +229,28 @@ def watch_next(root):
         dur = runs_text(item.get('lengthText')) or at(item, 'lengthText', 'simpleText')
         tracks.append(Track(id, title, artist, durationSec=duration(dur), thumbnail=thumbnail(item.get('thumbnail'))))
     return tracks
+
+
+def parse_search(root, query, scope, params):
+    """Anonymous music search, real opaque next-page token and correction metadata."""
+    sections = array(at(find(root,'sectionListRenderer'),'contents'))
+    if not sections:
+        sections = array(at(find(root,'musicShelfContinuation'),'contents'))
+    if not sections:
+        sections = array(find(root,'continuationItems'))
+    entries = []
+    for section in sections:
+        shelf = at(section,'musicShelfRenderer') or at(section,'itemSectionRenderer')
+        rows = array(at(shelf,'contents')) if shelf else [section]
+        for row in rows:
+            entry = list_item(at(row,'musicResponsiveListItemRenderer'))
+            if entry:
+                entries.append(entry)
+    corrected = find(root,'showingResultsForRenderer')
+    suggestion = corrected or find(root,'didYouMeanRenderer')
+    suggested = (runs_text(at(suggestion,'correctedQuery')) or at(suggestion,'correctedQuery','simpleText')
+                 or at(suggestion,'correctedQueryEndpoint','searchEndpoint','query') or '')
+    suggested = suggested[:500] if isinstance(suggested,str) else ''
+    token = continuation(root)
+    cursor = SearchCursor(query,scope,token,params) if isinstance(token,str) and 0<len(token)<=8192 else None
+    return SearchPage(tuple(entries),cursor,suggested,bool(corrected))

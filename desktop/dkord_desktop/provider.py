@@ -24,6 +24,22 @@ class Entry:
     params: str | None = None
 
 
+@dataclass(frozen=True)
+class SearchCursor:
+    query: str
+    scope: str
+    token: str
+    params: str
+
+
+@dataclass(frozen=True)
+class SearchPage:
+    entries: tuple[Entry, ...]
+    cursor: SearchCursor | None = None
+    suggested_query: str = ''
+    corrected: bool = False
+
+
 def provider_track(row: dict, album: str | None = None) -> Track | None:
     if not isinstance(row, dict):
         return None
@@ -101,13 +117,41 @@ class Provider:
         for row in rows:
             track = provider_track(row)
             kind = row.get("resultType") or ("song" if track else "")
-            id = (track.id if track else row.get("browseId")) or ""
+            id = (track.id if track else row.get("browseId") or ('VL'+row['playlistId'] if isinstance(row.get('playlistId'),str) else None)) or ""
             if not id or id in seen:
                 continue
             seen.add(id)
             artist = ", ".join(a.get("name", "") for a in row.get("artists", []) if isinstance(a, dict))
-            entries.append(Entry(kind, id, row.get("title") or row.get("artist") or "", artist or row.get("author") or "", track))
+            images = row.get('thumbnails') or []; image = images[-1].get('url') if images and isinstance(images[-1],dict) else None
+            title = row.get('title') or row.get('artist') or ''; author = row.get('author') or ''
+            if isinstance(title,dict):title = title.get('name','')
+            if isinstance(author,dict):author = author.get('name','')
+            entries.append(Entry(kind, id, title, artist or author, track, track.thumbnail if track else image))
         return entries
+
+    def search_page(self, query, scope='Songs', exact=False):
+        from ytmusicapi.parsers.search import get_search_params
+        from .catalogue import parse_search
+        query = ' '.join(query.split())[:500]
+        filters = {'Songs':'songs','Albums':'albums','Artists':'artists','Playlists':'playlists','Music videos':'videos'}
+        if not query or scope not in filters:
+            raise ValueError('Unsupported music search')
+        params = get_search_params(filters[scope], None, bool(exact))
+        response = self.music()._send_request('search', {'query':query, 'params':params})
+        return parse_search(response, query, scope, params)
+
+    def search_more(self, cursor):
+        from urllib.parse import quote
+        from ytmusicapi.parsers.search import get_search_params
+        from .catalogue import parse_search
+        filters = {'Songs':'songs','Albums':'albums','Artists':'artists','Playlists':'playlists','Music videos':'videos'}
+        if (not isinstance(cursor, SearchCursor) or cursor.scope not in filters or not 1 <= len(cursor.query) <= 500
+                or not isinstance(cursor.token,str) or not 1 <= len(cursor.token) <= 8192
+                or cursor.params not in {get_search_params(filters[cursor.scope],None,False), get_search_params(filters[cursor.scope],None,True)}):
+            raise ValueError('Unsupported search continuation')
+        suffix = '&ctoken='+quote(cursor.token,safe='')+'&continuation='+quote(cursor.token,safe='')+'&type=next'
+        response = self.music()._send_request('search', {'query':cursor.query,'params':cursor.params}, suffix)
+        return parse_search(response, cursor.query, cursor.scope, cursor.params)
 
     def home_page(self, chip=None):
         from .catalogue import parse_page

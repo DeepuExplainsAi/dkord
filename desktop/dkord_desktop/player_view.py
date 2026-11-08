@@ -20,7 +20,8 @@ def plain(value, style=None):
 
 
 def action(caption, callback, primary=False):
-    widget = QPushButton(caption); widget.clicked.connect(callback)
+    widget = QPushButton(caption); widget.clicked.connect(callback); widget.setIconSize(QSize(24,24))
+    if not caption: widget.setProperty('iconOnly',True)
     widget.setCursor(Qt.CursorShape.PointingHandCursor)
     if primary:
         widget.setProperty('primary', True)
@@ -72,7 +73,7 @@ class FullPlayer(QDialog):
             ('↗', 'share', self.share), ('♬', 'listen_together', lambda: (self.hide(), owner.navigate('Listen Together'))),
             ('▸', 'play_video', lambda: owner.show_video() if owner.current() else None),
         ):
-            widget = action(caption, callback); widget.setFixedWidth(44); widget.setToolTip(owner.tr(key)); widget.setAccessibleName(owner.tr(key)); actions.addWidget(widget)
+            widget = action('', callback); widget.setIcon(icon({'like':'favorite_border','download':'file_download','share':'share','listen_together':'groups','play_video':'videocam'}[key])); widget.setFixedWidth(44); widget.setToolTip(owner.tr(key)); widget.setAccessibleName(owner.tr(key)); actions.addWidget(widget)
             if key == 'like': self.like_button = widget
             if key == 'play_video': self.video_button = widget
         actions.addStretch(); outer.addLayout(actions)
@@ -139,7 +140,7 @@ class FullPlayer(QDialog):
         if changed or force:
             self.title.setText(track.title); self.artist.setText(track.artist)
             liked = any(t.id == track.id for t in self.owner.store.library('liked'))
-            self.like_button.setText('♥' if liked else '♡')
+            self.like_button.setText(''); self.like_button.setIcon(icon('favorite' if liked else 'favorite_border', palette(self.owner.effective_theme())['primary' if liked else 'onSurface']))
             self.video_button.setEnabled(not track.local and self.owner.store.setting('video_enabled', False))
             self.refresh_queue()
         if self.lyrics_value and self.lyrics_value.synced:

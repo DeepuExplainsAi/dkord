@@ -16,7 +16,8 @@ class NewReleaseRequestTest(unittest.TestCase):
         return validate(self.request if request is None else request,self.event if event is None else event,**(self.context|context))
     def test_exact_new_authorization_and_prepared_version_agree(self):
         self.assertEqual(TAG,self.check())
-        self.assertEqual(('0.10.0',14),app_version((ROOT/'app/build.gradle.kts').read_text()))
+        # Frozen consumed authorization stays code14; future versions must not replay it.
+        self.assertEqual(('0.10.0',14),app_version('versionCode = 14\nversionName = "0.10.0"'))
         self.assertEqual('arena/a0209191-dkord',BRANCH)
     def test_no_pr_dispatch_schedule_or_workflow_run_can_enter_the_push_route(self):
         for name in ('pull_request','pull_request_target','workflow_dispatch','workflow_run','schedule'):

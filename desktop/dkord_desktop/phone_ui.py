@@ -14,7 +14,7 @@ import time
 from .qt import (sip, Qt, QtCore, QtWidgets, QApplication, QWidget, QFrame, QVBoxLayout, QHBoxLayout,
                  QScrollArea, QLineEdit, QComboBox, QDockWidget, QListWidget, QListWidgetItem,
                  QPushButton, QLabel, QCheckBox, QDoubleSpinBox, QSlider, QFormLayout, QDialog,
-                 QMenu, QMessageBox, QInputDialog, QFont, QFontDatabase, QIcon, QSize, QTimer, QThreadPool)
+                 QMenu, QMessageBox, QInputDialog, QFileDialog, QFont, QFontDatabase, QIcon, QSize, QTimer, QThreadPool)
 from . import __version__
 from .experience import contract, text, branding, stylesheet, palette
 from .widgets import label, button, icon, ElideLabel
@@ -23,6 +23,7 @@ from .catalogue import Page, Shelf
 from .models import Track
 from .provider import Entry, Provider
 from .lyrics import LyricsRepository
+from .releases import NewReleasesRepository, ReleaseDatesUnavailable, CATEGORIES, WINDOWS
 from .room_view import RoomBridge, RoomPanel
 
 PAGES = {'HOME': 'Home', 'SEARCH': 'Search', 'LISTEN': 'Listen Again', 'LIBRARY': 'Library', 'DOWNLOADS': 'Downloads'}
@@ -41,7 +42,8 @@ class PhoneExperience:
 
     def apply_theme(self, mode):
         self.store.set_setting('theme', mode)
-        self.setStyleSheet(stylesheet(self.effective_theme()))
+        self._applied_theme = self.effective_theme()
+        self.setStyleSheet(stylesheet(self._applied_theme))
         self.refresh_icons()
         self.update()
 
@@ -66,6 +68,9 @@ class PhoneExperience:
         self.setFont(QFont('Roboto', 11))
         self.artwork_cache = ArtworkCache(self)
         self.lyrics_repository = LyricsRepository(); self.full_player = None; self.video_window = None
+        self.releases_repository = NewReleasesRepository.from_provider(self.provider)
+        self.release_expanded = False; self.release_window = 'LAST_7_DAYS'; self.release_category = 'ALL'
+        self.release_task = None; self.release_epoch = 0; self.release_tracks = None; self.release_error = None
         self.home_pool = QThreadPool(self); self.home_pool.setMaxThreadCount(2)
         self.home_tasks = set(); self.home_epoch = 0; self.home_data = None; self.home_error = None
         self.home_extras = {}; self.home_chip = None; self.home_loaded_at = 0
@@ -96,10 +101,21 @@ class PhoneExperience:
         self.together_button.setToolTip(self.tr('listen_together')); self.together_button.setAccessibleName(self.tr('listen_together')); top.addWidget(self.together_button)
         self.settings_button = button('', lambda: self.navigate('Settings')); self.settings_button.setFixedSize(42, 42)
         self.settings_button.setToolTip(self.tr('settings')); self.settings_button.setAccessibleName(self.tr('settings')); top.addWidget(self.settings_button); center.addLayout(top)
-        self.search_box = QWidget(); search = QHBoxLayout(self.search_box); search.setContentsMargins(0, 0, 0, 0)
+        self.search_box = QWidget(); search = QVBoxLayout(self.search_box); search.setContentsMargins(0, 0, 0, 0); search.setSpacing(6)
+        query_row = QHBoxLayout()
         self.query = QLineEdit(); self.query.setObjectName('global-search'); self.query.setPlaceholderText(self.tr('search_hint')); self.query.returnPressed.connect(self.search)
-        self.scope = QComboBox(); self.scope.addItems(list(Provider.scopes)); self.scope.setMinimumWidth(120)
-        search.addWidget(self.query, 1); search.addWidget(self.scope); search.addWidget(button(self.tr('search_submit'), self.search, True)); center.addWidget(self.search_box)
+        self.scope = QComboBox(self.search_box); self.scope.addItems(list(Provider.scopes)); self.scope.hide()
+        query_row.addWidget(self.query, 1); query_row.addWidget(button(self.tr('search_submit'), self.search, True)); search.addLayout(query_row)
+        self.scope_labels = dict(zip(Provider.scopes, ('songs','albums','artists','playlists','search_music_videos','search_videos','search_all')))
+        self.scope_buttons = {}
+        filters = QScrollArea(); filters.setWidgetResizable(True); filters.setFixedHeight(54)
+        filters.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff); filters.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        filter_content = QWidget(); filter_row = QHBoxLayout(filter_content); filter_row.setContentsMargins(0,0,0,0)
+        for value in Provider.scopes:
+            chip = button(self.tr(self.scope_labels[value]), lambda checked=False,value=value:self.choose_scope(value))
+            chip.setCheckable(True); chip.setChecked(value == self.scope.currentText()); chip.setObjectName('search-filter'); self.scope_buttons[value] = chip; filter_row.addWidget(chip)
+        filter_row.addStretch(); filters.setWidget(filter_content); search.addWidget(filters); center.addWidget(self.search_box)
+        self.scope.currentTextChanged.connect(lambda value: [widget.setChecked(name == value) for name,widget in self.scope_buttons.items()])
         self.subtitle = label('', 'muted'); center.addWidget(self.subtitle)
         self.content_scroll = QScrollArea(); self.content_scroll.setWidgetResizable(True)
         self.content = QWidget(); self.content_layout = QVBoxLayout(self.content); self.content_layout.setContentsMargins(0, 0, 0, 0); self.content_layout.setSpacing(16)
@@ -156,6 +172,10 @@ class PhoneExperience:
         if previous != page and not self._going_back:
             self.back_stack.append(previous)
             self.back_stack = self.back_stack[-30:]
+        if previous == 'Search' and page != 'Search':
+            self.search_epoch += 1; self.suggestion_epoch += 1; self.suggestion_timer.stop()
+            if self.search_task: self.search_task.cancel.set()
+            if self.more_task: self.more_task.cancel.set(); self.more_task = None
         self.route_epoch += 1; self.page = page; self.collection_tracks = []
         if previous == 'Home' and page != 'Home':
             self.cancel_home()
@@ -173,6 +193,11 @@ class PhoneExperience:
         else:
             self._legacy_navigate(page, fetch)
 
+    def choose_scope(self, value):
+        self.scope.setCurrentText(value)
+        if self.query.text().strip() and self.page == 'Search':
+            self.search()
+
     def focus_search(self):
         self.navigate('Search'); self.query.setFocus()
 
@@ -189,6 +214,7 @@ class PhoneExperience:
         for task in tuple(self.home_tasks):
             task.cancel.set()
         self.home_tasks.clear()
+        self.cancel_releases()
 
     def home_page(self, fetch=True, refresh=False):
         if refresh or (self.home_loaded_at and time.monotonic()-self.home_loaded_at > 900):
@@ -196,6 +222,8 @@ class PhoneExperience:
         self.render_home()
         if not fetch:
             return
+        if self.release_expanded:
+            self.load_releases(refresh)
         owner = self.home_epoch
         if self.home_data is None:
             def ready(page):
@@ -241,7 +269,7 @@ class PhoneExperience:
         refresh = button('', lambda: self.home_page(refresh=True)); refresh.setIcon(icon('refresh', palette(self.effective_theme())['onSurface'])); refresh.setToolTip(self.tr('retry')); row.addWidget(refresh)
         self.content_layout.addWidget(tools)
         if self.home_chip is None:
-            releases = button(self.tr('new_releases')+'  ›', self.new_releases_page); releases.setObjectName('new-releases'); self.content_layout.addWidget(releases)
+            self.release_section()
             recent = self.store.library('history')[:15]
             if recent:
                 self.add_shelf(Shelf(self.tr('recently_played'), tuple(Entry('song', t.id, t.title, t.artist, t, t.thumbnail) for t in recent)))
@@ -260,7 +288,7 @@ class PhoneExperience:
         self.content_layout.addStretch()
         QTimer.singleShot(0, lambda: self.content_scroll.verticalScrollBar().setValue(scroll) if self.page == 'Home' else None)
 
-    def add_shelf(self, shelf):
+    def add_shelf(self, shelf, target=None):
         group = QWidget(); layout = QVBoxLayout(group); layout.setContentsMargins(0, 0, 0, 0); layout.setSpacing(10)
         header = QHBoxLayout(); title = label(branding(shelf.title, self.store.setting('language','en')))
         title.setStyleSheet('font-size:21px;font-weight:700;'); header.addWidget(title, 1)
@@ -284,7 +312,7 @@ class PhoneExperience:
                 card.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
                 card.customContextMenuRequested.connect(lambda point, card=card, track=entry.track: self.track_menu(track, card.mapToGlobal(point)))
             row.addWidget(card)
-        row.addStretch(); scroll.setWidget(content); layout.addWidget(scroll); self.content_layout.addWidget(group)
+        row.addStretch(); scroll.setWidget(content); layout.addWidget(scroll); (target if target is not None else self.content_layout).addWidget(group)
 
     def shelf_entry(self, entry, hint):
         if entry.track:
@@ -326,8 +354,70 @@ class PhoneExperience:
     def playlists_page(self):
         self.library_page()
 
+    def cancel_releases(self):
+        self.release_epoch += 1
+        if self.release_task:
+            self.release_task.cancel.set(); self.release_task = None
+
     def new_releases_page(self):
-        self.open_catalogue(Entry('mood', 'FEmusic_new_releases', self.tr('new_releases')))
+        # Phone's inline expandable Home section, not a different raw browse page.
+        self.release_expanded = not self.release_expanded
+        if self.release_expanded:
+            self.load_releases()
+        else:
+            self.cancel_releases(); self.render_home()
+
+    def select_release(self, value, category=False):
+        if category:
+            self.release_category = value
+        else:
+            self.release_window = value
+        self.load_releases()
+
+    def load_releases(self, refresh=False):
+        self.cancel_releases(); owner = self.release_epoch
+        window, category = self.release_window, self.release_category
+        self.release_tracks = None; self.release_error = None; self.render_home()
+        def load(cancel, progress):
+            try:
+                return self.releases_repository.songs(window, category, refresh, cancel), None
+            except ReleaseDatesUnavailable:
+                return [], 'release_dates_unavailable'
+        def ready(result):
+            if owner == self.release_epoch and self.page == 'Home' and self.release_expanded:
+                self.release_task = None; self.release_tracks, self.release_error = result; self.render_home()
+        def failed(_):
+            if owner == self.release_epoch and self.page == 'Home' and self.release_expanded:
+                self.release_task = None; self.release_error = 'err_network'; self.render_home()
+        self.release_task = self.run(load, ready, failed=failed)
+
+    def release_section(self):
+        toggle = button(self.tr('new_releases') + ('  ⌃' if self.release_expanded else '  ⌄'), self.new_releases_page)
+        toggle.setObjectName('new-releases'); toggle.setCheckable(True); toggle.setChecked(self.release_expanded)
+        toggle.setAccessibleDescription(self.tr('section_expanded' if self.release_expanded else 'section_collapsed'))
+        self.content_layout.addWidget(toggle)
+        if not self.release_expanded:
+            return
+        panel = QWidget(); panel.setObjectName('new-releases-section'); layout = QVBoxLayout(panel); layout.setContentsMargins(0,0,0,0)
+        for values, selected, category in ((CATEGORIES, self.release_category, True),(WINDOWS, self.release_window, False)):
+            scroll = QScrollArea(); scroll.setWidgetResizable(True); scroll.setFixedHeight(54)
+            scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff); scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            content = QWidget(); row = QHBoxLayout(content); row.setContentsMargins(0,0,0,0)
+            for value in values:
+                key = 'choliwood_name' if value == 'CHOLIWOOD' else ('release_'+value.lower() if category else value.lower())
+                choice = button(self.tr(key), lambda checked=False, value=value, category=category:self.select_release(value, category))
+                choice.setCheckable(True); choice.setChecked(value == selected); choice.setObjectName('release-'+value.lower()); row.addWidget(choice)
+            row.addStretch(); scroll.setWidget(content); layout.addWidget(scroll)
+        if self.release_error:
+            layout.addWidget(label(self.tr(self.release_error), 'muted'))
+            layout.addWidget(button(self.tr('retry'), lambda:self.load_releases(True)))
+        elif self.release_tracks is None:
+            layout.addWidget(label(self.tr('loading'),'muted'))
+        elif not self.release_tracks:
+            layout.addWidget(label(self.tr('no_new_songs'),'muted'))
+        else:
+            self.add_shelf(Shelf('', tuple(Entry('song',t.id,t.title,t.artist,t,t.thumbnail) for t in self.release_tracks)), layout)
+        self.content_layout.addWidget(panel)
 
     def open_catalogue(self, entry):
         self.route_epoch += 1; route = self.route_epoch
@@ -397,7 +487,7 @@ class PhoneExperience:
         self.repeat = QComboBox(); self.repeat.addItems([self.tr('repeat_off'), self.tr('repeat_one'), self.tr('repeat_all')]); self.repeat.setMinimumWidth(116); self.repeat.setCurrentIndex(int(self.store.setting('repeat', 0))); options.addWidget(self.repeat)
         self.speed = QDoubleSpinBox(); self.speed.setRange(.5, 2); self.speed.setSingleStep(.05); self.speed.setSuffix('×'); self.speed.setValue(float(self.store.setting('speed', 1))); self.speed.setFixedWidth(92)
         self.speed.valueChanged.connect(self.player.setPlaybackRate); self.player.setPlaybackRate(self.speed.value()); options.addWidget(self.speed); options.addStretch(); controls.addLayout(options)
-        secondary = QHBoxLayout(); secondary.addWidget(button(self.tr('sleep_timer'), self.sleep_timer)); secondary.addStretch()
+        secondary = QHBoxLayout(); self.sleep_button = button(self.tr('sleep_timer'), self.sleep_timer); secondary.addWidget(self.sleep_button); secondary.addStretch()
         volume = QSlider(Qt.Orientation.Horizontal); volume.setRange(0, 100); volume.setValue(int(self.audio.volume()*100)); volume.setFixedWidth(90)
         volume.setAccessibleName(self.tr('volume')); volume.valueChanged.connect(lambda value: self.audio.setVolume(value/100)); secondary.addWidget(volume); controls.addLayout(secondary)
         self.player_controls.hide()
@@ -439,16 +529,27 @@ class PhoneExperience:
         quality = QComboBox(); quality.addItems(['high','medium','low']); quality.setCurrentText(self.store.setting('quality','high')); quality.currentTextChanged.connect(lambda value: self.store.set_setting('quality',value)); form.addRow(self.tr('audio_quality'),quality)
         autoplay = QCheckBox(self.tr('autoplay_hint')); autoplay.setChecked(self.store.setting('autoplay',True)); autoplay.toggled.connect(lambda value: self.store.set_setting('autoplay',value)); form.addRow(self.tr('autoplay'),autoplay)
         video = QCheckBox(self.tr('play_video')); video.setChecked(self.store.setting('video_enabled',False)); video.toggled.connect(lambda value: self.store.set_setting('video_enabled',value)); form.addRow(self.tr('video_playback'),video)
+        form.addRow(self.tr('report_broken'),button(self.tr('report_broken'),self.copy_diagnostics))
+        form.addRow('',label(self.tr('report_broken_hint'),'muted'))
         form.addRow(self.tr('app_update'),button(self.tr('check_update'),self.check_updates,True))
         form.addRow(self.tr('version'),label(__version__))
         self.content_layout.addWidget(panel)
         self.content_layout.addWidget(label(self.tr('about'),'pageTitle')); self.content_layout.addWidget(label(self.tr('about_text'))); self.content_layout.addStretch()
 
+    def copy_diagnostics(self):
+        from .platforms import platform_key
+        track = self.current(); source = 'none' if track is None else 'local' if track.local else 'online'
+        QApplication.clipboard().setText(self.diagnostics.report(__version__, platform_key(),
+            QtCore.QT_VERSION_STR+' '+QtCore.PYQT_VERSION_STR, source))
+        self.notify(self.tr('report_copied'))
+
     def change_language(self, language):
         self.store.set_setting('language', language); QApplication.instance().setProperty('dkord-language',language)
         for item in contract()['navigation']:
             page=PAGES[item['id']];self.nav_buttons[page].setText(self.tr(item['label']));self.bottom_buttons[page].setText(self.tr(item['label']))
-        self.query.setPlaceholderText(self.tr('search_hint')); self.adjust_layout(); self.navigate('Settings')
+        self.query.setPlaceholderText(self.tr('search_hint'))
+        for name,widget in self.scope_buttons.items():widget.setText(self.tr(self.scope_labels[name]))
+        self.adjust_layout(); self.navigate('Settings')
 
     def about(self):
         dialog=QDialog(self);dialog.setWindowTitle(self.tr('about'));dialog.resize(460,280);layout=QVBoxLayout(dialog)
@@ -461,6 +562,7 @@ class PhoneExperience:
         self.query.textEdited.connect(lambda _: self.suggestion_timer.start())
         self.suggestions = QtWidgets.QCompleter(self); self.suggestions.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.suggestions.setFilterMode(Qt.MatchFlag.MatchContains); self.query.setCompleter(self.suggestions)
+        self.suggestions.activated[str].connect(lambda _: self.search())
         self.suggestion_model = QtCore.QStringListModel(self); self.suggestions.setModel(self.suggestion_model)
 
     def fetch_suggestions(self):
