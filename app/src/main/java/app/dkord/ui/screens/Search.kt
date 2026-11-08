@@ -31,6 +31,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,7 +70,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.dkord.R
 import app.dkord.core.BrowseItem
-import app.dkord.core.ItemKind
 import app.dkord.core.Track
 import app.dkord.data.search.MAX_PINNED_SEARCHES
 import app.dkord.data.search.MusicSearchSource
@@ -89,6 +89,7 @@ import app.dkord.ui.common.Loading
 import app.dkord.ui.common.koinVm
 import app.dkord.ui.common.softClickable
 import app.dkord.ui.search.SearchController
+import app.dkord.ui.search.searchPlaybackQueue
 import kotlinx.coroutines.flow.collect
 import org.koin.compose.koinInject
 
@@ -174,24 +175,27 @@ fun SearchScreen(
     }
 
     Column(modifier.fillMaxSize().imePadding()) {
-        OutlinedTextField(
-            field, { next ->
-                val limited = limitSearchInput(next.text)
-                field = if (limited == next.text) next else TextFieldValue(limited, TextRange(limited.length))
-                vm.typed(limited)
-            },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).focusRequester(focusRequester),
-            placeholder = { Text(stringResource(R.string.search_hint)) },
-            leadingIcon = { IconButton({ submitted { vm.search() } }, enabled = query.isNotBlank()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                field, { next ->
+                    val limited = limitSearchInput(next.text)
+                    field = if (limited == next.text) next else TextFieldValue(limited, TextRange(limited.length))
+                    vm.typed(limited)
+                },
+                modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                placeholder = { Text(stringResource(R.string.search_hint), maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) },
+                trailingIcon = { if (query.isNotEmpty()) IconButton({ field = TextFieldValue(); vm.clear() }) {
+                    Icon(Icons.Default.Clear, stringResource(R.string.clear))
+                } },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { submitted { vm.search() } }),
+            )
+            FilledIconButton({ submitted { vm.search() } }, Modifier.size(48.dp), enabled = query.isNotBlank()) {
                 Icon(Icons.Default.Search, stringResource(R.string.search_submit))
-            } },
-            trailingIcon = { if (query.isNotEmpty()) IconButton({ field = TextFieldValue(); vm.clear() }) {
-                Icon(Icons.Default.Clear, stringResource(R.string.clear))
-            } },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { submitted { vm.search() } }),
-        )
+            }
+        }
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(SearchFilter.entries, key = { it.name }) { value ->
                 FilterChip(filter == value, {
@@ -220,7 +224,6 @@ fun SearchScreen(
                             snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
                                 .collect { if (it >= result.value.size + prefixRows - 4) vm.loadMore() }
                         }
-                        val songs = remember(result.value) { result.value.mapNotNull { it.track } }
                         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                             correction?.let { suggestion -> item("correction") {
                                 TextButton({ submitted { vm.search(suggestion.query) } }, Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
@@ -229,7 +232,8 @@ fun SearchScreen(
                             } }
                             items(result.value, key = { "${it.kind.name}:${it.id}" }) { item ->
                                 BrowseRow(item, onClick = {
-                                    if (item.kind == ItemKind.SONG) onPlay(songs, songs.indexOfFirst { it.id == item.id }.coerceAtLeast(0))
+                                    val selected = searchPlaybackQueue(item)
+                                    if (selected.isNotEmpty()) onPlay(selected, 0)
                                     else onItem(item)
                                 }, onMenu = item.track?.let { track -> { onMenu(track) } })
                             }

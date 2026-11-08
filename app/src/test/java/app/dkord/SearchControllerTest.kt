@@ -120,7 +120,7 @@ class SearchControllerTest {
     @Test fun old_uncancellable_search_cannot_replace_a_newer_query_or_filter() = runTest {
         val f = fixture()
         f.source.find = { _, filter ->
-            withContext(NonCancellable) { delay(if (filter == SearchFilter.ALL) 100 else 10) }
+            withContext(NonCancellable) { delay(if (filter == SearchFilter.SONGS) 100 else 10) }
             SearchPage(listOf(song(filter.name)))
         }
         f.controller.search("Artist"); runCurrent()
@@ -310,7 +310,7 @@ class SearchControllerTest {
         assertEquals(listOf("video0", "video1", "video2"), f.controller.ids())
     }
 
-    @Test fun clearing_a_narrow_query_resets_all_for_the_next_search_without_erasing_history() = runTest {
+    @Test fun clearing_a_narrow_query_resets_songs_for_the_next_search_without_erasing_history() = runTest {
         val f = fixture()
         f.controller.search("Old", SearchFilter.SONGS); runCurrent()
         f.controller.clear(); runCurrent()

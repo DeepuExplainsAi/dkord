@@ -13,6 +13,8 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -142,7 +144,7 @@ fun MiniPlayer(state: PlayerUiState, controller: PlayerController, onOpen: () ->
 private enum class Panel { ART, LYRICS, QUEUE }
 
 /** Full-screen player. Swipe down closes; swipe sideways on the art changes track. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun FullPlayer(state: PlayerUiState, onClose: () -> Unit, onAddToPlaylist: (Track) -> Unit, onPlayVideo: (Track) -> Unit, onListenTogether: () -> Unit) {
     val actions: Actions = koinInject()
@@ -237,23 +239,25 @@ fun FullPlayer(state: PlayerUiState, onClose: () -> Unit, onAddToPlaylist: (Trac
                         tint = if (state.repeatMode != Player.REPEAT_MODE_OFF) MaterialTheme.colorScheme.primary else LocalContentColorOrDefault())
                 }
             }
-            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                TextButton({ sheet = "speed" }) { Icon(Icons.Default.Speed, null); Text("  ${state.speed}x") }
+            FlowRow(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                TextButton({ sheet = "speed" }) { Icon(Icons.Default.Speed, null); Text("  ${state.speed}x", maxLines = 1, softWrap = false) }
                 TextButton({ sheet = "sleep" }) {
                     Icon(Icons.Default.Bedtime, null, tint = if (sleep != SleepState.Off) MaterialTheme.colorScheme.primary else LocalContentColorOrDefault())
                     Text("  " + when (val s = sleep) {
                         SleepState.Off -> stringResource(R.string.sleep_timer)
                         SleepState.EndOfTrack -> stringResource(R.string.end_of_track)
                         is SleepState.Countdown -> formatTime(s.remainingMs)
-                    })
+                    }, maxLines = 1, softWrap = false)
                 }
                 val st by settingsRepo.settings.collectAsState()
                 TextButton({ settingsRepo.setAutoplay(!st.autoplay) }) {
                     Icon(Icons.Default.AutoAwesome, null, tint = if (st.autoplay) MaterialTheme.colorScheme.primary else LocalContentColorOrDefault())
-                    Text("  " + stringResource(R.string.autoplay), color = if (st.autoplay) MaterialTheme.colorScheme.primary else LocalContentColorOrDefault())
+                    Text("  " + stringResource(R.string.autoplay), maxLines = 1, softWrap = false, color = if (st.autoplay) MaterialTheme.colorScheme.primary else LocalContentColorOrDefault())
                 }
-                TextButton({ onAddToPlaylist(track) }) { Text(stringResource(R.string.add_to_playlist)) }
-                TextButton({ onPlayVideo(track) }) { Text(stringResource(R.string.play_video)) }
+                TextButton({ onAddToPlaylist(track) }) { Text(stringResource(R.string.add_to_playlist), maxLines = 1, softWrap = false) }
+                TextButton({ onPlayVideo(track) }) { Text(stringResource(R.string.play_video), maxLines = 1, softWrap = false) }
             }
         }
     }

@@ -69,8 +69,8 @@ class SearchRoutingTest {
         }
     }
 
-    @Test fun all_scope_is_first_and_every_filter_has_a_distinct_backend_identity() {
-        assertEquals(SearchFilter.ALL, SearchFilter.entries.first())
+    @Test fun songs_scope_is_first_and_every_filter_has_a_distinct_backend_identity() {
+        assertEquals(SearchFilter.SONGS, SearchFilter.entries.first())
         assertEquals(SearchFilter.entries.size, SearchFilter.entries.map { it.id }.distinct().size)
     }
 }

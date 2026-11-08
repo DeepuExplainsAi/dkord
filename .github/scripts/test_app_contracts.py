@@ -138,7 +138,7 @@ class AppContractsTest(unittest.TestCase):
         self.assertLess(ui.index("confirmButton ="), ui.index("saved.clearAll()"))
         self.assertIn("onMessage = say", app)
 
-    def test_only_submissions_record_history_and_original_search_and_queue_paths_remain(self):
+    def test_only_submissions_record_history_and_search_selection_does_not_queue_alternative_matches(self):
         controller = read("app/src/main/java/app/dkord/ui/search/SearchController.kt")
         source = read("app/src/main/java/app/dkord/data/search/MusicSearchSource.kt")
         ui = read("app/src/main/java/app/dkord/ui/screens/Search.kt")
@@ -149,13 +149,16 @@ class AppContractsTest(unittest.TestCase):
         self.assertLess(record, controller.index("searchJob = scope.launch", submit))
         for call in ("music.suggestions(query)", "music.search(query, filter)", "music.searchMore("):
             self.assertIn(call, source)
-        self.assertIn("result.value.mapNotNull { it.track }", ui)
-        self.assertIn("onPlay(songs, songs.indexOfFirst", ui)
+        self.assertIn("searchPlaybackQueue(item)", ui)
+        self.assertIn("onPlay(selected, 0)", ui)
+        self.assertNotIn("onPlay(songs, songs.indexOfFirst", ui)
+        shelves = read("app/src/main/java/app/dkord/ui/common/Components.kt")
+        self.assertIn("onPlay(songs, songs.indexOfFirst", shelves)
         self.assertIn("else onItem(item)", ui)
         self.assertIn("vm.loadMore(retry = true)", ui)
         self.assertIn("results == null -> SearchSuggestions", ui)
 
-    def test_manual_search_is_broad_by_default_and_never_hardcodes_the_reported_query(self):
+    def test_manual_search_is_music_first_with_explicit_broad_scopes_and_no_hardcoded_query(self):
         backend = read("app/src/main/java/app/dkord/data/yt/MusicRepository.kt")
         controller = read("app/src/main/java/app/dkord/ui/search/SearchController.kt")
         ui = read("app/src/main/java/app/dkord/ui/screens/Search.kt")
@@ -209,13 +212,47 @@ class AppContractsTest(unittest.TestCase):
         backend = read("app/src/main/java/app/dkord/data/yt/MusicRepository.kt")
         mapper = read("app/src/main/java/app/dkord/data/yt/SearchItems.kt")
         radio = backend[backend.index("suspend fun related("):backend.index("// ---- Browse:")]
-        self.assertIn("it.durationSec in 60..720", radio)
+        policy = read("app/src/main/java/app/dkord/data/yt/RadioTracks.kt")
+        self.assertIn("track.durationSec in 60..720", policy)
+        self.assertIn("musicRadioRecommendations(track, queue", radio)
         self.assertIn("SearchFilter.SONGS", radio)
         self.assertIn("is StreamInfoItem", mapper)
         self.assertIn("i.duration", mapper)
         mapping = mapper[:mapper.index("internal fun searchVideoId(")]
         self.assertNotRegex(mapping, r"\b(?:filter|filterNot)\s*\{|duration\s+(?:in|[<>])")
         self.assertIn("YoutubeStreamLinkHandlerFactory.getInstance().getId(", mapper)
+
+    def test_search_submit_is_outside_the_editable_text_and_placeholder_cannot_wrap(self):
+        ui = read("app/src/main/java/app/dkord/ui/screens/Search.kt")
+        field = ui[ui.index("            OutlinedTextField("):ui.index("        LazyRow(")]
+        self.assertNotIn("leadingIcon", field)
+        self.assertIn("maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis", field)
+        self.assertIn("FilledIconButton({ submitted { vm.search() } }, Modifier.size(48.dp)", field)
+        self.assertLess(field.index("keyboardActions ="), field.index("FilledIconButton("))
+        self.assertIn("Modifier.weight(1f).focusRequester", field)
+
+    def test_player_secondary_controls_wrap_as_buttons_not_letter_by_letter(self):
+        ui = read("app/src/main/java/app/dkord/ui/player/PlayerUi.kt")
+        footer = ui[ui.index("            FlowRow("):ui.index('    if (sheet == "speed")')]
+        self.assertEqual(5, footer.count("maxLines = 1, softWrap = false"))
+        for action in ("sleep_timer", "autoplay", "add_to_playlist", "play_video"):
+            self.assertIn(action, footer)
+
+    def test_autoplay_uses_current_queue_intent_and_invalidates_old_selection_requests(self):
+        player = read("app/src/main/java/app/dkord/player/PlayerController.kt")
+        coordinator = read("app/src/main/java/app/dkord/player/AutoplayCoordinator.kt")
+        self.assertIn("AutoplayCoordinator(scope", player)
+        self.assertIn("playWhenReady = c.playWhenReady", player)
+        self.assertIn("if (resumeEnded && c.playWhenReady && settings.settings.value.autoplay)", player)
+        self.assertIn("settings.settings.map { it.autoplay }.distinctUntilChanged()", player)
+        for method in ("fun play(tracks:", "fun playNext(", "fun addToQueue(", "fun pause()", "fun stop()"):
+            start = player.index(method)
+            self.assertIn("autoplay.invalidate()", player[start:player.index("\n    }", start) + 6])
+        self.assertIn("now.queue.map { it.id } != request.ids", coordinator)
+        self.assertIn("active !== request", coordinator)
+        self.assertIn("currentCoroutineContext().ensureActive()", coordinator)
+        for source in (player, coordinator):
+            self.assertNotIn("SEM CONTROLE", source)
 
     def test_all_junit_annotations_have_function_declarations(self):
         for path in (ROOT / "app/src/test").rglob("*.kt"):

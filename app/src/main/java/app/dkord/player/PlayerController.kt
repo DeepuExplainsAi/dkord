@@ -18,6 +18,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 data class PlayerUiState(
@@ -55,6 +58,11 @@ class PlayerController(
     private var controller: MediaController? = null
     private var connecting = false
     private val pending = ArrayDeque<(MediaController) -> Unit>()
+    private val autoplay = AutoplayCoordinator(scope,
+        source = { track, queue -> music.related(track, queue) },
+        snapshot = ::autoplaySnapshot,
+        append = ::appendAutoplay,
+    )
 
     fun connect() {
         if (controller != null || connecting) return
@@ -64,6 +72,7 @@ class PlayerController(
             .setListener(object : MediaController.Listener {
                 override fun onDisconnected(controller: MediaController) {
                     DebugLog.w("controller", "service disconnected")
+                    autoplay.invalidate()
                     this@PlayerController.controller = null
                     _state.value = PlayerUiState()
                 }
@@ -73,6 +82,7 @@ class PlayerController(
             connecting = false
             runCatching { future.get() }
                 .onSuccess { c ->
+                    autoplay.invalidate()
                     controller = c
                     c.addListener(listener)
                     refresh(c)
@@ -92,6 +102,7 @@ class PlayerController(
     /** Replaces the queue and starts playing [tracks][startIndex]. */
     fun play(tracks: List<Track>, startIndex: Int = 0) = withController { c ->
         if (tracks.isEmpty()) return@withController
+        autoplay.invalidate()
         c.setMediaItems(tracks.map { it.toMediaItem() }, startIndex.coerceIn(0, tracks.lastIndex), 0)
         c.prepare(); c.play()
     }
@@ -99,29 +110,46 @@ class PlayerController(
     fun playTrack(track: Track) = play(listOf(track))
 
     fun playNext(track: Track) = withController { c ->
+        autoplay.invalidate()
         val at = if (c.mediaItemCount == 0) 0 else c.currentMediaItemIndex + 1
         c.addMediaItem(at, track.toMediaItem())
         if (c.mediaItemCount == 1) { c.prepare(); c.play() }
     }
 
     fun addToQueue(track: Track) = withController { c ->
+        autoplay.invalidate()
         c.addMediaItem(track.toMediaItem())
         if (c.mediaItemCount == 1) { c.prepare(); c.play() }
     }
 
-    fun removeFromQueue(index: Int) = withController { if (index in 0 until it.mediaItemCount) it.removeMediaItem(index) }
-    fun moveInQueue(from: Int, to: Int) = withController { if (from != to) it.moveMediaItem(from, to) }
-    fun skipTo(index: Int) = withController { it.seekToDefaultPosition(index); it.play() }
+    fun removeFromQueue(index: Int) = withController {
+        if (index in 0 until it.mediaItemCount) { autoplay.invalidate(); it.removeMediaItem(index) }
+    }
+    fun moveInQueue(from: Int, to: Int) = withController {
+        if (from != to && from in 0 until it.mediaItemCount && to in 0 until it.mediaItemCount) {
+            autoplay.invalidate(); it.moveMediaItem(from, to)
+        }
+    }
+    fun skipTo(index: Int) = withController {
+        if (index in 0 until it.mediaItemCount) { autoplay.invalidate(); it.seekToDefaultPosition(index); it.play() }
+    }
 
-    fun togglePlay() = withController { if (it.isPlaying) it.pause() else { if (it.playbackState == Player.STATE_IDLE) it.prepare(); it.play() } }
-    fun pause() = withController { it.pause() }
-    fun next() = withController { it.seekToNextMediaItem() }
+    fun togglePlay() = withController {
+        if (it.playWhenReady) { autoplay.invalidate(); it.pause() }
+        else { if (it.playbackState == Player.STATE_IDLE) it.prepare(); it.play() }
+    }
+    fun pause() = withController { autoplay.invalidate(); it.pause() }
+    fun next() = withController {
+        if (it.hasNextMediaItem()) it.seekToNextMediaItem()
+        else { autoplay.invalidate(); autoplay.update() }
+    }
     /** Like every music app: restart the track if it is past 3s, otherwise go to the previous one. */
     fun previous() = withController { if (it.currentPosition > 3_000 || !it.hasPreviousMediaItem()) it.seekTo(0) else it.seekToPreviousMediaItem() }
     fun seekTo(ms: Long) = withController { it.seekTo(ms) }
     fun setShuffle(on: Boolean) = withController { it.shuffleModeEnabled = on }
     fun toggleShuffle() = withController { it.shuffleModeEnabled = !it.shuffleModeEnabled }
     fun cycleRepeat() = withController {
+        autoplay.invalidate()
         it.repeatMode = when (it.repeatMode) {
             Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
             Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
@@ -129,7 +157,7 @@ class PlayerController(
         }
     }
     fun setSpeed(speed: Float) = withController { it.setPlaybackSpeed(speed.coerceIn(0.25f, 3f)) }
-    fun stop() = withController { it.stop(); it.clearMediaItems() }
+    fun stop() = withController { autoplay.invalidate(); it.stop(); it.clearMediaItems() }
 
     // Sleep timer runs in the app process on the main thread, next to the service's player.
     fun sleepIn(minutes: Int) = sleepTimer.start(minutes)
@@ -139,31 +167,32 @@ class PlayerController(
     // ---- state ----
 
     private val listener = object : Player.Listener {
-        override fun onEvents(player: Player, events: Player.Events) { refresh(player); maybeAutoplay(player) }
+        override fun onEvents(player: Player, events: Player.Events) {
+            val current = controller ?: return
+            refresh(current)
+            autoplay.update()
+        }
     }
 
-    private var fetchingFor: String? = null
+    private fun autoplaySnapshot(): AutoplaySnapshot? = controller?.let { c ->
+        AutoplaySnapshot(
+            queue = (0 until c.mediaItemCount).map { c.getMediaItemAt(it).toTrack() },
+            index = c.currentMediaItemIndex,
+            enabled = settings.settings.value.autoplay,
+            playWhenReady = c.playWhenReady,
+            repeatOff = c.repeatMode == Player.REPEAT_MODE_OFF,
+            idle = c.playbackState == Player.STATE_IDLE,
+            ended = c.playbackState == Player.STATE_ENDED,
+        )
+    }
 
-    /** Autoplay: when the last (or second to last) track is playing or the queue ended, append related songs. */
-    private fun maybeAutoplay(p: Player) {
-        if (!settings.settings.value.autoplay || p.mediaItemCount == 0) return
-        val ended = p.playbackState == Player.STATE_ENDED
-        val nearEnd = p.currentMediaItemIndex >= p.mediaItemCount - 2
-        if (!ended && !nearEnd) return
-        if (p.repeatMode != Player.REPEAT_MODE_OFF) return
-        val last = p.getMediaItemAt(p.mediaItemCount - 1).toTrack()
-        if (fetchingFor == last.id) return
-        fetchingFor = last.id
-        val queued = (0 until p.mediaItemCount).map { p.getMediaItemAt(it).toTrack() }
-        scope.launch {
-            val more = runCatching { music.related(last, queued) }.getOrDefault(emptyList())
-            val c = controller ?: return@launch
-            val have = (0 until c.mediaItemCount).map { c.getMediaItemAt(it).mediaId }.toSet()
-            val fresh = more.filter { it.id !in have }.take(15)
-            if (fresh.isEmpty()) { fetchingFor = null; return@launch }
-            val firstNew = c.mediaItemCount
-            c.addMediaItems(fresh.map { it.toMediaItem() })
-            if (c.playbackState == Player.STATE_ENDED) { c.seekToDefaultPosition(firstNew); c.prepare(); c.play() }
+    private fun appendAutoplay(tracks: List<Track>, resumeEnded: Boolean) {
+        val c = controller ?: return
+        val firstNew = c.mediaItemCount
+        c.addMediaItems(tracks.map { it.toMediaItem() })
+        // Never undo Pause, Autoplay-off or an end-of-track sleep timer during an async fetch.
+        if (resumeEnded && c.playWhenReady && settings.settings.value.autoplay) {
+            c.seekToDefaultPosition(firstNew); c.prepare(); c.play()
         }
     }
 
@@ -188,6 +217,11 @@ class PlayerController(
     }
 
     init {
+        scope.launch {
+            settings.settings.map { it.autoplay }.distinctUntilChanged().collect { enabled ->
+                if (enabled) autoplay.update() else autoplay.invalidate()
+            }
+        }
         // The seek bar needs a steady position; events alone only fire on state changes.
         scope.launch {
             while (true) {

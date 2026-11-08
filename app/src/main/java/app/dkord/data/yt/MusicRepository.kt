@@ -10,8 +10,8 @@ import org.schabi.newpipe.extractor.search.SearchInfo
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory as F
 
 enum class SearchFilter(internal val id: String) {
-    ALL(F.ALL), VIDEOS(F.VIDEOS), SONGS(F.MUSIC_SONGS), MUSIC_VIDEOS(F.MUSIC_VIDEOS),
-    ALBUMS(F.MUSIC_ALBUMS), ARTISTS(F.MUSIC_ARTISTS), PLAYLISTS(F.MUSIC_PLAYLISTS)
+    SONGS(F.MUSIC_SONGS), ALBUMS(F.MUSIC_ALBUMS), ARTISTS(F.MUSIC_ARTISTS), PLAYLISTS(F.MUSIC_PLAYLISTS),
+    MUSIC_VIDEOS(F.MUSIC_VIDEOS), VIDEOS(F.VIDEOS), ALL(F.ALL)
 }
 
 /** Opaque handle for the next search page. */
@@ -51,17 +51,10 @@ class MusicRepository(private val client: InnerTubeClient) {
      * The plain youtube.com watch-page related list is NOT used (it returns vlogs/normal videos).
      */
     suspend fun related(track: Track, queue: List<Track> = emptyList()): List<Track> = withContext(Dispatchers.IO) {
-        val seen = (queue + track).map { songKey(it.title) }.toMutableSet()
-        fun usable(songs: List<Track>) = songs.distinctBy { it.id }.filter {
-            it.id.isNotBlank() && it.title.isNotBlank() && it.id != track.id &&
-                (it.durationSec == 0L || it.durationSec in 60..720) && seen.add(songKey(it.title))
-        }
-
-        val radio = usable(runCatching { MusicParser.parseWatchNext(client.next(track.id)) }.getOrDefault(emptyList()))
-        radio.ifEmpty {
-            usable(runCatching { search("${track.artist} ${track.title}", SearchFilter.SONGS).items.mapNotNull { it.track } }
-                .getOrDefault(emptyList()))
-        }
+        musicRadioRecommendations(track, queue,
+            fetchRadio = { MusicParser.parseWatchNext(client.next(track.id)) },
+            searchSongs = { query -> search(query, SearchFilter.SONGS).items.mapNotNull { it.track } },
+        )
     }
 
     // ---- Browse: InnerTube WEB_REMIX (personalised when signed in) ----
@@ -98,12 +91,3 @@ class MusicRepository(private val client: InnerTubeClient) {
     }
 
 }
-
-private val VERSION_WORDS = Regex("""\b(slowed|reverb|sped up|speed up|super|ultra|nightcore|lofi|lo-fi|remix|cover|instrumental|8d|bass boosted|official|audio|video|lyrics?)\b""")
-
-/** Same song regardless of "(Slowed)", artist prefix or version tags, so autoplay doesn't queue its own variants. */
-internal fun songKey(title: String): String = title.lowercase()
-    .substringAfter(" - ", title.lowercase())
-    .replace(Regex("""[(\[].*?[)\]]"""), " ")
-    .replace(VERSION_WORDS, " ")
-    .replace(Regex("""[^\p{L}\p{N}]+"""), " ").trim()
