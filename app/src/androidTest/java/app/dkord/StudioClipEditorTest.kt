@@ -50,7 +50,7 @@ class StudioClipEditorTest {
             try {
                 save.assertExists().assertIsDisplayed().assertIsEnabled()
                 // The separate dialog Window must really inherit the requested larger font.
-                val height = save.fetchSemanticsNode().boundsInRoot.height
+                val height = rule.onNodeWithText(saveLabel, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.height
                 val minTextHeight = 20f * rule.activity.resources.displayMetrics.density * fontScale * 0.85f
                 org.junit.Assert.assertTrue("Owner font scale $fontScale must reach dialog text; height=$height expected>=$minTextHeight", height >= minTextHeight)
                 save.performClick()
