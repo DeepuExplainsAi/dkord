@@ -52,13 +52,13 @@ class MusicRadioRepositoryTest {
     @Test
     fun related_keeps_radio_order_and_filters_current_duplicates_and_duration() = runBlocking {
         val result = MusicRepository(client(panel(
-            row("seed"),
-            row("second", duration = "1:00"),
-            row("first", duration = ""),
-            row("second"),
-            row("short", duration = "0:59"),
-            row("long", duration = "12:01"),
-            row("vlog", "MUSIC_VIDEO_TYPE_UGC"),
+            row("seed", title = "Song seed"),
+            row("second", title = "Song second", duration = "1:00"),
+            row("first", title = "Song first", duration = ""),
+            row("second", title = "Song second"),
+            row("short", title = "Song short", duration = "0:59"),
+            row("long", title = "Song long", duration = "12:01"),
+            row("vlog", "MUSIC_VIDEO_TYPE_UGC", title = "Song vlog"),
         ))).related(Track("seed", "Seed song", "Artist"))
         check(result.map { it.id } == listOf("second", "first"))
     }
