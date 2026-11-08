@@ -120,7 +120,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            adb shell settings put secure show_ime_with_hard_keyboard 1
+            bash .github/scripts/prepare_emulator_ime.sh
             chmod +x gradlew
             bash -o pipefail -c './gradlew connectedDebugAndroidTest --stacktrace 2>&1 | tee "$RUNNER_TEMP/dkord-device-build.log"'
       - name: Surface Android device-build diagnostics

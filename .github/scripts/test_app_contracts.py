@@ -333,6 +333,24 @@ class AppContractsTest(unittest.TestCase):
             self.assertIn(entry, native)
         self.assertNotIn("Thread.sleep", native)
 
+    def test_actual_ime_regressions_keep_geometry_and_real_visibility_with_ready_emulator_fixtures(self):
+        workflow = read(".github/workflows/validate-pr.yml")
+        self.assertIn("bash .github/scripts/prepare_emulator_ime.sh", workflow)
+        setup = read(".github/scripts/prepare_emulator_ime.sh")
+        for command in ("KEYCODE_WAKEUP", "dismiss-keyguard", "screen_off_timeout", "ime list -s -a", "ime enable", "ime set", "show_ime_with_hard_keyboard"):
+            self.assertIn(command, setup)
+        helper = read("app/src/androidTest/java/app/dkord/RealImeTestEnvironment.kt")
+        self.assertIn("activity.hasWindowFocus()", helper)
+        self.assertIn("isVisible(WindowInsetsCompat.Type.ime())", helper)
+        self.assertNotIn("Thread.sleep", helper)
+        search = read("app/src/androidTest/java/app/dkord/SearchKeyboardViewportTest.kt")
+        self.assertIn("kotlin.math.abs(bottom - (height - ime)) <= 6 * density", search)
+        self.assertIn('onNodeWithTag("navigation").assertDoesNotExist()', search)
+        self.assertIn("shown = true, timeoutMs = 15_000", search)
+        self.assertIn("shown = false, timeoutMs = 15_000", search)
+        listen = read("app/src/androidTest/java/app/dkord/ListenAgainTest.kt")
+        self.assertIn("shown = true, timeoutMs = 10_000", listen)
+
     def test_all_junit_annotations_have_function_declarations(self):
         for path in (ROOT / "app/src/test").rglob("*.kt"):
             source = path.read_text()

@@ -63,9 +63,11 @@ class SearchKeyboardViewportTest {
     @Test fun larger_font_keeps_the_keyboard_viewport_and_restores_navigation_on_submit() = verify(1.3f)
 
     private fun verify(scale: Float) {
+        prepareRealImeTest()
         rule.activityRule.scenario.onActivity {
             it.enableEdgeToEdge()
             it.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            it.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
         rule.setContent {
             val systemDensity = LocalDensity.current
@@ -101,15 +103,16 @@ class SearchKeyboardViewportTest {
                 }
             }
         }
+        rule.awaitFocusedImeWindow(rule.activity)
         rule.onNodeWithTag("query").performClick().performTextInput("h")
-        rule.waitUntil(15_000) { ime > 0 && height > 0 && bottom > 0 }
+        rule.awaitActualIme(rule.activity, shown = true, timeoutMs = 15_000) { ime > 0 && height > 0 && bottom > 0 }
         rule.waitForIdle()
         rule.onNodeWithTag("navigation").assertDoesNotExist()
         assertTrue("Suggestions stopped at $bottom; keyboard top ${height - ime}; IME $ime",
             kotlin.math.abs(bottom - (height - ime)) <= 6 * density)
         rule.onNodeWithTag("suggestions").assertIsDisplayed()
         rule.onNodeWithTag("query").performImeAction()
-        rule.waitUntil(15_000) { ime == 0 }
+        rule.awaitActualIme(rule.activity, shown = false, timeoutMs = 15_000) { ime == 0 }
         rule.onNodeWithTag("navigation").assertIsDisplayed()
     }
 }

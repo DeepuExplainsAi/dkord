@@ -16,8 +16,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -80,9 +78,11 @@ class ListenAgainTest {
     }
 
     @Test fun hindi_larger_font_local_history_search_and_filters_work_with_real_ime() {
+        prepareRealImeTest()
         rule.activityRule.scenario.onActivity {
             it.enableEdgeToEdge()
             it.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            it.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
         val ctx = rule.activity.createConfigurationContext(Configuration(rule.activity.resources.configuration).apply { setLocale(Locale.forLanguageTag("hi")) })
         val one = Track("one", "तेरी मेरी कहानी", "गायक")
@@ -100,9 +100,10 @@ class ListenAgainTest {
                 }
             }
         }
+        rule.awaitFocusedImeWindow(rule.activity)
         scrollTo("listen-search")
         rule.onNodeWithTag("listen-search").assertIsDisplayed().performClick()
-        rule.waitUntil(10_000) { ViewCompat.getRootWindowInsets(rule.activity.window.decorView)?.isVisible(WindowInsetsCompat.Type.ime()) == true }
+        rule.awaitActualIme(rule.activity, shown = true, timeoutMs = 10_000)
         rule.onNodeWithTag("listen-search").performTextInput("कहानी")
         scrollTo("listen-filters"); rule.onNodeWithTag("listen-filter-LIKED").assertIsDisplayed().performClick()
         scrollTo("listen-track-one"); rule.onNodeWithTag("listen-track-one").assertIsDisplayed().performClick()
