@@ -23,12 +23,12 @@ import androidx.lifecycle.viewModelScope
 import app.dkord.R
 import app.dkord.core.BrowseItem
 import app.dkord.core.Chip
-import app.dkord.core.Page
 import app.dkord.core.Shelf
 import app.dkord.data.yt.MusicRepository
 import app.dkord.ui.common.ErrorBox
 import app.dkord.ui.common.Load
 import app.dkord.ui.common.Loading
+import app.dkord.ui.home.HomePageController
 import app.dkord.ui.common.ShelfRow
 import app.dkord.ui.common.koinVm
 import app.dkord.data.yt.SearchFilter
@@ -40,12 +40,10 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 class HomeViewModel(private val repo: MusicRepository) : ViewModel() {
-    private val _page = MutableStateFlow<Load<Page>>(Load.Loading)
-    val page: StateFlow<Load<Page>> = _page
-    private val _refreshing = MutableStateFlow(false)
-    val refreshing: StateFlow<Boolean> = _refreshing
-    private val _chip = MutableStateFlow<Chip?>(null)
-    val chip: StateFlow<Chip?> = _chip
+    private val controller = HomePageController(repo::home, viewModelScope)
+    val page = controller.page
+    val refreshing = controller.refreshing
+    val chip = controller.chip
 
     private val _extra = MutableStateFlow<List<Shelf>>(emptyList())
     /** Curated shelves (search based), filled in progressively so the page is scrollable even for guests. */
@@ -56,7 +54,7 @@ class HomeViewModel(private val repo: MusicRepository) : ViewModel() {
     private fun loadExtra() {
         viewModelScope.launch {
             val sections = CURATED.map { (title, query) ->
-                async { runCatching { Shelf(title, repo.search(query, SearchFilter.SONGS).items.take(15)) }.getOrNull() }
+                async { runCatching { Shelf(title, repo.search(query, SearchFilter.SONGS).items.take(15), radioHint = query) }.getOrNull() }
             }
             val out = mutableListOf<Shelf>()
             // Keep the declared order, show each shelf as soon as everything before it is ready.
@@ -64,15 +62,8 @@ class HomeViewModel(private val repo: MusicRepository) : ViewModel() {
         }
     }
 
-    fun select(c: Chip?) { _chip.value = if (_chip.value == c) null else c; load() }
-
-    fun load(refresh: Boolean = false) {
-        if (refresh) _refreshing.value = true else _page.value = Load.Loading
-        viewModelScope.launch {
-            _page.value = runCatching { repo.home(_chip.value) }.fold({ Load.Ok(it) }, { Load.Failed(it) })
-            _refreshing.value = false
-        }
-    }
+    fun select(c: Chip?) = controller.select(c)
+    fun load(refresh: Boolean = false) = controller.load(refresh)
 }
 
 private val CHOLIWOOD_WORD = Regex("\\bbhojpuri\\b|भोजपुरी", RegexOption.IGNORE_CASE)
@@ -99,7 +90,12 @@ private val CURATED = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(onItem: (BrowseItem) -> Unit, onPlay: (List<app.dkord.core.Track>, Int) -> Unit, modifier: Modifier = Modifier) {
+fun HomeScreen(
+    onItem: (BrowseItem) -> Unit,
+    onPlay: (List<app.dkord.core.Track>, Int) -> Unit,
+    modifier: Modifier = Modifier,
+    onRelated: (app.dkord.core.Track, String) -> Unit = { track, _ -> onPlay(listOf(track), 0) },
+) {
     val repo: MusicRepository = koinInject()
     val vm = koinVm { HomeViewModel(repo) }
     val page by vm.page.collectAsState()
@@ -126,8 +122,8 @@ fun HomeScreen(onItem: (BrowseItem) -> Unit, onPlay: (List<app.dkord.core.Track>
             is Load.Failed -> LazyColumn(contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (extra.isEmpty()) item("home_error") { ErrorBox(p.error, { vm.load() }, Modifier.padding(8.dp)) }
                 item("new_releases") { NewReleasesSection(onItem, onPlay) }
-                if (recentShelf != null) item("recent") { ShelfRow(recentShelf, onItem, onPlay) }
-                items(extra) { ShelfRow(it, onItem, onPlay) }
+                if (recentShelf != null) item("recent") { ShelfRow(recentShelf, onItem, onPlay, onRelated = onRelated) }
+                items(extra) { ShelfRow(it, onItem, onPlay, onRelated = onRelated) }
             }
             is Load.Ok -> LazyColumn(contentPadding = PaddingValues(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (p.value.chips.isNotEmpty()) item("chips") {
@@ -136,9 +132,13 @@ fun HomeScreen(onItem: (BrowseItem) -> Unit, onPlay: (List<app.dkord.core.Track>
                     }
                 }
                 if (selected == null) item("new_releases") { NewReleasesSection(onItem, onPlay) }
-                if (recentShelf != null && selected == null) item("recent") { ShelfRow(recentShelf, onItem, onPlay) }
-                items(p.value.shelves) { ShelfRow(it.copy(title = choliwoodShelfTitle(it.title, choliwoodName)), onItem, onPlay) }
-                if (selected == null) items(extra) { ShelfRow(it, onItem, onPlay) }
+                if (recentShelf != null && selected == null) item("recent") { ShelfRow(recentShelf, onItem, onPlay, onRelated = onRelated) }
+                items(p.value.shelves) { shelf ->
+                    ShelfRow(shelf.copy(title = choliwoodShelfTitle(shelf.title, choliwoodName),
+                        radioHint = listOfNotNull(selected?.title, shelf.radioHint).filter { it.isNotBlank() }.joinToString(" ")),
+                        onItem, onPlay, onRelated = onRelated)
+                }
+                if (selected == null) items(extra) { ShelfRow(it, onItem, onPlay, onRelated = onRelated) }
                 if (p.value.shelves.isEmpty() && extra.isEmpty()) item("empty") { Text(stringResource(R.string.nothing_here), Modifier.padding(32.dp)) }
             }
         }

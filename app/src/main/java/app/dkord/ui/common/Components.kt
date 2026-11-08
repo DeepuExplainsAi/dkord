@@ -58,6 +58,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -146,16 +148,33 @@ fun ItemCard(item: BrowseItem, onClick: () -> Unit, modifier: Modifier = Modifie
 }
 
 @Composable
-fun ShelfRow(shelf: Shelf, onItem: (BrowseItem) -> Unit, onPlay: ((List<app.dkord.core.Track>, Int) -> Unit)? = null) {
-    // Tapping a song plays the whole shelf from that song, so the next ones follow automatically.
+fun ShelfRow(
+    shelf: Shelf,
+    onItem: (BrowseItem) -> Unit,
+    onPlay: ((List<Track>, Int) -> Unit)? = null,
+    onRelated: ((Track, String) -> Unit)? = null,
+) {
+    // Home opts into single-song related radio; explicit album/category/playlist shelves retain order.
     val songs = remember(shelf) { shelf.items.mapNotNull { it.track } }
     fun click(item: BrowseItem) {
         val t = item.track
-        if (onPlay != null && item.kind == ItemKind.SONG && t != null) onPlay(songs, songs.indexOfFirst { it.id == t.id }.coerceAtLeast(0))
+        if (item.kind == ItemKind.SONG && t != null && onRelated != null) onRelated(t, shelf.radioHint)
+        else if (onPlay != null && item.kind == ItemKind.SONG && t != null) onPlay(songs, songs.indexOfFirst { it.id == t.id }.coerceAtLeast(0))
         else onItem(item)
     }
     Column {
-        if (shelf.title.isNotBlank()) SectionTitle(shelf.title)
+        if (onRelated != null && onPlay != null && songs.isNotEmpty()) {
+            val description = if (shelf.title.isBlank()) stringResource(R.string.shelf_play_all)
+                else stringResource(R.string.shelf_play_all_description, shelf.title)
+            Row(Modifier.fillMaxWidth().padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                SectionTitle(shelf.title, Modifier.weight(1f))
+                TextButton({ onPlay(songs, 0) }, Modifier.semantics { contentDescription = description }) {
+                    Icon(Icons.Default.PlayArrow, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.shelf_play_all), maxLines = 1, softWrap = false)
+                }
+            }
+        } else if (shelf.title.isNotBlank()) SectionTitle(shelf.title)
         LazyRow(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(shelf.items, key = null) { ItemCard(it, onClick = { click(it) }) }
         }

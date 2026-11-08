@@ -15,6 +15,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.put
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
@@ -92,6 +95,41 @@ class MusicRadioRepositoryTest {
             row("long", duration = "12:01"),
             row("vlog", "MUSIC_VIDEO_TYPE_UGC"),
         ))
+    }
+
+    @Test
+    fun repository_uses_actual_provider_metadata_to_keep_hindi_sad_radio_and_rank_relevant_hits() = runBlocking {
+        val seedId = "seedvideo01"
+        val tags = mapOf(seedId to listOf("hindi", "sad"), "hindiniche1" to listOf("hindi", "sad"),
+            "hindihit001" to listOf("hindi", "sad"), "englishhit1" to listOf("english", "sad"),
+            "hindiparty1" to listOf("hindi", "party"), "oldhindi001" to listOf("hindi", "sad", "old classics"))
+        val metadataCalls = AtomicInteger()
+        val http = OkHttpClient.Builder().addInterceptor { chain ->
+            val request = chain.request()
+            check(request.header("Cookie") == null && request.header("Authorization") == null)
+            val body = Buffer().also { checkNotNull(request.body).writeTo(it) }.readUtf8()
+            val video = lenientJson.parseToJsonElement(body).at("videoId").str()!!
+            val response = if (request.url.encodedPath.endsWith("/next")) panel(
+                row("hindiniche1", title = "First melody"), row("englishhit1", title = "Foreign melody"),
+                row("hindihit001", title = "Another melody"), row("hindiparty1", title = "Dance melody"),
+                row("oldhindi001", title = "Vintage melody"),
+            ) else {
+                check(request.url.encodedPath.endsWith("/player"))
+                metadataCalls.incrementAndGet()
+                buildJsonObject { put("videoDetails", buildJsonObject {
+                    put("videoId", video)
+                    put("viewCount", if (video == "hindiniche1") "100" else "100000000")
+                    put("keywords", buildJsonArray { tags.getValue(video).forEach { add(it) } })
+                }) }
+            }
+            Response.Builder().request(request).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body(response.toString().toResponseBody(Http.JSON)).build()
+        }.build()
+        val repo = MusicRepository(InnerTubeClient(CookieSource { error("No cookie/session reads") }, http))
+        val seed = Track(seedId, "Selected melody", "Singer", durationSec = 180)
+        val result = repo.related(seed, listOf(seed), "hindi sad")
+        check(result.map { it.id } == listOf("hindihit001", "hindiniche1"))
+        check(metadataCalls.get() == 6)
     }
 
     private suspend fun assertSearchFallback(radio: JsonElement) {

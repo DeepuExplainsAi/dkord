@@ -157,7 +157,7 @@ fun App() {
                 label = "dest",
             ) { entries ->
                 when (val dest = entries.lastOrNull()) {
-                    null -> TabContent(tab, savedTabs, ::say, { push(Dest.Settings) }, ::push, ::onItem, ::play, { menuTrack = it }, onOpenPlayer = { playerOpen = true }, onSearch = { tab = Tab.SEARCH })
+                    null -> TabContent(tab, savedTabs, ::say, { push(Dest.Settings) }, ::push, ::onItem, ::play, { menuTrack = it }, onOpenPlayer = { playerOpen = true }, onSearch = { tab = Tab.SEARCH }, onRelated = { track, hint -> player.playRelated(track, hint) })
                     is Dest.Detail -> DetailScreen(dest.toItem(), ::pop, ::onItem, ::play, { menuTrack = it }, { pickTracks = it })
                     is Dest.Playlist -> LocalPlaylistScreen(dest.id, ::pop, ::play) { menuTrack = it }
                     Dest.Liked -> LikedScreen(::pop, ::play) { menuTrack = it }
@@ -211,6 +211,7 @@ private fun TabContent(
     onMenu: (Track) -> Unit,
     onOpenPlayer: () -> Unit,
     onSearch: () -> Unit,
+    onRelated: (Track, String) -> Unit,
 ) {
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -239,8 +240,8 @@ private fun TabContent(
             savedTabs.SaveableStateProvider(selected.name) {
                 val m = Modifier.fillMaxSize()
                 when (selected) {
-                    Tab.HOME -> HomeScreen(onItem, onPlay, m)
-                    Tab.SEARCH -> SearchScreen(onItem, onPlay, onMenu, m, onMessage = say)
+                    Tab.HOME -> HomeScreen(onItem, onPlay, m, onRelated = onRelated)
+                    Tab.SEARCH -> SearchScreen(onItem, onPlay, onMenu, m, onMessage = say, onRelated = onRelated)
                     Tab.LISTEN, Tab.REELS -> ListenAgainScreen(onPlay, onMenu, onOpenPlayer, onSearch, say, m)
                     Tab.LIBRARY -> LibraryScreen({ push(Dest.Playlist(it)) }, { push(Dest.Liked) }, { push(Dest.Recent) }, onItem, say, m, onOpenStudio = { push(Dest.Studio()) })
                     Tab.DOWNLOADS -> DownloadsScreen(onPlay, onMenu, m)

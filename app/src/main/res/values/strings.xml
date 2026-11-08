@@ -334,4 +334,8 @@
     <string name="listen_load_failed">Could not read listening history. Retry without clearing your data.</string>
     <string name="listen_action_failed">Could not update history. Your songs and files were not removed.</string>
     <string name="listen_empty_hint">Songs appear here after they actually start playing. Find a song to begin.</string>
+
+    <!-- Home song taps start related radio; whole-shelf playback is explicit. -->
+    <string name="shelf_play_all">Play all</string>
+    <string name="shelf_play_all_description">Play all songs from %1$s</string>
 </resources>

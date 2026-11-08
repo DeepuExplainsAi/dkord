@@ -25,7 +25,8 @@ data class BrowseItem(
     val track: Track? = null,
 )
 
-data class Shelf(val title: String, val items: List<BrowseItem>)
+/** Public discovery intent for Home radio; not a serialized Track or room field. */
+data class Shelf(val title: String, val items: List<BrowseItem>, val radioHint: String = title)
 
 data class Chip(val title: String, val browseId: String, val params: String?)
 

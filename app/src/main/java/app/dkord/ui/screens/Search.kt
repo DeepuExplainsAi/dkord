@@ -101,6 +101,7 @@ class SearchViewModel(repo: MusicRepository, history: SearchHistoryRepository) :
     val suggestionsLoading = controller.suggestionsLoading
     val suggestionsFailed = controller.suggestionsFailed
     val correction = controller.correction
+    val playbackHint = controller.playbackHint
     val hasMore = controller.hasMore
     val loadingMore = controller.loadingMore
     val moreFailed = controller.moreFailed
@@ -121,6 +122,7 @@ fun SearchScreen(
     onMenu: (Track) -> Unit,
     modifier: Modifier = Modifier,
     onMessage: (String) -> Unit = {},
+    onRelated: ((Track, String) -> Unit)? = null,
 ) {
     val repo: MusicRepository = koinInject()
     val saved: SearchHistoryRepository = koinInject()
@@ -132,6 +134,7 @@ fun SearchScreen(
     val suggestionsLoading by vm.suggestionsLoading.collectAsState()
     val suggestionsFailed by vm.suggestionsFailed.collectAsState()
     val correction by vm.correction.collectAsState()
+    val playbackHint by vm.playbackHint.collectAsState()
     val history by saved.state.collectAsState()
     val hasMore by vm.hasMore.collectAsState()
     val loadingMore by vm.loadingMore.collectAsState()
@@ -230,11 +233,7 @@ fun SearchScreen(
                                 }
                             } }
                             items(result.value, key = { "${it.kind.name}:${it.id}" }) { item ->
-                                BrowseRow(item, onClick = {
-                                    val selected = searchPlaybackQueue(item)
-                                    if (selected.isNotEmpty()) onPlay(selected, 0)
-                                    else onItem(item)
-                                }, onMenu = item.track?.let { track -> { onMenu(track) } })
+                                SearchPlaybackRow(item, playbackHint, onItem, onPlay, onMenu, onRelated)
                             }
                             if (result.value.isEmpty()) item("none") {
                                 Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -265,6 +264,25 @@ fun SearchScreen(
         confirmButton = { TextButton({ confirmClear = false; saved.clearAll() }) { Text(stringResource(R.string.search_clear_all)) } },
         dismissButton = { TextButton({ confirmClear = false }) { Text(stringResource(R.string.cancel)) } },
     )
+}
+
+/** The actual result row, also exercised on Android without repository/DI or live networking. */
+@Composable
+internal fun SearchPlaybackRow(
+    item: BrowseItem,
+    contextHint: String,
+    onItem: (BrowseItem) -> Unit,
+    onPlay: (List<Track>, Int) -> Unit,
+    onMenu: (Track) -> Unit,
+    onRelated: ((Track, String) -> Unit)? = null,
+) {
+    BrowseRow(item, onClick = {
+        val selected = searchPlaybackQueue(item)
+        if (selected.isNotEmpty()) {
+            if (onRelated != null) onRelated(selected.single(), contextHint)
+            else onPlay(selected, 0)
+        } else onItem(item)
+    }, onMenu = item.track?.let { track -> { onMenu(track) } })
 }
 
 /** Keep the broad-upload route visible even when an old/narrow search returns some results. */

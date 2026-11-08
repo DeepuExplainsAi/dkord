@@ -334,4 +334,8 @@
     <string name="listen_load_failed">सुनने का इतिहास नहीं पढ़ सके। डेटा साफ किए बिना फिर कोशिश करें।</string>
     <string name="listen_action_failed">इतिहास नहीं बदल सके। आपके गाने और फ़ाइलें नहीं हटाई गईं।</string>
     <string name="listen_empty_hint">गाना चलने पर वह यहाँ दिखेगा। शुरू करने के लिए कोई गाना खोजें।</string>
+
+    <!-- Home song taps start related radio; whole-shelf playback is explicit. -->
+    <string name="shelf_play_all">सभी चलाएँ</string>
+    <string name="shelf_play_all_description">%1$s के सभी गाने चलाएँ</string>
 </resources>

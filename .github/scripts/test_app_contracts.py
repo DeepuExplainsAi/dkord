@@ -267,6 +267,71 @@ class AppContractsTest(unittest.TestCase):
         for source in (player, coordinator):
             self.assertNotIn("SEM CONTROLE", source)
 
+    def test_search_and_home_route_single_song_radio_with_context_and_keep_explicit_play_all(self):
+        app = read("app/src/main/java/app/dkord/ui/App.kt")
+        home = read("app/src/main/java/app/dkord/ui/screens/Home.kt")
+        search = read("app/src/main/java/app/dkord/ui/screens/Search.kt")
+        shelves = read("app/src/main/java/app/dkord/ui/common/Components.kt")
+        self.assertIn("player.playRelated(track, hint)", app)
+        self.assertIn("HomeScreen(onItem, onPlay, m, onRelated = onRelated)", app)
+        self.assertIn("onMessage = say, onRelated = onRelated", app)
+        self.assertIn("radioHint = query", home)
+        self.assertEqual(home.count("ShelfRow("), home.count("onRelated = onRelated"))
+        self.assertIn("NewReleasesSection(onItem, onPlay)", home)
+        home_requests = read("app/src/main/java/app/dkord/ui/home/HomePageController.kt")
+        self.assertIn("HomePageController(repo::home, viewModelScope)", home)
+        self.assertIn("val selected = chip.value", home_requests)
+        self.assertIn("if (id == request)", home_requests)
+        self.assertIn("currentCoroutineContext().ensureActive()", home_requests)
+        self.assertIn("SearchPlaybackRow(item, playbackHint", search)
+        self.assertIn("onRelated(selected.single(), contextHint)", search)
+        self.assertIn("onRelated(t, shelf.radioHint)", shelves)
+        self.assertIn("TextButton({ onPlay(songs, 0) }", shelves)
+        self.assertIn("onPlay(songs, songs.indexOfFirst", shelves)
+
+    def test_contextual_radio_keeps_anonymous_bounded_metadata_and_never_serializes_private_intent(self):
+        client = read("app/src/main/java/app/dkord/data/yt/InnerTubeClient.kt")
+        facts = read("app/src/main/java/app/dkord/data/yt/RadioFactsSource.kt")
+        radio = read("app/src/main/java/app/dkord/data/yt/RadioTracks.kt")
+        for text in ("CookieJar.NO_COOKIES", "Authenticator.NONE", "callTimeout(8", "call.cancel()", "Radio metadata too large"):
+            self.assertIn(text, client)
+        self.assertIn("AudioTrackType.ORIGINAL", facts)
+        self.assertIn("Semaphore(3)", facts)
+        self.assertIn("cache.size > 192", facts)
+        self.assertIn("profiled < 24", radio)
+        self.assertNotIn("ServiceList", facts)
+        self.assertNotIn('at("uploadDate")', facts)
+        models = read("app/src/main/java/app/dkord/core/Models.kt")
+        track = models[models.index("data class Track("):models.index("enum class ItemKind")]
+        private_targets = [track, read("app/src/main/java/app/dkord/player/MediaItems.kt")]
+        private_targets += [p.read_text() for p in (MAIN / "java/app/dkord/data/room").glob("*.kt")]
+        for target in private_targets:
+            for name in ("contextHint", "radioHint", "RadioFacts"):
+                self.assertNotIn(name, target)
+
+    def test_context_and_anchor_are_part_of_autoplay_response_ownership_not_queue_tail_reseeding(self):
+        coordinator = read("app/src/main/java/app/dkord/player/AutoplayCoordinator.kt")
+        controller = read("app/src/main/java/app/dkord/ui/search/SearchController.kt")
+        self.assertIn("val seed = before.radioSeed ?: queue.last()", coordinator)
+        self.assertIn("source(seed, queue, request.hint)", coordinator)
+        self.assertNotIn("source(queue.last(), queue)", coordinator)
+        self.assertIn("now.radioHint != request.hint", coordinator)
+        self.assertIn("request.seedId", coordinator)
+        self.assertIn("mutablePlaybackHint.value = mutableCorrection.value", controller)
+        self.assertIn('mutablePlaybackHint.value = ""', controller)
+        self.assertIn("currentCoroutineContext().ensureActive()", controller)
+
+    def test_related_routing_has_translated_accessible_actions_and_mandatory_actual_device_cases(self):
+        for key in ("shelf_play_all", "shelf_play_all_description"):
+            self.assertIn(key, strings("values"))
+            self.assertIn(key, strings("values-hi"))
+        workflow = read(".github/workflows/validate-pr.yml")
+        self.assertIn("--required-class app.dkord.RelatedPlaybackRoutingTest", workflow)
+        native = read("app/src/androidTest/java/app/dkord/RelatedPlaybackRoutingTest.kt")
+        for entry in ("ShelfRow(", "SearchPlaybackRow(", "Density(density.density, 1.3f)", "performClick()"):
+            self.assertIn(entry, native)
+        self.assertNotIn("Thread.sleep", native)
+
     def test_all_junit_annotations_have_function_declarations(self):
         for path in (ROOT / "app/src/test").rglob("*.kt"):
             source = path.read_text()

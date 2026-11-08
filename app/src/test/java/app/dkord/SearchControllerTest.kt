@@ -519,4 +519,68 @@ class SearchControllerTest {
         assertEquals(MAX_SEARCH_LENGTH, f.source.searches.single().first.length)
         assertEquals(MAX_SEARCH_LENGTH, f.history.state.value.entries.single().query.length)
     }
+
+    @Test fun radio_intent_is_only_published_with_completed_submitted_results_not_typing_or_loading() = runTest {
+        val f = fixture()
+        f.source.find = { _, _ -> delay(50); SearchPage(listOf(song("selected"))) }
+        f.controller.typed("  Hindi   sad songs  "); runCurrent()
+        assertEquals("", f.controller.playbackHint.value)
+        f.controller.search(); runCurrent()
+        assertEquals("", f.controller.playbackHint.value)
+        advanceTimeBy(50); runCurrent()
+        assertEquals("Hindi sad songs", f.controller.playbackHint.value)
+        f.controller.typed("english party"); runCurrent()
+        assertEquals("", f.controller.playbackHint.value)
+        assertNull(f.controller.results.value)
+    }
+
+    @Test fun an_uncancellable_old_response_cannot_replace_the_new_radio_intent() = runTest {
+        val f = fixture()
+        f.source.find = { query, _ ->
+            withContext(NonCancellable) { delay(if (query == "hindi sad") 100 else 5) }
+            SearchPage(listOf(song(query)))
+        }
+        f.controller.search("hindi sad"); runCurrent()
+        f.controller.search("english party"); runCurrent(); advanceTimeBy(5); runCurrent()
+        assertEquals("english party", f.controller.playbackHint.value)
+        advanceTimeBy(95); runCurrent()
+        assertEquals("english party", f.controller.playbackHint.value)
+        assertEquals(listOf("english party"), f.controller.ids())
+    }
+
+    @Test fun provider_correction_changes_radio_intent_only_when_results_were_actually_corrected() = runTest {
+        for (corrected in listOf(false, true)) {
+            val f = fixture()
+            f.source.find = { _, _ -> SearchPage(listOf(song("selected")), correction = SearchCorrection("hindi sad", corrected)) }
+            f.controller.search("hindi sda"); runCurrent()
+            assertEquals(if (corrected) "hindi sad" else "hindi sda", f.controller.playbackHint.value)
+            assertEquals("hindi sda", f.controller.query.value)
+            assertEquals("hindi sda", f.history.state.value.entries.single().query)
+        }
+    }
+
+    @Test fun pagination_keeps_submitted_radio_intent_instead_of_reclassifying_the_queue_from_a_later_page() = runTest {
+        val f = fixture()
+        f.source.find = { _, _ -> SearchPage(listOf(song("one")), Token("next")) }
+        f.source.next = { SearchPage(listOf(song("two")), correction = SearchCorrection("unrelated", true)) }
+        f.controller.search("hindi chill"); runCurrent()
+        f.controller.loadMore(); runCurrent()
+        assertEquals(listOf("one", "two"), f.controller.ids())
+        assertEquals("hindi chill", f.controller.playbackHint.value)
+        assertEquals(1, f.storage.writes)
+    }
+
+    @Test fun clear_and_failed_or_loading_filter_changes_never_retain_previous_radio_intent() = runTest {
+        val f = fixture()
+        f.controller.search("hindi sad"); runCurrent()
+        assertEquals("hindi sad", f.controller.playbackHint.value)
+        f.source.find = { _, _ -> delay(10); throw IOException("offline") }
+        f.controller.setFilter(SearchFilter.ALL); runCurrent()
+        assertEquals("", f.controller.playbackHint.value)
+        advanceTimeBy(10); runCurrent()
+        assertEquals("", f.controller.playbackHint.value)
+        f.controller.clear(); runCurrent()
+        assertEquals("", f.controller.playbackHint.value)
+    }
+
 }
