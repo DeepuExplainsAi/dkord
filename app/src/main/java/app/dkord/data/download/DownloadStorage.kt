@@ -126,11 +126,8 @@ class DownloadStorage(private val context: Context) {
     }
 
     companion object {
-        /** Removes characters Android file systems reject and keeps names a sane length. */
-        fun safeName(artist: String, title: String, ext: String): String {
-            val base = "$artist - $title".replace(Regex("[\\\\/:*?\"<>|\\p{Cntrl}]"), "").replace(Regex("\\s+"), " ").trim().take(120).trim('.', ' ', '-')
-            return "${base.ifBlank { "track" }}.$ext"
-        }
+        /** UTF-8 byte bounded too: Hindi/emoji character counts alone can exceed the filesystem limit. */
+        fun safeName(artist: String, title: String, ext: String): String = downloadFileName(artist, title, ext)
 
         fun uniqueFile(dir: File, name: String): File {
             var f = File(dir, name)

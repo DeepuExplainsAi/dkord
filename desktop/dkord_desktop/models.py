@@ -48,7 +48,13 @@ def safe_name(track: Track, suffix: str) -> str:
     name = re.sub(r'[\x00-\x1f<>:"/\\|?*]', "_", f"{track.artist} - {track.title}").strip(" .")[:160] or "Dkord audio"
     if name.split(".")[0].upper() in {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}:
         name = "Dkord " + name
-    return name + "." + suffix.lstrip(".")
+    suffix = suffix.lstrip(".")
+    if not re.fullmatch(r"[A-Za-z0-9]{1,8}", suffix):
+        raise ValueError("Invalid audio extension")
+    # Linux/Android limit filename components in bytes, not Unicode characters.
+    # Keep metadata intact and leave space for public-copy collision suffixes.
+    name = name.encode("utf-8")[:220].decode("utf-8", errors="ignore").rstrip(" .") or "Dkord audio"
+    return name + "." + suffix
 
 
 def owned_path(root: Path, name: str) -> Path:

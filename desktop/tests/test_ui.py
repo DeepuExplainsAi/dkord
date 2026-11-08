@@ -84,4 +84,12 @@ class NativeWidgetTest(unittest.TestCase):
         self.assertEqual([(True,'cleanup committed',0,'existing playlists and offline data')],observations)
         self.assertEqual([],self.provider.calls)
 
+    def test_theme_choice_persists_without_changing_likes_or_original_audio(self):
+        track=Track('online00001','संगवारी','Artist');self.window.store.like(track,True)
+        file=Path(self.temp.name)/'theme-original.wav';tone(file);before=file.read_bytes()
+        self.window.apply_theme('light');self.app.processEvents()
+        reopened=Store(self.window.store.root)
+        self.assertEqual('light',reopened.setting('theme'));self.assertEqual([track],reopened.library('liked'))
+        self.assertEqual(before,file.read_bytes());self.assertTrue(self.window.player.source().isEmpty())
+
 if __name__=='__main__':unittest.main()

@@ -127,4 +127,13 @@ class CoreTest(unittest.TestCase):
         self.assertNotIn('/',safe_name(self.track,'m4a'))
         self.assertIsNone(provider_track({'videoId':'../bad','title':'No'}));self.assertEqual(self.track.id,provider_track({'videoId':self.track.id,'title':'Real','artists':[{'name':'Singer'}]}).id)
 
+    def test_long_unicode_device_names_are_byte_bounded_and_real_copies_succeed(self):
+        track=Track(self.track.id,'संगवारी🎧'*150,'गायक'*100)
+        name=safe_name(track,'wav');self.assertLessEqual(len(name.encode('utf-8')),240)
+        self.assertEqual(name,name.encode('utf-8').decode('utf-8'))
+        folder=self.root/'Music';first=publish_device(self.input,folder,name);second=publish_device(self.input,folder,name)
+        self.assertNotEqual(first,second);self.assertEqual(self.input.read_bytes(),first.read_bytes());self.assertEqual(first.read_bytes(),second.read_bytes())
+        self.assertTrue(self.input.exists());self.assertEqual('संगवारी🎧'*150,track.title)
+        with self.assertRaises(ValueError):safe_name(track,'../wav')
+
 if __name__=='__main__':unittest.main()

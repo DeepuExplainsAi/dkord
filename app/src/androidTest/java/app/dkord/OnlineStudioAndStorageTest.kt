@@ -92,7 +92,9 @@ class OnlineStudioAndStorageTest {
         val storage = DownloadStorage(isolated(dir))
         var device: String? = null
         try {
-            val bytes = wave(); val name = "Dkord-test-${studioId()}.wav"
+            val bytes = wave(); val name = DownloadStorage.safeName("Dkord-test-${studioId()}", "संगवारी 🎧 ".repeat(40), "wav")
+            assertTrue("Unicode leaf name must leave room below255 filesystem bytes", name.toByteArray(Charsets.UTF_8).size <= 240)
+            assertEquals(name, String(name.toByteArray(Charsets.UTF_8), Charsets.UTF_8))
             val part = File(dir, "part").apply { writeBytes(bytes) }
             val private = storage.publishPrivate(part, name)
             assertTrue(storage.isPrivate(private)); assertTrue(storage.exists(private)); assertFalse(part.exists())

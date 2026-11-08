@@ -105,7 +105,7 @@ class UpdateTest(unittest.TestCase):
                 self.assertEqual(body,target.read_bytes());self.assertEqual(b'existing user database',sentinel.read_bytes())
                 # Represents main's post-event-loop / worker-drain / QLockFile-unlock callback.
                 after_release();launch.assert_called_once()
-                self.assertEqual([str(target)],launch.call_args.args[0]);self.assertEqual('1',launch.call_args.kwargs['env']['PYINSTALLER_RESET_ENVIRONMENT'])
+                self.assertEqual([str(target.resolve())],launch.call_args.args[0]);self.assertEqual('1',launch.call_args.kwargs['env']['PYINSTALLER_RESET_ENVIRONMENT'])
                 target.write_bytes(b'corrupt replacement')
                 with self.assertRaises(ValueError):after_release()
                 launch.assert_called_once();self.assertEqual(b'existing user database',sentinel.read_bytes())

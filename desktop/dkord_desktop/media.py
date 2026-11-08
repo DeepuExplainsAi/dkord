@@ -51,7 +51,9 @@ def probe(file: Path) -> int:
 
 def atomic_copy(source: Path, target: Path, event: threading.Event | None = None) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
-    stage = target.parent / ("." + target.name + "." + str(uuid4()) + ".part")
+    # Independent short staging leaf: an already-valid long Unicode name must not
+    # overflow the filesystem limit when a UUID is appended for atomic publication.
+    stage = target.parent / (".dkord-" + str(uuid4()) + ".part")
     try:
         with source.open("rb") as src, stage.open("xb") as dst:
             while data := src.read(256 * 1024):

@@ -21,7 +21,7 @@ with log.open('w',encoding='utf-8') as file:
         print(line,end='',flush=True);file.write(line);file.flush();tail.append(line)
     code=process.wait()
 if code:
-    text=(''.join(tail) or 'Native process exited without stdout; consult self-test report.').strip()[-10000:]
+    text=(''.join(tail) or 'Native process exited without stdout; consult self-test report.').strip()[-2800:]
     text=text.replace('%','%25').replace('\r','%0D').replace('\n','%0A')
     print(f'::error title=Desktop {phase} failed (exit {code})::{text}',flush=True)
 raise SystemExit(code)
