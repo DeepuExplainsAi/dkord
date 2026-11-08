@@ -514,7 +514,7 @@ class MainWindow(QMainWindow):
         # A 1024px desktop with the queue dock must not squeeze words into vertical
         # letters or clip repeat/speed controls; the same controls still work at1360+.
         top=QHBoxLayout();self.now=label("Nothing playing");self.now.setMaximumWidth(420);self.now.setMinimumWidth(0);self.now.setWordWrap(False)
-        self.now_artist=label("Choose a song to start","muted");self.now_artist.setWordWrap(False);self.now_artist.setMinimumWidth(0)
+        self.now_artist=label("Choose a song to start","muted");self.now_artist.setWordWrap(False);self.now_artist.setMinimumWidth(0);self.now_artist.setMaximumWidth(420)
         info=QVBoxLayout();info.addWidget(self.now);info.addWidget(self.now_artist);top.addLayout(info,1)
         self.previous_button=button("◀",lambda:self.next_track(-1));self.previous_button.setToolTip("Previous")
         self.play_button=button("Play",self.toggle,True);self.play_button.setObjectName("play-toggle")
