@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -79,7 +80,12 @@ internal fun ClipEditor(edit: ClipEdit, repo: StudioRepository, dismiss: () -> U
  * and constrain the whole card above the real IME, including narrow/large-font Hindi layouts. */
 @Composable
 private fun RangeEditorDialog(title: String, valid: Boolean, dismiss: () -> Unit, save: () -> Unit, content: @Composable () -> Unit) {
+    val ownerContext = LocalContext.current
+    val ownerDensity = LocalDensity.current
     Dialog(onDismissRequest = dismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        // A new Android Window provides its own platform locals; retain the owner language and
+        // accessibility density rather than reverting to application/device defaults.
+        CompositionLocalProvider(LocalContext provides ownerContext, LocalDensity provides ownerDensity) {
         Box(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp), contentAlignment = Alignment.Center) {
             Surface(Modifier.widthIn(max = 560.dp).fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh, tonalElevation = 6.dp) {
@@ -93,6 +99,7 @@ private fun RangeEditorDialog(title: String, valid: Boolean, dismiss: () -> Unit
                     }
                 }
             }
+        }
         }
     }
 }

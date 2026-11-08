@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
@@ -44,7 +45,21 @@ class StudioClipEditorTest {
             rule.onNodeWithTag("studio-start").performTextInput("0.123")
             rule.onNodeWithTag("studio-end").performScrollTo().performTextClearance()
             rule.onNodeWithTag("studio-end").performTextInput("1.234")
-            rule.onNodeWithText(ctx.getString(R.string.save)).assertIsDisplayed().assertIsEnabled().performClick()
+            val saveLabel = ctx.getString(R.string.save)
+            val save = rule.onNodeWithText(saveLabel)
+            try {
+                save.assertExists().assertIsDisplayed().assertIsEnabled()
+                // The separate dialog Window must really inherit the requested larger font.
+                val height = save.fetchSemanticsNode().boundsInRoot.height
+                val minTextHeight = 20f * rule.activity.resources.displayMetrics.density * fontScale * 0.85f
+                org.junit.Assert.assertTrue("Owner font scale $fontScale must reach dialog text; height=$height expected>=$minTextHeight", height >= minTextHeight)
+                save.performClick()
+            } catch (e: AssertionError) {
+                val matches = rule.onAllNodesWithText(saveLabel).fetchSemanticsNodes().map { it.boundsInRoot }
+                val actual = rule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)).fetchSemanticsNodes()
+                    .flatMap { it.config[SemanticsProperties.Text].map { text -> text.text } }.joinToString(" | ").take(320)
+                throw AssertionError("Expected Save=$saveLabel font=$fontScale matches=$matches; actual labels=$actual; ${e.message?.lineSequence()?.firstOrNull()}", e)
+            }
             rule.runOnIdle { assertEquals(123L to 1234L, saved) }
         } finally { dir.deleteRecursively() }
     }
