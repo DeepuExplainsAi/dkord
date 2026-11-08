@@ -380,9 +380,10 @@ class AppContractsTest(unittest.TestCase):
     def test_release_push_is_only_the_explicit_versioned_request_and_keeps_original_gates(self):
         workflow = read(".github/workflows/release.yml")
         self.assertIn("branches: [arena/59a2f745-dkord]", workflow)
-        self.assertIn("paths: [.github/release-requests/v0.9.0.json]", workflow)
+        self.assertIn("paths: [.github/release-requests/v0.9.1.json]", workflow)
         self.assertNotIn("paths: [.github/release-requests/v0.8.2.json]", workflow)
-        self.assertIn("TAG: ${{ inputs.tag || 'v0.9.0' }}", workflow)
+        self.assertNotIn("paths: [.github/release-requests/v0.9.0.json]", workflow)
+        self.assertIn("TAG: ${{ inputs.tag || 'v0.9.1' }}", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("if: github.event_name == 'push'", workflow)
         self.assertLess(workflow.index("validate_release_request.py"),
@@ -402,7 +403,8 @@ class AppContractsTest(unittest.TestCase):
         workflow = read(".github/workflows/release.yml")
         gates = ["Validate release tag against app version", "python3 -B -m unittest discover",
                  "Require the existing stable signing key", "./gradlew testDebugUnitTest assembleDebug",
-                 "Verify and prepare release APK", "python3 -B .github/scripts/verify_apk_update.py", "gh release create"]
+                 "Verify and prepare release APK", "python3 -B .github/scripts/verify_apk_update.py",
+                 "Require successful full Android validation of this exact release head", "gh release create"]
         positions = [workflow.index(gate) for gate in gates]
         self.assertEqual(positions, sorted(positions))
         self.assertNotIn("gh release delete", workflow)
@@ -413,6 +415,21 @@ class AppContractsTest(unittest.TestCase):
         self.assertIn('applicationId = "app.dkord"', gradle)
         self.assertIn('keyAlias = "dkord"', gradle)
         self.assertRegex(gradle, r'versionName\s*=\s*"\d+\.\d+\.\d+"')
+
+    def test_v091_publication_waits_for_its_own_full_android_run_and_has_current_honest_notes(self):
+        workflow = read(".github/workflows/release.yml")
+        for requirement in ('actions: read', 'checks: read', '/actions/workflows/validate-pr.yml/runs',
+                            '-f head_sha="$GITHUB_SHA" -f event=pull_request -f per_page=1',
+                            'gh run watch "$validation_id"', '--exit-status --interval 30',
+                            'No matching-head PR validation found', 'exit 1',
+                            '## New in v0.9.1', 'Shorts/Reels removed completely', 'Listen Again',
+                            '378 JVM tests', '19 real Android emulator cases',
+                            'Dkord-v0.9.1.apk', 'versionCode13', 'physical-phone/OEM',
+                            'not account-personalized YouTube Music AI'):
+            self.assertIn(requirement, workflow)
+        self.assertNotIn('gh run rerun', workflow)
+        self.assertNotIn('## New in v0.9.0', workflow)
+        self.assertNotIn('Genuine Shorts:', workflow)
 
     def test_unwanted_shorts_feed_is_removed_not_hidden_behind_another_name(self):
         for path in ("app/src/main/java/app/dkord/data/shorts/ShortsRepository.kt",

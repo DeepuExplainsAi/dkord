@@ -4,20 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag matching app versionName (for example v0.9.0)'
+        description: 'Release tag matching app versionName (for example v0.9.1)'
         required: true
         type: string
 
   # One explicit owner-authorized release request, never ordinary PR/code pushes.
   push:
     branches: [arena/59a2f745-dkord]
-    paths: [.github/release-requests/v0.9.0.json]
+    paths: [.github/release-requests/v0.9.1.json]
 
 permissions:
   contents: write
+  actions: read
+  checks: read
 
 concurrency:
-  group: release-${{ inputs.tag || 'v0.9.0' }}
+  group: release-${{ inputs.tag || 'v0.9.1' }}
   cancel-in-progress: false
 
 jobs:
@@ -25,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      TAG: ${{ inputs.tag || 'v0.9.0' }}
+      TAG: ${{ inputs.tag || 'v0.9.1' }}
     steps:
       - uses: actions/checkout@v7
       - name: Validate the explicit trusted-branch release request
@@ -108,24 +110,39 @@ jobs:
           gh release download "$previous_tag" --repo "$GITHUB_REPOSITORY" \
             --pattern '*.apk' --dir "$RUNNER_TEMP/previous-apk"
           python3 -B .github/scripts/verify_apk_update.py
+      - name: Require successful full Android validation of this exact release head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          validation_id=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/validate-pr.yml/runs" \
+            -f head_sha="$GITHUB_SHA" -f event=pull_request -f per_page=1 \
+            --jq '.workflow_runs[0].id // empty')
+          if [[ ! "$validation_id" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::No matching-head PR validation found. Refusing to publish without full Android/device validation."
+            exit 1
+          fi
+          gh run watch "$validation_id" --repo "$GITHUB_REPOSITORY" --exit-status --interval 30
       - name: Create latest release with APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           printf 'Dkord %s\n\n' "$TAG" > "$RUNNER_TEMP/release-notes.md"
           cat >> "$RUNNER_TEMP/release-notes.md" <<'NOTES'
-          ## New in v0.9.0
-          - Search keyboard/insets repair: one app-shell IME owner, consumed nested padding and keyboard-aware bottom controls avoid duplicate reserved space. Submit, keyboard Search, clear, history, suggestions and explicit search scopes are preserved.
-          - Genuine Shorts: native provider videos in a vertical feed, paged creator Shorts discovery, one active clip player and lifecycle/headset cleanup. Find full song opens an editable Songs lookup; choose the matching song explicitly. Original-song attribution is not verified and a guessed first result is never silently played.
-          - Real Mashup Studio: open from Library or a song menu, import readable non-DRM phone audio or completed Dkord downloads, choose arbitrary valid millisecond start/end or duration ranges, reuse sources, reorder/remove clips and preview.
-          - Merge produces one actual playable AAC/M4A file on-device, not a queue or playlist. Persistent projects, frozen export inputs, foreground progress/cancel and incomplete-output cleanup are included. Saved audio supports playback, playlists, file sharing and Save a copy.
-          - English/Hindi UI and a keyboard-safe editor footer with owner language/accessibility font inheritance. Private project inputs are not exposed by audio sharing; generated local tracks do not fall through to remote stream/radio/lyrics/video or room lookup.
-          - Existing selected-song-first playback, guarded diverse radio, downloads, recents/pins, rooms, settings, visible Choliwood naming and original signing/update safety are retained. No global colour/theme replacement.
+          ## New in v0.9.1
+          - Shorts/Reels removed completely. The replacement Listen / Listen Again tab is audio-first: resume the actual saved/current song and queue at its position, search real local listening history, browse real dates, and filter liked or completed-download history.
+          - Individual history rows play the chosen song; Play these songs is a separate full-list action. History management removes only history entries, not songs, likes, playlists, downloads, exported files or the current queue. Existing saved Shorts tabs migrate directly to Listen.
+          - Search and ordinary Home song taps start the exact selected song, then use one pinned selection context for related anonymous music radio across batches. Known language/mood/era incompatibilities are filtered before shared-style, genuine provider-view and provider-rank relevance; broad artist-only fallback and uninspected filler are removed.
+          - Same-song/base-song/version and long-mix guards remain. Pause, sleep, Autoplay-off, repeat, rapid selection and manual queue edits retain cancellation/result-time ownership protections: no stale append or forced resume.
+          - Home has a separate accessible English/Hindi Play all action. Explicit playlist/album/category/New Releases full-shelf playback remains intact; New Releases stays collapsed by default and visible Choliwood naming is retained.
+          - Completed Search submissions/provider corrections and owned Home chip/page responses supply session-private recommendation intent; typing and stale requests cannot change it. Private intent is not persisted or sent in Track, MediaItem or room metadata.
+          - Preserve the keyboard/footer repairs, English-default/explicit Hindi interface, downloads, Library, metadata-only rooms, optional ordinary song video/link search and real on-device Mashup Studio from v0.9.0. No replacement colour/theme or account/cookie login is added.
 
           ## Validation and limits
-          The application source passed 300 JVM tests and all 9 real Android device regressions, including actual mixed-format AAC decode/range/order, cancellation, persistence, foreground saved-output registration and English/Hindi real-keyboard editor layout. These tests do not establish full Search-screen/physical-phone/OEM/live-provider acceptance. Provider/account/region/format restrictions and device codec/storage limits still apply; original-song links are not guaranteed. Only accessible non-DRM audio is supported. External document-provider failure can leave a partial user-selected Save-copy document; arbitrary user documents are never deleted automatically.
+          Publication requires fresh full Android validation on this exact release head: APK compile, 378 JVM tests and all 19 real Android emulator cases, including Search keyboard/viewport/navigation, Hindi large-font Listen search, related-routing, Studio editor, decoded audio/export/cancellation and saved-output publication checks, without skips. The signed pipeline also reruns the full unit suite and verifies the actual previous/new APK package, signing certificates and increasing version code before publication. Python/source checks are additional guards, not substitutes for Android execution.
 
-          Install **Dkord-v0.9.0.apk** over your existing Dkord app, without uninstalling, to retain playlists, likes, downloads and settings. Same app.dkord package and original signing key; versionCode12 increases from v0.8.2/code11. The release pipeline checks actual old/new APK package/signatures/version compatibility before publication. PR #7 is not merged by this release.
+          Related autoplay is best-effort metadata/context matching, not account-personalized YouTube Music AI or acoustic mood recognition. Unknown or provider-mislabeled language/mood/era can limit quality; weak/offline evidence can produce fewer recommendations rather than invented songs or unrelated padding. Live-provider similarity, physical-phone/OEM behavior and phone update/data-retention smoke remain unverified. Previous intermittent CI Window-focus failures have diagnostic coverage; their underlying cause is not claimed permanently fixed. Existing provider/account/region, readable non-DRM audio, codec/storage and document-provider limits still apply.
+
+          Install **Dkord-v0.9.1.apk** over the existing Dkord app, **without uninstalling or resetting data**. It keeps app.dkord and the original signing key; versionCode13 increases from v0.9.0/code12. Existing binary install-over compatibility gates are mandatory, not a claim of a completed physical-phone install. Previous releases are preserved. PR #7 remains unmerged; this release does not merge main.
           NOTES
           gh release create "$TAG" "$RELEASE_APK" --latest --target "$GITHUB_SHA" \
             --title "Dkord ${TAG}" --notes-file "$RUNNER_TEMP/release-notes.md"
