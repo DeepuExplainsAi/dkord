@@ -1,6 +1,6 @@
-# 0.9.1 development acceptance checks — UNPUBLISHED; not a pass report
+# v0.9.1 phone/live acceptance checks — unexecuted; not a pass report
 
-CI and phone/live-provider checks are different. Exact completed run proof is in `HANDOFF.md`; this checklist is **not** a record of phone passes. Never uninstall/reset data to test an update; future official APKs must use the existing package/key and a fresh greater version code.
+v0.9.1/code13 is [published](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.9.1). CI and phone/live-provider checks are different. Exact completed run proof is in `HANDOFF.md`; this checklist is **not** a record of phone passes. Never uninstall/reset data to test an update; official APKs must use the existing package/key and a fresh greater version code.
 
 ## Search keyboard / navigation
 - English and explicitly selected Hindi; narrow portrait, landscape and larger system fonts.
