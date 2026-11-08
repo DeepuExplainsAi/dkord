@@ -352,6 +352,13 @@ class AppContractsTest(unittest.TestCase):
         listen = read("app/src/androidTest/java/app/dkord/ListenAgainTest.kt")
         self.assertIn("shown = true, timeoutMs = 10_000", listen)
 
+    def test_real_ime_timeout_reports_actual_focus_owner_and_keyguard_without_guessing_or_dismissing_it(self):
+        helper = read("app/src/androidTest/java/app/dkord/RealImeTestEnvironment.kt")
+        for diagnostic in ('executeShellCommand("dumpsys window")', "mCurrentFocus=", "mFocusedApp=", "isKeyguardLocked", "isDeviceLocked", "isAttachedToWindow", "decor.isShown"):
+            self.assertIn(diagnostic, helper)
+        self.assertNotIn("KEYCODE_BACK", helper)
+        self.assertNotIn("statusbar collapse", helper)
+
     def test_all_junit_annotations_have_function_declarations(self):
         for path in (ROOT / "app/src/test").rglob("*.kt"):
             source = path.read_text()
