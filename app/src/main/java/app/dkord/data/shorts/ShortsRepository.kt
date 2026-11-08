@@ -46,5 +46,5 @@ internal fun uniqueClips(existing: List<MusicClip>, candidates: List<MusicClip>)
 }
 
 /** Only an editable lookup hint, NEVER a claimed original-song attribution or auto-played guess. */
-internal fun fullSongQuery(clip: MusicClip): String = clip.title.replace(Regex("#[\\p{L}\\p{N}_]+"), " ")
+internal fun fullSongQuery(clip: MusicClip): String = clip.title.replace(Regex("#[\\p{L}\\p{M}\\p{N}_]+"), " ")
     .replace(Regex("\\s+"), " ").trim().ifBlank { clip.title }.take(200)

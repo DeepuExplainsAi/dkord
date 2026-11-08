@@ -50,6 +50,15 @@ jobs:
               suite = ET.parse(report).getroot()
               for key in totals:
                   totals[key] += int(suite.attrib.get(key, 0))
+              for case in suite.findall('testcase'):
+                  failure = case.find('failure')
+                  if failure is None:
+                      failure = case.find('error')
+                  if failure is not None:
+                      detail = (failure.attrib.get('message') or failure.text or '').splitlines()[0:1]
+                      message = f"{case.attrib.get('classname', suite.attrib.get('name', ''))}.{case.attrib.get('name', '')}: {' '.join(detail)[:600]}"
+                      message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+                      print('::error title=Android JUnit failure::' + message)
           passed = totals['tests'] - totals['failures'] - totals['errors'] - totals['skipped']
           if reports:
               message = (f"{totals['tests']} JUnit test cases: {passed} passed, "
