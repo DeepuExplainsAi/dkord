@@ -40,3 +40,12 @@ v0.9.1/code13 is [published](https://github.com/DeepuExplainsAi/dkord/releases/t
 - No replacement signing key, version/tag reuse, release deletion, widened FileProvider root, credentials in logs, cloud audio processing or unauthorized release/PR merge.
 
 Android 35 emulator checks do not establish physical-phone/provider behavior or every Android 8–14 storage/foreground-service edge case. Record actual observations separately before authorizing a fresh signed release.
+
+
+## Android co-host rooms (unpublished 0.10.0)
+Exact5ca30b1 source earned [Android432 JVM +38 device](https://github.com/DeepuExplainsAi/dkord/actions/runs/42496445156), all mandatory classes/zero skips. This is protocol/widget/Android-crypto actor proof, not the physical checks below.
+
+- [ ] Three real updated phones: default host-only, one selected co-host, two selected, Everyone and a late joiner; unauthorized local commands never change the room.
+- [ ] Opt into Sync/Follow on listeners, then have each permitted co-host play/pause/change songs/seek from the app player. Confirm creator administration/revocation and that grant/revoke itself never starts audio.
+- [ ] Duplicate names/short member IDs, EN/HI/large font, creator buffering/provider failure, concurrent intents, grant/revoke during delayed network publication, creator offline/reconnect, real Leave/new identity and old/new client combinations.
+- [ ] Confirm headset/notification controls on a guest remain local in this version; no false desktop room or E2EE/private-account claims. Full bounds/compatibility: [ROOM_CONTROLS.md](ROOM_CONTROLS.md).
