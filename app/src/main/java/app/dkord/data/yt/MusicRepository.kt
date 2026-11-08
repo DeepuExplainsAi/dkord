@@ -50,10 +50,11 @@ class MusicRepository(private val client: InnerTubeClient) {
      * Falls back to the YouTube Music "songs" search if no usable radio songs remain after filtering.
      * The plain youtube.com watch-page related list is NOT used (it returns vlogs/normal videos).
      */
-    suspend fun related(track: Track): List<Track> = withContext(Dispatchers.IO) {
+    suspend fun related(track: Track, queue: List<Track> = emptyList()): List<Track> = withContext(Dispatchers.IO) {
+        val seen = (queue + track).map { songKey(it.title) }.toMutableSet()
         fun usable(songs: List<Track>) = songs.distinctBy { it.id }.filter {
             it.id.isNotBlank() && it.title.isNotBlank() && it.id != track.id &&
-                (it.durationSec == 0L || it.durationSec in 60..720)
+                (it.durationSec == 0L || it.durationSec in 60..720) && seen.add(songKey(it.title))
         }
 
         val radio = usable(runCatching { MusicParser.parseWatchNext(client.next(track.id)) }.getOrDefault(emptyList()))
@@ -97,3 +98,12 @@ class MusicRepository(private val client: InnerTubeClient) {
     }
 
 }
+
+private val VERSION_WORDS = Regex("""\b(slowed|reverb|sped up|speed up|super|ultra|nightcore|lofi|lo-fi|remix|cover|instrumental|8d|bass boosted|official|audio|video|lyrics?)\b""")
+
+/** Same song regardless of "(Slowed)", artist prefix or version tags, so autoplay doesn't queue its own variants. */
+internal fun songKey(title: String): String = title.lowercase()
+    .substringAfter(" - ", title.lowercase())
+    .replace(Regex("""[(\[].*?[)\]]"""), " ")
+    .replace(VERSION_WORDS, " ")
+    .replace(Regex("""[^\p{L}\p{N}]+"""), " ").trim()

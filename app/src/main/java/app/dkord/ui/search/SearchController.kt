@@ -30,7 +30,7 @@ class SearchController(
     private val scope: CoroutineScope,
 ) {
     private val mutableQuery = MutableStateFlow("")
-    private val mutableFilter = MutableStateFlow(SearchFilter.ALL)
+    private val mutableFilter = MutableStateFlow(SearchFilter.SONGS)
     private val mutableResults = MutableStateFlow<Load<List<BrowseItem>>?>(null)
     private val mutableSuggestions = MutableStateFlow<List<String>>(emptyList())
     private val mutableSuggestionLoading = MutableStateFlow(false)
@@ -175,7 +175,7 @@ class SearchController(
     fun clear() {
         invalidate()
         mutableQuery.value = ""
-        mutableFilter.value = SearchFilter.ALL
+        mutableFilter.value = SearchFilter.SONGS
         mutableResults.value = null
     }
 

@@ -161,7 +161,7 @@ class AppContractsTest(unittest.TestCase):
         ui = read("app/src/main/java/app/dkord/ui/screens/Search.kt")
         for route in ("ALL(F.ALL)", "VIDEOS(F.VIDEOS)", "MUSIC_VIDEOS(F.MUSIC_VIDEOS)", "SONGS(F.MUSIC_SONGS)"):
             self.assertIn(route, backend)
-        self.assertIn("mutableFilter = MutableStateFlow(SearchFilter.ALL)", controller)
+        self.assertIn("mutableFilter = MutableStateFlow(SearchFilter.SONGS)", controller)
         self.assertIn('fromQuery(query, listOf(filter.id), "")', backend)
         self.assertIn('fromQuery(cursor.query, listOf(cursor.filter.id), "")', backend)
         self.assertIn("SearchFilter.ALL -> R.string.search_all", ui)

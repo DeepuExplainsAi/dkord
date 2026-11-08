@@ -154,8 +154,9 @@ class PlayerController(
         val last = p.getMediaItemAt(p.mediaItemCount - 1).toTrack()
         if (fetchingFor == last.id) return
         fetchingFor = last.id
+        val queued = (0 until p.mediaItemCount).map { p.getMediaItemAt(it).toTrack() }
         scope.launch {
-            val more = runCatching { music.related(last) }.getOrDefault(emptyList())
+            val more = runCatching { music.related(last, queued) }.getOrDefault(emptyList())
             val c = controller ?: return@launch
             val have = (0 until c.mediaItemCount).map { c.getMediaItemAt(it).mediaId }.toSet()
             val fresh = more.filter { it.id !in have }.take(15)

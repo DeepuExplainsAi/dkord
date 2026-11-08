@@ -62,9 +62,9 @@ class SearchControllerTest {
         val f = fixture()
         f.controller.typed("  Arijit   Singh  "); f.controller.search(); runCurrent()
         assertEquals("Arijit Singh", f.controller.query.value)
-        assertEquals(listOf("Arijit Singh" to SearchFilter.ALL), f.source.searches)
+        assertEquals(listOf("Arijit Singh" to SearchFilter.SONGS), f.source.searches)
         assertEquals(listOf("Arijit Singh"), f.controller.ids())
-        assertEquals(listOf(SavedSearch("Arijit Singh", SearchFilter.ALL)), f.history.state.value.entries)
+        assertEquals(listOf(SavedSearch("Arijit Singh", SearchFilter.SONGS)), f.history.state.value.entries)
         assertEquals(1, f.storage.writes)
         advanceTimeBy(1000); runCurrent()
         assertTrue(f.source.suggested.isEmpty())
@@ -286,14 +286,14 @@ class SearchControllerTest {
         assertTrue(f.history.state.value.entries.isEmpty())
     }
 
-    @Test fun new_searches_default_to_all_and_arbitrary_queries_are_not_rewritten() = runTest {
+    @Test fun new_searches_default_to_songs_and_arbitrary_queries_are_not_rewritten() = runTest {
         val f = fixture()
-        assertEquals(SearchFilter.ALL, f.controller.filter.value)
+        assertEquals(SearchFilter.SONGS, f.controller.filter.value)
         for (query in listOf("mashup sad love 1 hour", "Tamil cover unplugged", "भजन nonstop 3 hours", "podcast live remix",
             "Teri meri kahani instrumental", "Teri meri kahani instumental", "Teri meri kahani Instagram version",
             "Teri meri kahani cover by another creator", "karaoke no vocals piano", "slowed reverb 8D remix")) {
             f.controller.search(query); runCurrent()
-            assertEquals(query to SearchFilter.ALL, f.source.searches.last())
+            assertEquals(query to SearchFilter.SONGS, f.source.searches.last())
             assertEquals(listOf(query), f.controller.ids())
         }
     }
@@ -314,10 +314,10 @@ class SearchControllerTest {
         val f = fixture()
         f.controller.search("Old", SearchFilter.SONGS); runCurrent()
         f.controller.clear(); runCurrent()
-        assertEquals(SearchFilter.ALL, f.controller.filter.value)
+        assertEquals(SearchFilter.SONGS, f.controller.filter.value)
         assertEquals(listOf(SavedSearch("Old", SearchFilter.SONGS)), f.history.state.value.entries)
         f.controller.search("New long mix"); runCurrent()
-        assertEquals("New long mix" to SearchFilter.ALL, f.source.searches.last())
+        assertEquals("New long mix" to SearchFilter.SONGS, f.source.searches.last())
     }
 
     @Test fun broadening_a_music_query_keeps_exact_text_and_saves_both_explicit_scopes() = runTest {
@@ -489,11 +489,11 @@ class SearchControllerTest {
         f.source.find = { _, _ -> SearchPage(listOf(song("instrumental-upload")), correction = SearchCorrection(suggested)) }
         f.controller.search(typed); runCurrent()
         assertEquals(typed, f.controller.query.value)
-        assertEquals(typed to SearchFilter.ALL, f.source.searches.single())
-        assertEquals(listOf(SavedSearch(typed, SearchFilter.ALL)), f.history.state.value.entries)
+        assertEquals(typed to SearchFilter.SONGS, f.source.searches.single())
+        assertEquals(listOf(SavedSearch(typed, SearchFilter.SONGS)), f.history.state.value.entries)
         assertEquals(SearchCorrection(suggested), f.controller.correction.value)
         f.controller.search(suggested); runCurrent()
-        assertEquals(suggested to SearchFilter.ALL, f.source.searches.last())
+        assertEquals(suggested to SearchFilter.SONGS, f.source.searches.last())
         assertEquals(listOf(suggested, typed), f.history.state.value.entries.map { it.query })
     }
 
