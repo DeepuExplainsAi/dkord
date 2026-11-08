@@ -4,14 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag matching app versionName (for example v0.9.1)'
+        description: 'Release tag matching app versionName (for example v0.10.0)'
         required: true
         type: string
 
-  # One explicit owner-authorized release request, never ordinary PR/code pushes.
+  # One NEW explicit owner-authorized release request; older requests remain consumed, never ordinary PR/code pushes.
   push:
-    branches: [arena/59a2f745-dkord]
-    paths: [.github/release-requests/v0.9.1.json]
+    branches: [arena/a0209191-dkord]
+    paths: [.github/release-requests/v0.10.0.json]
 
 permissions:
   contents: write
@@ -19,7 +19,7 @@ permissions:
   checks: read
 
 concurrency:
-  group: release-${{ inputs.tag || 'v0.9.1' }}
+  group: release-${{ inputs.tag || 'v0.10.0' }}
   cancel-in-progress: false
 
 jobs:
@@ -27,12 +27,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      TAG: ${{ inputs.tag || 'v0.9.1' }}
+      TAG: ${{ inputs.tag || 'v0.10.0' }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
       - name: Validate the explicit trusted-branch release request
         if: github.event_name == 'push'
-        run: python3 -B .github/scripts/validate_release_request.py
+        run: python3 -B .github/scripts/validate_release_request_v010.py
       - name: Validate release tag against app version
         run: |
           python3 - <<'PY'
@@ -122,27 +124,62 @@ jobs:
             exit 1
           fi
           gh run watch "$validation_id" --repo "$GITHUB_REPOSITORY" --exit-status --interval 30
-      - name: Create latest release with APK
+      - name: Require the exact-head five-host native preview build
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          printf 'Dkord %s\n\n' "$TAG" > "$RUNNER_TEMP/release-notes.md"
-          cat >> "$RUNNER_TEMP/release-notes.md" <<'NOTES'
-          ## New in v0.9.1
-          - Shorts/Reels removed completely. The replacement Listen / Listen Again tab is audio-first: resume the actual saved/current song and queue at its position, search real local listening history, browse real dates, and filter liked or completed-download history.
-          - Individual history rows play the chosen song; Play these songs is a separate full-list action. History management removes only history entries, not songs, likes, playlists, downloads, exported files or the current queue. Existing saved Shorts tabs migrate directly to Listen.
-          - Search and ordinary Home song taps start the exact selected song, then use one pinned selection context for related anonymous music radio across batches. Known language/mood/era incompatibilities are filtered before shared-style, genuine provider-view and provider-rank relevance; broad artist-only fallback and uninspected filler are removed.
-          - Same-song/base-song/version and long-mix guards remain. Pause, sleep, Autoplay-off, repeat, rapid selection and manual queue edits retain cancellation/result-time ownership protections: no stale append or forced resume.
-          - Home has a separate accessible English/Hindi Play all action. Explicit playlist/album/category/New Releases full-shelf playback remains intact; New Releases stays collapsed by default and visible Choliwood naming is retained.
-          - Completed Search submissions/provider corrections and owned Home chip/page responses supply session-private recommendation intent; typing and stale requests cannot change it. Private intent is not persisted or sent in Track, MediaItem or room metadata.
-          - Preserve the keyboard/footer repairs, English-default/explicit Hindi interface, downloads, Library, metadata-only rooms, optional ordinary song video/link search and real on-device Mashup Studio from v0.9.0. No replacement colour/theme or account/cookie login is added.
-
-          ## Validation and limits
-          Publication requires fresh full Android validation on this exact release head: APK compile, 378 JVM tests and all 19 real Android emulator cases, including Search keyboard/viewport/navigation, Hindi large-font Listen search, related-routing, Studio editor, decoded audio/export/cancellation and saved-output publication checks, without skips. The signed pipeline also reruns the full unit suite and verifies the actual previous/new APK package, signing certificates and increasing version code before publication. Python/source checks are additional guards, not substitutes for Android execution.
-
-          Related autoplay is best-effort metadata/context matching, not account-personalized YouTube Music AI or acoustic mood recognition. Unknown or provider-mislabeled language/mood/era can limit quality; weak/offline evidence can produce fewer recommendations rather than invented songs or unrelated padding. Live-provider similarity, physical-phone/OEM behavior and phone update/data-retention smoke remain unverified. Previous intermittent CI Window-focus failures have diagnostic coverage; their underlying cause is not claimed permanently fixed. Existing provider/account/region, readable non-DRM audio, codec/storage and document-provider limits still apply.
-
-          Install **Dkord-v0.9.1.apk** over the existing Dkord app, **without uninstalling or resetting data**. It keeps app.dkord and the original signing key; versionCode13 increases from v0.9.0/code12. Existing binary install-over compatibility gates are mandatory, not a claim of a completed physical-phone install. Previous releases are preserved. PR #7 remains unmerged; this release does not merge main.
-          NOTES
-          gh release create "$TAG" "$RELEASE_APK" --latest --target "$GITHUB_SHA" \
+          native_id=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/validate-desktop.yml/runs" \
+            -f head_sha="$GITHUB_SHA" -f event=pull_request -f per_page=1 \
+            --jq '.workflow_runs[0].id // empty')
+          if [[ ! "$native_id" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::No exact-head native preview run. Refusing to attach old or untested desktop binaries."
+            exit 1
+          fi
+          gh run watch "$native_id" --repo "$GITHUB_REPOSITORY" --exit-status --interval 30
+          echo "NATIVE_RUN_ID=$native_id" >> "$GITHUB_ENV"
+      - name: Download and verify native preview provenance, test reports and actual package hashes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download "$NATIVE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --pattern 'desktop-preview-*' --dir "$RUNNER_TEMP/native-previews"
+          python3 -B .github/scripts/verify_desktop_release_artifacts.py \
+            --root "$RUNNER_TEMP/native-previews" --output "$RUNNER_TEMP/native-release-assets" \
+            --sha "$GITHUB_SHA" --version "${TAG#v}"
+      - name: Create latest release with APK and explicitly experimental desktop previews
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="docs/releases/${TAG}.md"
+          if [ ! -s "$notes" ]; then
+            echo "::error::Missing version-specific honest release notes."
+            exit 1
+          fi
+          cp -- "$notes" "$RUNNER_TEMP/release-notes.md"
+          printf '\nExact release source: `%s`. [Android validation](https://github.com/%s/actions?query=workflow%%3A%%22Validate+pull+request%%22) · [Native preview proof](https://github.com/%s/actions/runs/%s).\n' \
+            "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_REPOSITORY" "$NATIVE_RUN_ID" >> "$RUNNER_TEMP/release-notes.md"
+          export RELEASE_ASSET_DIR="$RUNNER_TEMP/native-release-assets"
+          python3 - <<'PY'
+          import hashlib, os
+          from pathlib import Path
+          folder = Path(os.environ['RELEASE_ASSET_DIR'])
+          apk = Path(os.environ['RELEASE_APK'])
+          files = [apk, *sorted(folder.iterdir())]
+          lines = []
+          for file in files:
+              value = hashlib.sha256()
+              with file.open('rb') as source:
+                  for block in iter(lambda: source.read(1024*1024), b''):
+                      value.update(block)
+              lines.append(value.hexdigest() + '  ' + file.name)
+          (folder/'SHA256SUMS').write_text('\n'.join(lines)+'\n', encoding='utf-8')
+          print('::notice title=Release SHA-256::' + lines[0])
+          PY
+          shopt -s nullglob
+          assets=("$RUNNER_TEMP/native-release-assets/"*)
+          if [ "${#assets[@]}" -ne 13 ]; then
+            echo "::error::Expected7 native packages,5 provenance manifests and SHA256SUMS."
+            exit 1
+          fi
+          gh release create "$TAG" "$RELEASE_APK" "${assets[@]}" --latest --target "$GITHUB_SHA" \
             --title "Dkord ${TAG}" --notes-file "$RUNNER_TEMP/release-notes.md"

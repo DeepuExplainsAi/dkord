@@ -1,0 +1,97 @@
+"""Byte/metadata fixtures only; actual native packages/tests are verified separately in OS CI."""
+import hashlib
+import json
+from pathlib import Path
+import struct
+import tempfile
+import unittest
+from verify_desktop_release_artifacts import TARGETS,KINDS,digest,verify_and_stage
+
+class NativeReleaseProofTest(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
+        self.root=Path(self.temp.name)/'input';self.output=Path(self.temp.name)/'output'
+        self.sha=hashlib.sha1(b'exact release source fixture').hexdigest();self.version='0.10.0'
+        for target in TARGETS:self.target(target)
+    def target(self,target):
+        folder=self.root/('desktop-preview-'+target);folder.mkdir(parents=True)
+        entries=[]
+        for kind in KINDS[target]:
+            file=folder/f'Dkord-desktop-v{self.version}-{target}.{kind}'
+            data=bytearray(256)
+            if kind=='exe':data[:2]=b'MZ';struct.pack_into('<I',data,60,128);data[128:134]=b'PE\0\0'+struct.pack('<H',0x14c)
+            elif kind=='pkg':data[:4]=b'xar!'
+            elif kind=='deb':data[:8]=b'!<arch>\n'
+            else:data[:6]=b'\x7fELF\x02\x01';data[8:11]=b'AI\x02';data[18:20]=(183 if target.endswith('arm64') else 62).to_bytes(2,'little')
+            file.write_bytes(data);entries.append({'name':file.name,'bytes':len(data),'sha256':digest(file)})
+        manifest={'channel':'development-preview','version':self.version,'target':target,'source':self.sha,
+                  'trusted_signed_release':False,'notarized':False,'artifacts':entries}
+        if target.startswith('linux-'):manifest['minimum_glibc']='2.39'
+        self.save(target,manifest)
+        cases=''.join(f'<testcase classname="desktop.tests.{cls}" name="case{i}"/>' for cls in ('CoreTest','UpdateTest','NativeWidgetTest') for i in range(10))
+        (folder/'test-results.xml').write_text('<testsuites><testsuite tests="30" failures="0" errors="0" skipped="0">'+cases+'</testsuite></testsuites>')
+    def folder(self,target='windows-x64'):return self.root/('desktop-preview-'+target)
+    def manifest(self,target='windows-x64'):return json.loads((self.folder(target)/f'preview-{target}.json').read_text())
+    def save(self,target,data):
+        (self.root/('desktop-preview-'+target)/f'preview-{target}.json').write_text(json.dumps(data))
+    def verify(self):return verify_and_stage(self.root,self.output,self.sha,self.version)
+    def test_all_five_targets_stage_seven_packages_and_five_honest_preview_manifests(self):
+        files=self.verify();self.assertEqual(12,len(files));self.assertEqual(7,sum(p.suffix in ('.exe','.pkg','.deb','.AppImage') for p in files))
+        self.assertEqual(5,sum(p.suffix=='.json' for p in files))
+    def test_an_old_source_version_target_or_signing_claim_is_rejected(self):
+        original=self.manifest()
+        for key,value in (('source',hashlib.sha1(b'old').hexdigest()),('version','0.9.1'),('target','linux-x64'),('channel','production'),('trusted_signed_release',True),('notarized',True)):
+            self.save('windows-x64',original|{key:value})
+            with self.subTest(key=key),self.assertRaises(ValueError):self.verify()
+        self.assertFalse(self.output.exists())
+    def test_missing_platform_or_package_is_not_silently_omitted(self):
+        file=next(self.folder('macos-arm64').glob('*.pkg'));file.unlink()
+        with self.assertRaises(ValueError):self.verify()
+    def test_tampered_bytes_even_with_unchanged_size_are_rejected(self):
+        file=next(self.folder().glob('*.exe'));data=bytearray(file.read_bytes());data[-1]^=1;file.write_bytes(data)
+        with self.assertRaises(ValueError):self.verify()
+    def test_wrong_size_duplicate_name_or_traversal_entry_is_rejected(self):
+        original=self.manifest()
+        for changed in ({'bytes':True},{'bytes':255},{'name':'../escape.exe'}):
+            data=json.loads(json.dumps(original));data['artifacts'][0].update(changed);self.save('windows-x64',data)
+            with self.assertRaises(ValueError):self.verify()
+        data=json.loads(json.dumps(original));data['artifacts']*=2;self.save('windows-x64',data)
+        with self.assertRaises(ValueError):self.verify()
+    def test_correct_hash_does_not_allow_an_apk_renamed_as_native_package(self):
+        file=next(self.folder().glob('*.exe'));file.write_bytes(b'PK\x03\x04'+bytes(252))
+        data=self.manifest();data['artifacts'][0]['sha256']=digest(file);self.save('windows-x64',data)
+        with self.assertRaises(ValueError):self.verify()
+    def test_appimage_architecture_is_checked_beyond_filename_and_hash(self):
+        target='linux-arm64';file=next(self.folder(target).glob('*.AppImage'));data=bytearray(file.read_bytes());data[18:20]=(62).to_bytes(2,'little');file.write_bytes(data)
+        meta=self.manifest(target)
+        for entry in meta['artifacts']:
+            if entry['name']==file.name:entry['sha256']=digest(file)
+        self.save(target,meta)
+        with self.assertRaises(ValueError):self.verify()
+    def test_no_skipped_failed_or_missing_native_test_class_can_be_promoted(self):
+        file=self.folder()/'test-results.xml';original=file.read_text()
+        for content in (original.replace('/>','><skipped/></testcase>',1),original.replace('failures="0"','failures="1"'),original.replace('NativeWidgetTest','NotTheRequiredClass')):
+            file.write_text(content)
+            with self.assertRaises(ValueError):self.verify()
+    def test_inconsistent_native_junit_totals_are_rejected(self):
+        file=self.folder()/'test-results.xml';file.write_text(file.read_text().replace('tests="30"','tests="31"'))
+        with self.assertRaises(ValueError):self.verify()
+    def test_preview_symlinks_and_unexpected_extra_files_are_rejected(self):
+        file=self.folder()/'unexpected.txt';file.write_text('not an approved asset')
+        with self.assertRaises(ValueError):self.verify()
+        file.unlink();native=next(self.folder().glob('*.exe'));original=self.root/'binary';native.rename(original);native.symlink_to(original)
+        with self.assertRaises(ValueError):self.verify()
+    def test_no_existing_output_or_duplicate_json_fields_can_be_overwritten(self):
+        self.output.mkdir();(self.output/'old').write_text('keep')
+        with self.assertRaises(ValueError):self.verify()
+        (self.output/'old').unlink();self.output.rmdir()
+        file=self.folder()/'preview-windows-x64.json';text=file.read_text();file.write_text(text[:-1]+',"source":"different"}')
+        with self.assertRaises(ValueError):self.verify()
+    def test_linux_minimum_glibc_is_not_misrepresented(self):
+        data=self.manifest('linux-x64');data['minimum_glibc']='2.34';self.save('linux-x64',data)
+        with self.assertRaises(ValueError):self.verify()
+    def test_nonzero_full_source_sha_and_exact_version_are_required(self):
+        for sha in ('bad','0'*40):
+            with self.assertRaises(ValueError):verify_and_stage(self.root,self.output,sha,self.version)
+
+if __name__=='__main__':unittest.main()

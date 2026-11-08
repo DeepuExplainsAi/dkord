@@ -102,14 +102,17 @@ def linux(target):
     with tempfile.TemporaryDirectory() as temp:
         stage=Path(temp)/'deb';install=stage/'opt/Dkord';install.parent.mkdir(parents=True);shutil.copytree(DIST/'Dkord',install)
         control=stage/'DEBIAN';control.mkdir()
-        glibc='2.39' if arch=='arm64' else '2.34'
+        glibc='2.39' # Both binaries are built on Ubuntu24.04, never promise an untested older libc.
         (control/'control').write_text(f'Package: dkord\nVersion: {__version__}\nSection: sound\nPriority: optional\nArchitecture: {arch}\nMaintainer: DeepuGupta\nDepends: libc6 (>= {glibc}), libgl1, libegl1, libdbus-1-3, libxkbcommon0, libxcb-cursor0, libpulse0\nDescription: Dkord native desktop music and Mashup Studio preview\n')
         binary=stage/'usr/bin';binary.mkdir(parents=True);launcher=binary/'dkord';launcher.write_text('#!/bin/sh\nexec /opt/Dkord/Dkord "$@"\n');launcher.chmod(0o755)
         desktop=stage/'usr/share/applications';desktop.mkdir(parents=True)
         text='[Desktop Entry]\nType=Application\nName=Dkord Desktop Preview\nComment=Music, private offline audio and Mashup Studio\nExec=dkord\nIcon=dkord\nTerminal=false\nCategories=AudioVideo;Audio;Music;\nKeywords=Music;YouTube Music;Offline;Audio editor;Mashup;Choliwood;\n'
         (desktop/'app.dkord.desktop').write_text(text)
         icons=stage/'usr/share/icons/hicolor/256x256/apps';icons.mkdir(parents=True);shutil.copy2(OUT/'dkord.png',icons/'dkord.png')
-        call(['dpkg-deb','--root-owner-group','--build',stage,OUT/f'Dkord-desktop-v{__version__}-{target}.deb'])
+        deb=OUT/f'Dkord-desktop-v{__version__}-{target}.deb'
+        call(['dpkg-deb','--root-owner-group','--build',stage,deb])
+        dependencies=subprocess.check_output(['dpkg-deb','--field',deb,'Depends'],text=True)
+        if 'libc6 (>= 2.39)' not in dependencies:raise RuntimeError('Native Debian package must declare the actual conservative glibc2.39 build baseline')
         appdir=Path(temp)/'Dkord.AppDir';appdir.mkdir();shutil.copytree(DIST/'Dkord',appdir/'usr/lib/Dkord')
         run=appdir/'AppRun';run.write_text('#!/bin/sh\nHERE=$(dirname "$(readlink -f "$0")")\nexec "$HERE/usr/lib/Dkord/Dkord" "$@"\n');run.chmod(0o755)
         (appdir/'app.dkord.desktop').write_text(text);shutil.copy2(OUT/'dkord.png',appdir/'dkord.png')
@@ -139,6 +142,7 @@ def main():
     if not artifacts:raise RuntimeError('No real native packages were produced')
     preview={'channel':'development-preview','version':__version__,'target':args.target,'source':os.environ.get('DKORD_SOURCE_SHA','local'),
              'trusted_signed_release':False,'notarized':False,'artifacts':artifacts}
+    if args.target.startswith('linux-'):preview['minimum_glibc']='2.39'
     (OUT/f'preview-{args.target}.json').write_text(json.dumps(preview,indent=2)+'\n')
     print(json.dumps(preview,indent=2))
 

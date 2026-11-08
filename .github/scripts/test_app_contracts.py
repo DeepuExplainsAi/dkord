@@ -379,14 +379,15 @@ class AppContractsTest(unittest.TestCase):
 
     def test_release_push_is_only_the_explicit_versioned_request_and_keeps_original_gates(self):
         workflow = read(".github/workflows/release.yml")
-        self.assertIn("branches: [arena/59a2f745-dkord]", workflow)
-        self.assertIn("paths: [.github/release-requests/v0.9.1.json]", workflow)
+        self.assertIn("branches: [arena/a0209191-dkord]", workflow)
+        self.assertIn("paths: [.github/release-requests/v0.10.0.json]", workflow)
+        self.assertNotIn("paths: [.github/release-requests/v0.9.1.json]", workflow)
         self.assertNotIn("paths: [.github/release-requests/v0.8.2.json]", workflow)
         self.assertNotIn("paths: [.github/release-requests/v0.9.0.json]", workflow)
-        self.assertIn("TAG: ${{ inputs.tag || 'v0.9.1' }}", workflow)
+        self.assertIn("TAG: ${{ inputs.tag || 'v0.10.0' }}", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("if: github.event_name == 'push'", workflow)
-        self.assertLess(workflow.index("validate_release_request.py"),
+        self.assertLess(workflow.index("validate_release_request_v010.py"),
                         workflow.index("Require the existing stable signing key"))
         self.assertNotRegex(workflow, r"(?m)^\s+(?:pull_request|pull_request_target|schedule):")
         self.assertNotIn("--clobber", workflow)
@@ -416,20 +417,23 @@ class AppContractsTest(unittest.TestCase):
         self.assertIn('keyAlias = "dkord"', gradle)
         self.assertRegex(gradle, r'versionName\s*=\s*"\d+\.\d+\.\d+"')
 
-    def test_v091_publication_waits_for_its_own_full_android_run_and_has_current_honest_notes(self):
+    def test_v010_publication_waits_for_its_own_full_android_and_native_runs_with_honest_notes(self):
         workflow = read(".github/workflows/release.yml")
         for requirement in ('actions: read', 'checks: read', '/actions/workflows/validate-pr.yml/runs',
                             '-f head_sha="$GITHUB_SHA" -f event=pull_request -f per_page=1',
                             'gh run watch "$validation_id"', '--exit-status --interval 30',
                             'No matching-head PR validation found', 'exit 1',
-                            '## New in v0.9.1', 'Shorts/Reels removed completely', 'Listen Again',
-                            '378 JVM tests', '19 real Android emulator cases',
-                            'Dkord-v0.9.1.apk', 'versionCode13', 'physical-phone/OEM',
-                            'not account-personalized YouTube Music AI'):
+                            '/actions/workflows/validate-desktop.yml/runs', 'gh run watch "$native_id"',
+                            'verify_desktop_release_artifacts.py', 'docs/releases/${TAG}.md',
+                            '--sha "$GITHUB_SHA"', 'SHA256SUMS'):
             self.assertIn(requirement, workflow)
+        notes = read('docs/releases/v0.10.0.md')
+        for requirement in ('432 JVM cases', '38 Android35 emulator cases', 'Dkord-v0.10.0.apk',
+                            '14', 'physical-phone/OEM', 'not account-personalized YouTube Music AI',
+                            'experimental desktop previews', 'NOT finished Android feature parity'):
+            self.assertIn(requirement.lower(), notes.lower())
         self.assertNotIn('gh run rerun', workflow)
-        self.assertNotIn('## New in v0.9.0', workflow)
-        self.assertNotIn('Genuine Shorts:', workflow)
+        self.assertNotIn('## New in v0.9.1', workflow)
 
     def test_unwanted_shorts_feed_is_removed_not_hidden_behind_another_name(self):
         for path in ("app/src/main/java/app/dkord/data/shorts/ShortsRepository.kt",

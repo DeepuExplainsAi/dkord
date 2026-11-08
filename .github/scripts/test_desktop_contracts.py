@@ -42,10 +42,11 @@ class DesktopContractsTest(unittest.TestCase):
         self.assertIn('AppId=app.dkord.desktop',installer)
         self.assertNotIn('[UninstallDelete]',installer)
         self.assertNotIn('fallbackToDestructiveMigration',read('app/src/main/java/app/dkord/data/db/AppDatabase.kt'))
-    def test_desktop_and_android_unpublished_version_agree_without_replaying_releases(self):
+    def test_desktop_and_android_prepared_version_agree_without_replaying_releases(self):
         gradle=read('app/build.gradle.kts');desktop=read('desktop/dkord_desktop/__init__.py')
         self.assertEqual(re.search(r'versionName = "([^"]+)"',gradle)[1],re.search(r'__version__ = "([^"]+)"',desktop)[1])
-        self.assertIn('branches: [arena/59a2f745-dkord]',read('.github/workflows/release.yml'))
+        self.assertIn('branches: [arena/a0209191-dkord]',read('.github/workflows/release.yml'))
+        self.assertNotIn('paths: [.github/release-requests/v0.9.1.json]',read('.github/workflows/release.yml'))
         self.assertNotIn('release',read('desktop/packaging/windows.iss').split('[Files]')[1].split('[Icons]')[0].lower())
     def test_android_studio_readiness_includes_recovery_before_observers_can_import(self):
         source=read('app/src/main/java/app/dkord/data/studio/StudioRepository.kt')
@@ -67,4 +68,11 @@ class DesktopContractsTest(unittest.TestCase):
         self.assertEqual(digest,hashlib.sha256((ROOT/'desktop/assets/Node-LICENSE.txt').read_bytes()).hexdigest())
         self.assertNotIn('api.github.com/repos/nodejs/node/contents/LICENSE',build)
         self.assertIn("(runtime/'NODE-LICENSE.txt').write_bytes(license)",build)
+    def test_both_linux_debs_declare_the_actual_conservative_build_baseline(self):
+        build=read('desktop/packaging/build.py')
+        self.assertIn("glibc='2.39'",build)
+        self.assertNotIn("else '2.34'",build)
+        self.assertIn("['dpkg-deb','--field',deb,'Depends']",build)
+        self.assertIn("if 'libc6 (>= 2.39)' not in dependencies",build)
+        self.assertIn("preview['minimum_glibc']='2.39'",build)
 if __name__=='__main__':unittest.main()
