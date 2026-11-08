@@ -31,7 +31,7 @@ def export(apk: Path, apksigner: Path, output: Path):
     if len(verified) != 1 or set(found) != verified:
         raise ValueError('Public root does not match the verified existing APK signing identity')
     digest = next(iter(verified)); data = found[digest]
-    public = x509.load_der_x509509_certificate(data).public_key()
+    public = x509.load_der_x509_certificate(data).public_key()
     if isinstance(public, rsa.RSAPublicKey) and public.key_size >= 2048:
         algorithm = 'rsa-pkcs1-sha256'
     elif isinstance(public, ec.EllipticCurvePublicKey) and isinstance(public.curve, ec.SECP256R1):
