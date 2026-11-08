@@ -1,0 +1,79 @@
+name: Validate pull request
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Validation only: no signing secrets, release writes or published/installer APK artifacts.
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-android-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android tests and APK compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Run resource, app-contract and release-guard regressions
+        run: python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - run: chmod +x gradlew
+      - name: Run the full Android unit suite and build the APK
+        id: android_build
+        run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
+      - name: Summarize executed Android tests
+        if: always()
+        env:
+          ANDROID_BUILD_OUTCOME: ${{ steps.android_build.outcome }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          reports = sorted(Path('app/build/test-results/testDebugUnitTest').glob('TEST-*.xml'))
+          totals = dict.fromkeys(('tests', 'failures', 'errors', 'skipped'), 0)
+          for report in reports:
+              suite = ET.parse(report).getroot()
+              for key in totals:
+                  totals[key] += int(suite.attrib.get(key, 0))
+          passed = totals['tests'] - totals['failures'] - totals['errors'] - totals['skipped']
+          if reports:
+              message = (f"{totals['tests']} JUnit test cases: {passed} passed, "
+                         f"{totals['failures']} failed, {totals['errors']} errors, {totals['skipped']} skipped "
+                         f"({len(reports)} JUnit XML reports).")
+          else:
+              message = 'No Android unit-test reports generated; Android validation is not established.'
+          print('::notice title=Android unit tests::' + message)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write('## Android validation\n\n' + message + '\n\n')
+              summary.write(f"PR head: `{os.environ['PR_HEAD_SHA']}`\n\n")
+              summary.write(f"Checked merge commit: `{os.environ['GITHUB_SHA']}`\n\n")
+              summary.write('Validation only. No release/tag or installable APK artifact is published. '
+                            'Official updates still require the manual Release APK signing/install-over gates.\n')
+          if os.environ.get('ANDROID_BUILD_OUTCOME') == 'success' and (
+                  not reports or passed <= 0 or totals['failures'] or totals['errors']):
+              raise SystemExit('A successful Android build must have real passing JUnit reports and no failed tests.')
+          PY
+      - name: Upload Android unit-test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr-android-unit-test-reports
+          path: |
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore

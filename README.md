@@ -65,10 +65,12 @@ python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
 ./gradlew testDebugUnitTest assembleDebug --stacktrace
 ```
 
-Both GitHub Actions workflows are **manual-only**; a push does not build or publish:
+**Validate pull request** automatically runs for PRs targeting main, including draft PR updates. It uses a read-only token, no signing secrets, and runs the Python checks, full Android unit suite and APK compile. Actual JUnit XML counts and checked PR/merge SHAs are reported; no empty/all-skipped report can establish a successful validation. Only unit-test reports are uploaded—no release/tag or installer APK is published. This is the validation path when the agent cannot dispatch a manual workflow (integration HTTP403). It may still require owner approval if GitHub flags a contributor run.
+
+The existing **Build debug APK** and **Release APK** workflows remain **manual-only**; a push never publishes an update:
 - **Build debug APK** runs the Python regressions, full Android unit suite and debug build, then uploads `dkord-debug-apk`. Without the existing signing secrets, a developer debug APK cannot update an official install.
 - **Release APK** takes a tag matching `versionName` (next prepared tag: `v0.8.2`, versionCode `11`; `v0.8.1` is already published), runs the Python and full Android unit suites/build, requires the existing stable key (`DKORD_KEYSTORE_B64`, `DKORD_KEYSTORE_PASS`, alias `dkord`), and checks the actual old/new APK signatures, package and increasing versionCode. Only then does it create the tag/release page and attach the APK. No previous release is overwritten or removed. Start a **fresh run on the prepared branch**, not a re-run of old jobs.
-- Both workflows preserve Android unit-test reports as an artifact, including failed runs where reports exist. Resource/source/workflow checks are not a substitute for Android compilation, UI/device tests or a real multi-phone room session. Current validation/execution status is recorded in `HANDOFF.md`; pending tests are not claimed as passing.
+- All three workflows preserve Android unit-test reports as an artifact, including failed runs where reports exist. Resource/source/workflow checks are not a substitute for Android compilation, UI/device tests or a real multi-phone room session. Current validation/execution status is recorded in `HANDOFF.md`; pending tests are not claimed as passing.
 
 ## How playback works (and why it can break)
 Streams are resolved on the phone through a chain: NewPipeExtractor, then the YouTube InnerTube ANDROID_VR and IOS clients, then both again with fresh visitor data. Only audio-only streams (m4a/opus) are used. URLs are cached until they expire and re-resolved automatically on HTTP 403.
