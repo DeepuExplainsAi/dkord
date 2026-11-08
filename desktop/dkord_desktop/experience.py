@@ -52,7 +52,7 @@ def branding(title: str, language='en') -> str:
 def stylesheet(mode='dark') -> str:
     p = palette(mode)
     return f'''
-QWidget {{ background:{p['background']}; color:{p['onSurface']}; font-family:'Segoe UI','Noto Sans','Arial'; font-size:14px; }}
+QWidget {{ background:{p['background']}; color:{p['onSurface']}; font-family:'Roboto','Noto Sans Devanagari','Segoe UI','Noto Sans','Arial'; font-size:14px; }}
 QMainWindow,QDialog,QScrollArea,QScrollArea>QWidget>QWidget {{ background:{p['background']}; }}
 QFrame#sidebar {{ border-right:1px solid {p['outlineVariant']}; }}
 QLabel#brand {{ font-size:25px; font-weight:700; }} QLabel#pageTitle {{ font-size:26px; font-weight:700; }}
@@ -64,8 +64,8 @@ QPushButton[primary="true"] {{ background:{p['primary']}; color:{p['onPrimary']}
 QPushButton:disabled {{ color:{p['onSurfaceVariant']}; }}
 QPushButton#nav {{ text-align:left; padding:12px 16px; background:transparent; border:0; border-radius:24px; }}
 QPushButton#nav:checked {{ background:{p['surfaceVariant']}; font-weight:700; }}
-QPushButton#bottom-nav {{ background:transparent; padding:8px 2px; border-radius:0; font-size:11px; }}
-QPushButton#bottom-nav:checked {{ color:{p['primary']}; }}
+QToolButton#bottom-nav {{ background:transparent; padding:8px 2px; border:0; border-radius:0; font-size:11px; min-height:48px; }}
+QToolButton#bottom-nav:checked {{ color:{p['primary']}; }}
 QPushButton#cover-card {{ background:transparent; padding:0; border-radius:8px; }}
 QLineEdit,QComboBox,QSpinBox,QDoubleSpinBox {{ background:{p['surfaceContainerHigh']}; border:1px solid {p['outlineVariant']}; border-radius:18px; padding:9px; selection-background-color:{p['primary']}; }}
 QLineEdit:focus {{ border-color:{p['primary']}; }} QComboBox::drop-down {{ border:0; width:22px; }}

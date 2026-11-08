@@ -377,4 +377,14 @@
     <string name="room_anywhere_title">Your listening room</string>
     <string name="room_anywhere_hint">Play songs or playlists from anywhere in Dkord. Your room stays connected.</string>
     <string name="room_choose_music">Choose songs or playlists</string>
+    <string name="loading">Loading…</string>
+    <string name="all">All</string>
+    <string name="artwork">Artwork</string>
+    <string name="now_playing">Now playing</string>
+    <string name="nothing_playing">Nothing playing</string>
+    <string name="play_all">Play all</string>
+    <string name="volume">Volume</string>
+    <string name="video_playback">Video playback</string>
+    <string name="video_disabled">Enable video playback in Settings to watch a video.</string>
+    <string name="check_update">Check for updates</string>
 </resources>

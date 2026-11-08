@@ -30,13 +30,16 @@ QFont = QtGui.QFont
 QIcon = QtGui.QIcon
 QImage = QtGui.QImage
 QPainter = QtGui.QPainter
+QPixmap = QtGui.QPixmap
+QPainterPath = QtGui.QPainterPath
+QFontDatabase = QtGui.QFontDatabase
 QKeySequence = QtGui.QKeySequence
 QSvgRenderer = QtSvg.QSvgRenderer
 for _name in (
     'QApplication', 'QAbstractItemView', 'QCheckBox', 'QComboBox', 'QDialog', 'QDialogButtonBox', 'QDockWidget',
     'QDoubleSpinBox', 'QFileDialog', 'QFormLayout', 'QFrame', 'QHBoxLayout', 'QHeaderView', 'QInputDialog',
     'QLabel', 'QLineEdit', 'QListWidget', 'QListWidgetItem', 'QMainWindow', 'QMenu', 'QMessageBox', 'QPushButton',
-    'QScrollArea', 'QSlider', 'QSpinBox', 'QStyle', 'QTableWidget', 'QTableWidgetItem', 'QTextEdit', 'QVBoxLayout', 'QWidget',
+    'QTabWidget', 'QStackedWidget', 'QSizePolicy', 'QToolButton', 'QScrollArea', 'QSlider', 'QSpinBox', 'QStyle', 'QTableWidget', 'QTableWidgetItem', 'QTextEdit', 'QVBoxLayout', 'QWidget',
 ):
     globals()[_name] = getattr(QtWidgets, _name)
 del _name

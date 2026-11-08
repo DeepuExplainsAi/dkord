@@ -109,7 +109,7 @@ jobs:
           for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest', 'RoomProtocolTest', 'LyricsTest', 'PhoneContractTest'):
               assert any(cls in c.attrib.get('classname', '') for c in cases), f'Missing {cls}'
           assert len(cases) >= 36, f'Only {len(cases)} desktop cases'
-          assert len(cases) >= 60, f'New phone/desktop parity regressions missing: {len(cases)} cases'
+          assert len(cases) >= 66, f'New phone/desktop parity regressions missing: {len(cases)} cases'
           for case in cases:
               for marker in ('failure','error','skipped'):
                   error=case.find(marker)

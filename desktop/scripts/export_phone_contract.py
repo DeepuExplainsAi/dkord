@@ -52,7 +52,8 @@ def build():
     navigation = re.findall(r'TabSpec\(Tab\.(\w+), Icons\.Default\.\w+, R\.string\.(\w+)\)', (ROOT / SOURCES[4]).read_text(encoding='utf-8'))
     return {
         'schema': 1,
-        'sources': {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in SOURCES},
+        # Git for Windows may checkout CRLF; fingerprints describe normalized UTF-8 TEXT.
+        'sources': {name: hashlib.sha256((ROOT / name).read_text(encoding='utf-8').encode('utf-8')).hexdigest() for name in SOURCES},
         'navigation': [{'id': name, 'label': key} for name, key in navigation],
         'palettes': palettes,
         'curated': [{'title': name, 'query': query} for name, query in re.findall(r'"([^"]+)" to "([^"]+)"', curated)],

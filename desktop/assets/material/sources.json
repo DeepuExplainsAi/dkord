@@ -1,0 +1,103 @@
+{
+  "repository": "google/material-design-icons",
+  "revision": "10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7",
+  "license": "Apache-2.0",
+  "icons": {
+    "home": {
+      "path": "src/action/home/materialicons/24px.svg",
+      "blob": "19f63725f42b79f87b64c95a595afd30be4c1832"
+    },
+    "search": {
+      "path": "src/action/search/materialicons/24px.svg",
+      "blob": "7c2111eb7e4891171f6abe3ca3048baced2a3cbf"
+    },
+    "history": {
+      "path": "src/action/history/materialicons/24px.svg",
+      "blob": "3dfff5de6a9125eedb983bc844f7872a5e6db6b5"
+    },
+    "library_music": {
+      "path": "src/av/library_music/materialicons/24px.svg",
+      "blob": "5d28143440937950eddad7414bc0ad7c2df860b4"
+    },
+    "file_download": {
+      "path": "src/file/file_download/materialicons/24px.svg",
+      "blob": "4820385327f9a7e9d81bccba2985f021bcb4b2cc"
+    },
+    "settings": {
+      "path": "src/action/settings/materialicons/24px.svg",
+      "blob": "e40c8496e5b27c4e01f5f0a93809106b3e228d31"
+    },
+    "more_vert": {
+      "path": "src/navigation/more_vert/materialicons/24px.svg",
+      "blob": "f450d128de1b87cc2086b686236d16eb616da0b1"
+    },
+    "pause": {
+      "path": "src/av/pause/materialicons/24px.svg",
+      "blob": "63a1c461e99026a9df668630aa8f214508ee0b09"
+    },
+    "play_arrow": {
+      "path": "src/av/play_arrow/materialicons/24px.svg",
+      "blob": "fe2e57860345a9d02a40d6c072fbb4bb36ce9155"
+    },
+    "skip_previous": {
+      "path": "src/av/skip_previous/materialicons/24px.svg",
+      "blob": "fe2bd534ec280e70f3efa422a9740e7c170c3250"
+    },
+    "skip_next": {
+      "path": "src/av/skip_next/materialicons/24px.svg",
+      "blob": "25b78bb879decb6f014229d79cda4f17f19aee53"
+    },
+    "close": {
+      "path": "src/navigation/close/materialicons/24px.svg",
+      "blob": "e96a4e7c16f8bcd660e590a33f37e1b2f042d726"
+    },
+    "arrow_back": {
+      "path": "src/navigation/arrow_back/materialicons/24px.svg",
+      "blob": "26300ebf08bc32ff3fdf3e6bc5719d487a95a7cd"
+    },
+    "expand_more": {
+      "path": "src/navigation/expand_more/materialicons/24px.svg",
+      "blob": "c55bd7ff5ead4141321bfd023fa5dd02e689f10f"
+    },
+    "groups": {
+      "path": "src/social/groups/materialicons/24px.svg",
+      "blob": "b2a48e63eef273c0cd35f6ec27c3c80404440608"
+    },
+    "favorite": {
+      "path": "src/action/favorite/materialicons/24px.svg",
+      "blob": "c65bba382f5c9ac1926040a269013fde72aab7d0"
+    },
+    "favorite_border": {
+      "path": "src/action/favorite_border/materialicons/24px.svg",
+      "blob": "8aaac989052c07a04e0b67c7dfc38b1395eda3a2"
+    },
+    "shuffle": {
+      "path": "src/av/shuffle/materialicons/24px.svg",
+      "blob": "a3efe19ca1bce0f77b7566ee8872cc30aa553d41"
+    },
+    "repeat": {
+      "path": "src/av/repeat/materialicons/24px.svg",
+      "blob": "5933dc942495d945f0e5102fbf434ab5fd8ed35d"
+    },
+    "queue_music": {
+      "path": "src/av/queue_music/materialicons/24px.svg",
+      "blob": "07e3fdf8df261022ef4f5a91ce431e635e5d9a3b"
+    },
+    "share": {
+      "path": "src/social/share/materialicons/24px.svg",
+      "blob": "07fc6639ed2cf31fbd5e132aa0219d76afd68999"
+    },
+    "timer": {
+      "path": "src/image/timer/materialicons/24px.svg",
+      "blob": "18173e5f7be1c4afafc06c8e634ac35a89498e9b"
+    },
+    "videocam": {
+      "path": "src/av/videocam/materialicons/24px.svg",
+      "blob": "49a20acb064bd1d02d2399b120a5b5f59773c6b0"
+    },
+    "refresh": {
+      "path": "src/navigation/refresh/materialicons/24px.svg",
+      "blob": "b8d69f402eeaac63a1c07435958c05c079459fee"
+    }
+  }
+}

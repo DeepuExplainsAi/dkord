@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "sources": {
-    "app/src/main/res/values/strings.xml": "eef4dbfadf0bbd9b6866927e9e2fe6442db80e0e64d9e0aa8621b5f17bf6dd26",
-    "app/src/main/res/values-hi/strings.xml": "5515d0286b6d29423962bdcf068e5a9ba514a3e62d2e1cc5bb932001f751c3d7",
+    "app/src/main/res/values/strings.xml": "6e023f7edf0659b9baf83607b1bb9798b3024b0fb72da83db5bac9d65477e570",
+    "app/src/main/res/values-hi/strings.xml": "87a0a41cad210ec3f6067c3eb85fa504d0f625208611422bb3c8df1efbffcc34",
     "app/src/main/java/app/dkord/ui/theme/Theme.kt": "6418f30204dc0efe07a0e26a98823dcd8ee89fe20047bc0ceff80a5f45112b8e",
     "app/src/main/java/app/dkord/ui/screens/Home.kt": "182688ecaf716442a3a59d1041ce8b5dbf277718da44ea1db2ca90b1079d5e02",
     "app/src/main/java/app/dkord/ui/App.kt": "7a036f31e0850e9a31b63a8a085d8e5f9a5cbe80fe2c7172e441200127a539c1"
@@ -507,7 +507,17 @@
       "room_controls_owner_offline": "The creator is not reachable. Shared control is paused until the room reconnects.",
       "room_anywhere_title": "Your listening room",
       "room_anywhere_hint": "Play songs or playlists from anywhere in Dkord. Your room stays connected.",
-      "room_choose_music": "Choose songs or playlists"
+      "room_choose_music": "Choose songs or playlists",
+      "loading": "Loading…",
+      "all": "All",
+      "artwork": "Artwork",
+      "now_playing": "Now playing",
+      "nothing_playing": "Nothing playing",
+      "play_all": "Play all",
+      "volume": "Volume",
+      "video_playback": "Video playback",
+      "video_disabled": "Enable video playback in Settings to watch a video.",
+      "check_update": "Check for updates"
     },
     "hi": {
       "tab_home": "होम",
@@ -878,7 +888,17 @@
       "room_controls_owner_offline": "कमरा बनाने वाले से संपर्क नहीं हो पा रहा है। दोबारा जुड़ने तक साझा कंट्रोल रुका हुआ है।",
       "room_anywhere_title": "आपका लिसनिंग रूम",
       "room_anywhere_hint": "Dkord में कहीं से भी गाने या प्लेलिस्ट चलाएँ। आपका रूम जुड़ा रहेगा।",
-      "room_choose_music": "गाने या प्लेलिस्ट चुनें"
+      "room_choose_music": "गाने या प्लेलिस्ट चुनें",
+      "loading": "लोड हो रहा है…",
+      "all": "सभी",
+      "artwork": "आर्टवर्क",
+      "now_playing": "अभी चल रहा है",
+      "nothing_playing": "कोई गाना नहीं चल रहा",
+      "play_all": "सभी चलाएँ",
+      "volume": "आवाज़",
+      "video_playback": "वीडियो प्लेबैक",
+      "video_disabled": "वीडियो देखने के लिए सेटिंग्स में वीडियो प्लेबैक चालू करें।",
+      "check_update": "अपडेट जाँचें"
     }
   }
 }

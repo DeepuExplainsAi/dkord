@@ -28,10 +28,13 @@ def main():
     parser.add_argument("--self-test",action="store_true",help="Run actual native codec/renderer/widget smoke checks without any external provider")
     parser.add_argument("--capture-ui",type=Path,help="Capture the actual window using isolated generated audio, never normal user data")
     args=parser.parse_args()
-    from .qt import QLockFile, QApplication, QMessageBox
+    from .qt import QLockFile, QApplication, QMessageBox, Qt, BINDING
     from platformdirs import user_data_path
     from .store import Store
     from .ui import MainWindow
+    if BINDING=="PyQt5":
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling,True)
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps,True)
     app=QApplication(sys.argv[:1]);app.setOrganizationName("Dkord");app.setOrganizationDomain("app.dkord");app.setApplicationName("Dkord")
     if args.capture_ui:
         return capture_ui(app,args.capture_ui)

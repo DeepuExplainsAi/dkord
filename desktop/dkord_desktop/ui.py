@@ -26,46 +26,12 @@ from .streaming import AudioProxy
 from .tasks import Task
 from .updates import Updater
 
-DARK = """
-QWidget { background:#101013; color:#eeeeF1; font-family:'Segoe UI','Noto Sans','Arial'; font-size:14px; }
-QMainWindow,QDialog { background:#101013; } QFrame#sidebar { background:#17171b; border-right:1px solid #29292f; }
-QLabel#brand { font-size:30px; font-weight:800; } QLabel#eyebrow { color:#ff6268; font-size:11px; font-weight:700; }
-QLabel#pageTitle { font-size:32px; font-weight:750; } QLabel#muted { color:#a3a3b0; }
-QFrame#player { background:#1b1b20; border-top:1px solid #33333b; border-radius:0; }
-QPushButton { background:#24242b; padding:9px 14px; border:1px solid #35353f; border-radius:8px; }
-QPushButton:hover { background:#34343f; } QPushButton:pressed { background:#454550; }
-QPushButton:disabled { color:#686875; border-color:#28282e; } QPushButton[primary="true"] { background:#ed343e; color:white; border-color:#ed343e; font-weight:700; }
-QPushButton#nav { text-align:left; padding:12px; background:transparent; border:0; } QPushButton#nav:checked { background:#382026; color:#ff777b; }
-QLineEdit,QComboBox,QSpinBox,QDoubleSpinBox { background:#202027; border:1px solid #3c3c46; border-radius:8px; padding:9px; selection-background-color:#be2734; }
-QLineEdit:focus { border-color:#f44a52; } QComboBox::drop-down { border:0; width:24px; }
-QTableWidget,QListWidget,QTextEdit { background:#151519; alternate-background-color:#1b1b20; border:1px solid #2d2d34; border-radius:10px; selection-background-color:#44252b; }
-QTableWidget::item { padding:8px; border-bottom:1px solid #25252c; } QHeaderView::section { background:#1b1b21; color:#a4a4b2; border:0; padding:10px; }
-QScrollBar:vertical { background:#151519; width:9px; } QScrollBar::handle:vertical { background:#454550; border-radius:4px; min-height:30px; }
-QSlider::groove:horizontal { height:4px; background:#43434c; border-radius:2px; } QSlider::handle:horizontal { background:#ff535b; width:12px; margin:-4px 0; border-radius:6px; }
-QSlider::sub-page:horizontal { background:#ed343e; } QDockWidget::title { background:#17171c; padding:12px; font-weight:700; }
-QToolTip { background:#292932; color:#fff; border:1px solid #444; } QMenu { border:1px solid #454550; padding:5px; } QMenu::item { padding:8px 20px; } QMenu::item:selected { background:#44252b; }
-"""
+from .phone_ui import PhoneExperience
+from .widgets import label, button, icon, translated
+from .experience import palette
 
 
-def label(text: str, style: str | None = None) -> QLabel:
-    result = QLabel(text)
-    result.setTextFormat(Qt.TextFormat.PlainText)
-    result.setWordWrap(True)
-    if style:
-        result.setObjectName(style)
-    return result
-
-
-def button(text: str, action, primary=False) -> QPushButton:
-    result = QPushButton(text)
-    result.clicked.connect(action)
-    if primary:
-        result.setProperty("primary", True)
-    result.setCursor(Qt.CursorShape.PointingHandCursor)
-    return result
-
-
-class MainWindow(QMainWindow):
+class MainWindow(PhoneExperience, QMainWindow):
     def __init__(self, store: Store, provider: Provider | None = None, autoload=True):
         super().__init__()
         self.store, self.provider = store, provider or Provider()
@@ -111,46 +77,8 @@ class MainWindow(QMainWindow):
         self.preview_player.setAudioOutput(self.preview_audio)
         self.preview_end = None
         self.preview_player.positionChanged.connect(lambda position: self.preview_player.stop() if self.preview_end and position >= self.preview_end else None)
-        self.setWindowTitle(f"Dkord — Music & Mashup Studio · {__version__} preview" + (" · 32-bit" if WINDOWS_X86 else ""))
-        root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
-        self.setWindowIcon(QIcon(str(root / "assets" / "dkord.svg")))
-        self.resize(1360, 850); self.setMinimumSize(940, 640)
-        container = QWidget(); self.setCentralWidget(container)
-        outer = QVBoxLayout(container); outer.setContentsMargins(0, 0, 0, 0); outer.setSpacing(0)
-        body = QWidget(); row = QHBoxLayout(body); row.setContentsMargins(0, 0, 0, 0); row.setSpacing(0)
-        outer.addWidget(body, 1)
-        sidebar = QFrame(); sidebar.setObjectName("sidebar"); sidebar.setFixedWidth(212)
-        nav = QVBoxLayout(sidebar); nav.setContentsMargins(20, 28, 20, 22); nav.setSpacing(8)
-        nav.addWidget(label("Dkord", "brand")); nav.addWidget(label("YOUR MUSIC. YOUR SPACE.", "eyebrow")); nav.addSpacing(28)
-        self.nav_buttons = {}
-        for name in ("Home", "Search", "Listen Again", "Liked songs", "Playlists", "Downloads", "Mashup Studio"):
-            b = button(name, lambda checked=False, name=name: self.navigate(name)); b.setObjectName("nav"); b.setCheckable(True)
-            self.nav_buttons[name] = b; nav.addWidget(b)
-        nav.addStretch(1)
-        nav.addWidget(button("Settings & updates", lambda: self.navigate("Settings")))
-        nav.addWidget(button("About Dkord", self.about))
-        nav.addWidget(label("DESKTOP PREVIEW · LOCAL FIRST", "muted"))
-        row.addWidget(sidebar)
-        middle = QWidget(); center = QVBoxLayout(middle); center.setContentsMargins(30, 24, 30, 20); center.setSpacing(16)
-        search_row = QHBoxLayout()
-        self.query = QLineEdit(); self.query.setObjectName("global-search"); self.query.setPlaceholderText("Search music, artists, Choliwood or a song version…")
-        self.query.returnPressed.connect(self.search)
-        self.scope = QComboBox(); self.scope.addItems(list(Provider.scopes)); self.scope.setMinimumWidth(132)
-        search_row.addWidget(self.query, 1); search_row.addWidget(self.scope); search_row.addWidget(button("Search", self.search, True))
-        center.addLayout(search_row)
-        self.heading = label("Home", "pageTitle"); center.addWidget(self.heading)
-        self.subtitle = label("Discover songs. Keep them close. Make something your own.", "muted"); center.addWidget(self.subtitle)
-        self.content = QWidget(); self.content_layout = QVBoxLayout(self.content); self.content_layout.setContentsMargins(0, 0, 0, 0)
-        center.addWidget(self.content, 1); row.addWidget(middle, 1)
-        self.build_player(outer)
-        self.queue_dock = QDockWidget("Up next", self); self.queue_dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea)
-        self.queue_list = QListWidget(); self.queue_list.itemDoubleClicked.connect(lambda item: self.play_index(self.queue_list.row(item)))
-        self.queue_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.queue_list.customContextMenuRequested.connect(self.queue_menu)
-        self.queue_dock.setWidget(self.queue_list); self.queue_dock.setMinimumWidth(245)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.queue_dock)
-        self.statusBar().showMessage("Ready · no account, subscription or custom backend required")
-        QShortcut(QKeySequence("Ctrl+L"), self, activated=self.query.setFocus)
+        self.build_shell()
+        QShortcut(QKeySequence("Ctrl+L"), self, activated=self.focus_search)
         QShortcut(QKeySequence("Ctrl+,"), self, activated=lambda: self.navigate("Settings"))
         QShortcut(QKeySequence("Ctrl+J"), self, activated=lambda: self.navigate("Downloads"))
         self.timer = QTimer(self); self.timer.timeout.connect(self.tick); self.timer.start(1000)
@@ -160,7 +88,7 @@ class MainWindow(QMainWindow):
         if autoload:
             self.drain_downloads()
 
-    def run(self, call, done=None, progress=None, failed=None, download=False, finished=None) -> Task:
+    def run(self, call, done=None, progress=None, failed=None, download=False, finished=None, background=False) -> Task:
         task = Task(call); self.tasks.add(task)
         task.signals.result.connect(lambda result: done(result) if done and not self.closing else None)
         task.signals.error.connect(lambda text: (failed or self.notify)(text) if not self.closing else None)
@@ -168,47 +96,29 @@ class MainWindow(QMainWindow):
             task.signals.progress.connect(lambda value: progress(value) if not self.closing else None)
         def finish():
             self.tasks.discard(task)
+            if hasattr(self, "home_tasks"): self.home_tasks.discard(task)
             if finished and not self.closing:
                 finished()
         task.signals.finished.connect(finish)
-        (self.download_pool if download else self.pool).start(task)
+        (self.download_pool if download else self.home_pool if background else self.pool).start(task)
         return task
 
     def notify(self, text):
         self.statusBar().showMessage(str(text), 12000)
 
-    def apply_theme(self, theme):
-        self.store.set_setting("theme", theme)
-        if theme == "light":
-            self.setStyleSheet(DARK.replace("#101013", "#f6f6f9").replace("#eeeeF1", "#16161c").replace("#17171b", "#eaeaef").replace("#151519", "#ffffff").replace("#1b1b20", "#f1f1f5").replace("#202027", "#ffffff").replace("#24242b", "#e8e8ef").replace("#17171c", "#eaeaef").replace("#1b1b21", "#e8e8ef").replace("#a3a3b0", "#626270"))
-        else:
-            self.setStyleSheet(DARK.replace("#101013", "#000000") if theme == "amoled" else DARK)
-
     def reset_content(self, title, subtitle=""):
-        self.heading.setText(title); self.subtitle.setText(subtitle)
+        self.heading.setText(translated(title)); self.subtitle.setText(translated(subtitle)); self.subtitle.setVisible(bool(subtitle))
         while self.content_layout.count():
             item = self.content_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
         self.table = None
 
-    def navigate(self, page, fetch=True):
+    def _legacy_navigate(self, page, fetch=True):
         self.route_epoch += 1
         self.page = page
-        for name, b in self.nav_buttons.items():
-            b.setChecked(name == page)
-        if page == "Home":
-            self.reset_content("Good music. Great possibilities.", "A music-first home, powered by the real YouTube Music catalogue.")
-            self.content_layout.addWidget(label("Loading music…" if fetch else "Search a song to begin. No demo catalogue or bundled music."))
-            self.content_layout.addWidget(button("Explore Hindi & Choliwood", lambda: self.search_for("Choliwood songs")))
-            if fetch:
-                epoch = self.search_epoch = self.search_epoch + 1
-                self.run(lambda event, progress: self.provider.home(), lambda entries: self.show_entries(entries, "Home") if self.page == "Home" and epoch == self.search_epoch else None)
-        elif page == "Search":
-            self.reset_content("Find your next favourite", "Songs is the default. Other scopes stay explicit; typing does not start playback.")
-            self.saved_queries()
-        elif page in {"Listen Again", "Liked songs"}:
-            self.reset_content(page, "Your local listening library. No network is needed to browse it.")
+        if page in {"Listen Again", "Liked songs"}:
+            self.reset_content(self.tr("listen_title") if page=="Listen Again" else self.tr("liked_songs"))
             toolbar = QWidget(); layout = QHBoxLayout(toolbar); layout.setContentsMargins(0, 0, 0, 0)
             local = QLineEdit(); local.setPlaceholderText("Filter this local library…"); layout.addWidget(local, 1)
             if page == "Listen Again":
@@ -235,6 +145,7 @@ class MainWindow(QMainWindow):
         if not query:
             self.navigate("Search"); return
         scope = self.scope.currentText()
+        self.cancel_home(); self.select_navigation("Search")
         self.store.remember_query(query, scope)
         self.route_epoch += 1
         self.page = "Search"; self.search_limit = 20
@@ -307,20 +218,29 @@ class MainWindow(QMainWindow):
 
     def song_table(self, entries):
         self.entries = entries
-        table = QTableWidget(len(entries), 3); table.setObjectName("songs-table")
-        table.setHorizontalHeaderLabels(["TITLE / ARTIST", "LENGTH", "SOURCE"])
+        table = QTableWidget(len(entries), 4); table.setObjectName("songs-table")
+        table.setHorizontalHeaderLabels(["TITLE / ARTIST", "LENGTH", "SOURCE", ""])
         table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        table.verticalHeader().hide(); table.verticalHeader().setDefaultSectionSize(58)
+        table.verticalHeader().hide(); table.verticalHeader().setDefaultSectionSize(72)
+        table.horizontalHeader().hide(); table.setIconSize(QSize(52,52))
+        table.horizontalHeader().setSectionResizeMode(3,QHeaderView.ResizeMode.Fixed); table.setColumnWidth(3,48)
         table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers); table.setAlternatingRowColors(True)
+        table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers); table.setAlternatingRowColors(False)
         for row, entry in enumerate(entries):
-            table.setItem(row, 0, QTableWidgetItem(entry.title + ("\n" + entry.subtitle if entry.subtitle else "")))
+            item=QTableWidgetItem(entry.title + ("\n" + entry.subtitle if entry.subtitle else ""))
+            item.setIcon(icon("library_music", palette(self.effective_theme())["onSurfaceVariant"], 52)); table.setItem(row,0,item)
+            if row<40 and (image:=entry.thumbnail or (entry.track.thumbnail if entry.track else None)):
+                def art_ready(pixmap, table=table, row=row):
+                    if not sip.isdeleted(table) and table.item(row,0):table.item(row,0).setIcon(QIcon(pixmap))
+                self.artwork_cache.request(image,art_ready)
+            more=button("⋮" if entry.track else "›",lambda checked=False,entry=entry,row=row:self.track_menu(entry.track,table.mapToGlobal(table.visualItemRect(table.item(row,0)).bottomRight())) if entry.track else self.open_entry(entry))
+            more.setObjectName("track-more");more.setAccessibleName(self.tr("more"));table.setCellWidget(row,3,more)
             table.setItem(row, 1, QTableWidgetItem(clock(entry.track.durationSec * 1000) if entry.track and entry.track.durationSec else "—"))
             offline = entry.track and self.library.local_file(entry.track)
             table.setItem(row, 2, QTableWidgetItem("In Dkord" if offline else entry.kind.capitalize()))
-        table.cellDoubleClicked.connect(lambda row, column: self.open_entry(entries[row]))
+        table.cellDoubleClicked.connect(lambda row, column: self.open_entry(entries[row],row))
         table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         def context(point):
             item = table.itemAt(point)
@@ -334,17 +254,18 @@ class MainWindow(QMainWindow):
             for row, entry in enumerate(self.entries):
                 self.table.setRowHidden(row, query.casefold() not in (entry.title + " " + entry.subtitle).casefold())
 
-    def open_entry(self, entry):
+    def open_entry(self, entry, row=None):
         if entry.track:
-            self.play_track(entry.track, related=self.page in {"Home", "Search"})
+            if self.page=="Catalogue" and self.collection_tracks:
+                selected=row if row is not None and 0<=row<len(self.collection_tracks) and self.collection_tracks[row].id==entry.track.id else next((i for i,t in enumerate(self.collection_tracks) if t.id==entry.track.id),0)
+                self.play_queue(self.collection_tracks,index=selected)
+            else:self.play_track(entry.track, related=self.page in {"Home", "Search"})
         else:
-            self.notify("Opening catalogue…")
-            route = self.route_epoch
-            self.run(lambda event, progress: self.provider.browse(entry), lambda result: self.browse_result(*result) if route == self.route_epoch else None)
+            self.open_catalogue(entry)
 
     def browse_result(self, name, songs):
         self.route_epoch += 1
-        self.page = "Catalogue"; self.reset_content(name, "Explicit album/artist/playlist collection")
+        self.page = "Catalogue"; self.select_navigation("Catalogue"); self.collection_tracks=list(songs); self.reset_content(name)
         self.content_layout.addWidget(button("Play all shown", lambda: self.play_queue(songs), True))
         self.song_table([Entry("song", t.id, t.title, t.artist, t) for t in songs])
 
@@ -451,33 +372,6 @@ class MainWindow(QMainWindow):
             if row["state"] in {"FAILED", "PAUSED"}: self.store.update_download(row["id"], state="QUEUED", error=None)
         self.drain_downloads()
 
-    def playlists_page(self):
-        self.reset_content("Made for your moments", "Local playlists, kept through updates. JSON imports/exports are compatible with Android; audio bytes are not included.")
-        toolbar = QWidget(); buttons = QHBoxLayout(toolbar); buttons.setContentsMargins(0,0,0,0)
-        buttons.addWidget(button("New playlist", self.new_playlist, True)); buttons.addWidget(button("Import JSON", self.import_library)); buttons.addWidget(button("Export library JSON", self.export_library)); buttons.addStretch()
-        self.content_layout.addWidget(toolbar)
-        listing = QListWidget()
-        for playlist in self.store.playlists():
-            item = QListWidgetItem(f"{playlist['name']}\n{len(playlist['data'])} songs"); item.setData(Qt.ItemDataRole.UserRole, playlist); item.setSizeHint(QSize(0,64)); listing.addItem(item)
-        def open_playlist(item):
-            playlist = item.data(Qt.ItemDataRole.UserRole)
-            songs = [Track.parse(t) for t in playlist["data"]]
-            self.browse_result(playlist["name"], songs)
-        listing.itemDoubleClicked.connect(open_playlist)
-        listing.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        def context(point):
-            item=listing.itemAt(point)
-            if not item:return
-            playlist=item.data(Qt.ItemDataRole.UserRole); menu=QMenu(self)
-            def rename():
-                name,ok=QInputDialog.getText(self,"Rename playlist","Name",text=playlist["name"])
-                if ok and name.strip():self.store.save_playlist(name,[Track.parse(t) for t in playlist["data"]],playlist["id"]);self.playlists_page()
-            menu.addAction("Rename",rename)
-            menu.addAction("Export playlist JSON",lambda:self.export_library(playlist))
-            menu.addAction("Delete playlist only",lambda:(self.store.delete_playlist(playlist["id"]),self.playlists_page()))
-            menu.exec(listing.mapToGlobal(point))
-        listing.customContextMenuRequested.connect(context);self.content_layout.addWidget(listing,1)
-
     def new_playlist(self):
         name, ok = QInputDialog.getText(self, "New playlist", "Name")
         if ok and name.strip(): self.store.save_playlist(name, []); self.navigate("Playlists")
@@ -508,33 +402,6 @@ class MainWindow(QMainWindow):
         try:export_library(self.store,Path(name),playlist);self.notify("Export saved; local audio is not embedded in this JSON file")
         except Exception as error:self.notify(str(error))
 
-    def build_player(self, layout):
-        frame=QFrame();frame.setObjectName("player");body=QVBoxLayout(frame);body.setContentsMargins(22,12,22,14)
-        # Keep metadata/transport, seeking and secondary controls on separate rows.
-        # A 1024px desktop with the queue dock must not squeeze words into vertical
-        # letters or clip repeat/speed controls; the same controls still work at1360+.
-        top=QHBoxLayout();self.now=label("Nothing playing");self.now.setMaximumWidth(420);self.now.setMinimumWidth(0);self.now.setWordWrap(False)
-        self.now_artist=label("Choose a song to start","muted");self.now_artist.setWordWrap(False);self.now_artist.setMinimumWidth(0);self.now_artist.setMaximumWidth(420)
-        info=QVBoxLayout();info.addWidget(self.now);info.addWidget(self.now_artist);top.addLayout(info,1)
-        self.previous_button=button("◀",lambda:self.next_track(-1));self.previous_button.setToolTip("Previous")
-        self.play_button=button("Play",self.toggle,True);self.play_button.setObjectName("play-toggle")
-        self.next_button=button("▶",lambda:self.next_track(1));self.next_button.setToolTip("Next")
-        top.addWidget(self.previous_button);top.addWidget(self.play_button);top.addWidget(self.next_button);body.addLayout(top)
-        line=QHBoxLayout();self.elapsed=label("0:00","muted");self.remaining=label("—","muted")
-        self.seek=QSlider(Qt.Orientation.Horizontal);self.seek.setObjectName("playback-seek");self.seek.setRange(0,1);self.seek.setEnabled(False)
-        self.seek.sliderReleased.connect(lambda:self.player.setPosition(self.seek.value()))
-        line.addWidget(self.elapsed);line.addWidget(self.seek,1);line.addWidget(self.remaining);body.addLayout(line)
-        options=QHBoxLayout()
-        self.shuffle=QCheckBox("Shuffle");self.shuffle.setChecked(bool(self.store.setting("shuffle",False)));self.shuffle.toggled.connect(self.shuffle_queue);options.addWidget(self.shuffle)
-        self.repeat=QComboBox();self.repeat.addItems(["Repeat off","Repeat one","Repeat all"]);self.repeat.setMinimumWidth(116);self.repeat.setCurrentIndex(int(self.store.setting("repeat",0)));options.addWidget(self.repeat)
-        self.speed=QDoubleSpinBox();self.speed.setRange(.5,2);self.speed.setSingleStep(.05);self.speed.setSuffix("×");self.speed.setValue(float(self.store.setting("speed",1)));self.speed.setFixedWidth(92)
-        self.speed.valueChanged.connect(self.player.setPlaybackRate);self.player.setPlaybackRate(self.speed.value());options.addWidget(self.speed)
-        options.addStretch()
-        options.addWidget(button("Lyrics",self.lyrics));options.addWidget(button("Sleep",self.sleep_timer));options.addWidget(button("Queue",lambda:self.queue_dock.setVisible(not self.queue_dock.isVisible())))
-        volume=QSlider(Qt.Orientation.Horizontal);volume.setRange(0,100);volume.setValue(int(self.audio.volume()*100));volume.setFixedWidth(90);volume.setToolTip("Volume")
-        volume.valueChanged.connect(lambda v:self.audio.setVolume(v/100));options.addWidget(volume)
-        body.addLayout(options);layout.addWidget(frame)
-
     def current(self):
         return self.queue[self.index] if self.queue and 0<=self.index<len(self.queue) else None
 
@@ -546,7 +413,7 @@ class MainWindow(QMainWindow):
             self.queue=[Track.parse(t) for t in session.get("queue",[])]
             self.index=max(0,min(session.get("index",0),len(self.queue)-1))
             self.pending_seek=max(0,int(session.get("position",0)))
-            if track:=self.current():self.now.setText(track.title[:90]);self.now_artist.setText(track.artist[:90]);self.elapsed.setText(clock(self.pending_seek))
+            if track:=self.current():self.now.setText(track.title);self.now_artist.setText(track.artist);self.mini_cover.set_url(track.thumbnail);self.elapsed.setText(clock(self.pending_seek))
             self.refresh_queue()
         except Exception:
             self.session_writable=False
@@ -557,7 +424,7 @@ class MainWindow(QMainWindow):
             self.store.set_setting("session",{"version":1,"queue":[t.json() for t in self.queue],"index":self.index,
                 "position":self.player.position() if self.loaded_epoch==self.epoch else self.pending_seek})
 
-    def play_track(self, track, related=False):
+    def play_track(self, track, related=False, context_hint=""):
         if not track:return
         self.play_queue([track])
         if related and self.store.setting("autoplay",True) and not track.local:
@@ -565,21 +432,23 @@ class MainWindow(QMainWindow):
             def append(songs):
                 if owner==self.epoch and revision==self.revision:
                     known={t.id for t in self.queue};self.queue.extend(t for t in songs if t.id not in known);self.refresh_queue();self.save_session()
-            self.run(lambda event,progress:self.provider.related(track,[track]),append,failed=lambda text:self.notify("Music radio unavailable; the selected song is kept."))
+            self.run(lambda event,progress:self.provider.related_context(track,[track],context_hint) if hasattr(self.provider,"related_context") else self.provider.related(track,[track]),append,failed=lambda text:self.notify("Music radio unavailable; the selected song is kept."))
 
-    def play_queue(self, tracks):
+    def play_queue(self, tracks, index=0, user=True):
         if not tracks:return
-        self.queue=list(tracks);self.index=0
+        self.queue=list(tracks);self.index=max(0,min(index,len(self.queue)-1))
         if self.shuffle.isChecked() and len(self.queue)>1:
-            remaining=self.queue[1:];random.shuffle(remaining);self.queue=self.queue[:1]+remaining
-        self.revision+=1;self.play_index(0)
+            selected=self.queue[self.index];remaining=[t for i,t in enumerate(self.queue) if i!=self.index];random.shuffle(remaining);self.queue=[selected]+remaining;self.index=0
+        self.revision+=1;self.play_index(self.index,user=user)
 
-    def play_index(self, index, position=0):
+    def play_index(self, index, position=0, user=True, playing=True):
         if not 0<=index<len(self.queue):return
-        self.preview_player.stop();self.desired_playing=True;self.player.pause();self.index=index
-        self.epoch+=1;owner=self.epoch;self.pending_seek=max(0,position);self.seek.setEnabled(False);self.play_button.setText("Pause")
-        track=self.queue[index];self.now.setText(track.title[:90]);self.now.setToolTip(track.title);self.now_artist.setText(track.artist[:90])
+        self.preview_player.stop();self.desired_playing=playing;self.player.pause();self.index=index
+        self.epoch+=1;owner=self.epoch;self.pending_seek=max(0,position);self.seek.setEnabled(False);self.update_play_button()
+        track=self.queue[index];self.now.setText(track.title);self.now.setToolTip(track.title);self.now_artist.setText(track.artist);self.mini_cover.set_url(track.thumbnail)
         self.refresh_queue();self.save_session();self.notify("Preparing playback…")
+        if user:self.room_local_intent()
+        if self.full_player:self.full_player.refresh(force=True)
         local=self.library.local_file(track)
         if local:self.set_media(QUrl.fromLocalFile(str(local)),owner);return
         if track.local:self.notify("Local export is missing. Export it again; it cannot be resolved online.");self.desired_playing=False;return
@@ -601,29 +470,30 @@ class MainWindow(QMainWindow):
             self.pending_seek=0;self.seek.setEnabled(True)
             if self.desired_playing:self.player.play()
         elif status==QMediaPlayer.MediaStatus.EndOfMedia and self.desired_playing:
-            if self.repeat.currentIndex()==1:self.play_index(self.index)
-            elif self.index+1<len(self.queue):self.next_track(1)
-            elif self.repeat.currentIndex()==2:self.play_index(0)
-            else:self.desired_playing=False;self.play_button.setText("Play")
+            if self.repeat.currentIndex()==1:self.play_index(self.index,user=False)
+            elif self.index+1<len(self.queue):self.next_track(1,user=False)
+            elif self.repeat.currentIndex()==2:self.play_index(0,user=False)
+            else:self.desired_playing=False;self.update_play_button()
 
     def toggle(self):
         if self.desired_playing and (self.player.playbackState()==QMediaPlayer.PlaybackState.PlayingState or self.loaded_epoch!=self.epoch):
-            self.desired_playing=False;self.player.pause();self.play_button.setText("Play");self.save_session()
+            self.desired_playing=False;self.player.pause();self.update_play_button();self.save_session()
         elif self.current():
             self.desired_playing=True
             if self.loaded_epoch==self.epoch and not self.player.source().isEmpty():self.player.play()
-            else:self.play_index(self.index,self.pending_seek)
+            else:self.play_index(self.index,self.pending_seek,user=False)
+        self.room_local_intent();self.update_play_button()
 
     def resume(self):
         if self.current():self.play_index(self.index,self.pending_seek if self.loaded_epoch!=self.epoch else self.player.position())
         else:self.notify("No saved queue yet. Choose a song first.")
 
-    def next_track(self, delta):
+    def next_track(self, delta, user=True):
         if not self.queue:return
-        if delta<0 and self.player.position()>3000:self.player.setPosition(0);return
+        if delta<0 and self.player.position()>3000:self.user_seek(0,user=user);return
         index=self.index+delta
         if index>=len(self.queue) and self.repeat.currentIndex()==2:index=0
-        if 0<=index<len(self.queue):self.play_index(index)
+        if 0<=index<len(self.queue):self.play_index(index,user=user)
 
     def shuffle_queue(self, enabled):
         if not enabled or len(self.queue)<2:return
@@ -635,73 +505,64 @@ class MainWindow(QMainWindow):
         track.validate();self.revision+=1
         if next:self.queue.insert(min(self.index+1,len(self.queue)),track)
         else:self.queue.append(track)
-        self.refresh_queue();self.save_session();self.notify("Queue updated; playback was not restarted")
+        self.refresh_queue();self.save_session();self.room_local_intent();self.notify("Queue updated; playback was not restarted")
 
     def refresh_queue(self):
         self.queue_list.clear()
         for index,track in enumerate(self.queue):
             item=QListWidgetItem(("▶ " if index==self.index else "")+track.title+"\n"+track.artist);item.setSizeHint(QSize(220,58));self.queue_list.addItem(item)
-        self.queue_dock.setWindowTitle(f"Up next · {len(self.queue)}")
+        self.queue_dock.setWindowTitle(f"{self.tr('queue')} · {len(self.queue)}")
+        if self.full_player:self.full_player.refresh_queue()
 
-    def queue_menu(self,point):
-        item=self.queue_list.itemAt(point)
+    def queue_menu(self,point,listing=None):
+        listing=listing or self.queue_list
+        item=listing.itemAt(point)
         if not item:return
-        index=self.queue_list.row(item);menu=QMenu(self)
+        index=listing.row(item);menu=QMenu(self)
         def move(delta):
             to=index+delta
             if not 0<=to<len(self.queue):return
             current=self.current();track=self.queue.pop(index);self.queue.insert(to,track)
-            self.index=next(i for i,t in enumerate(self.queue) if t is current);self.revision+=1;self.refresh_queue();self.save_session()
+            self.index=next(i for i,t in enumerate(self.queue) if t is current);self.revision+=1;self.refresh_queue();self.save_session();self.room_local_intent()
         def remove():
             self.revision+=1
             if index==self.index:
                 self.desired_playing=False;self.player.stop();self.player.setSource(QUrl());self.epoch+=1
             self.queue.pop(index)
             if index<self.index:self.index-=1
-            self.index=max(0,min(self.index,len(self.queue)-1));self.refresh_queue();self.save_session()
+            self.index=max(0,min(self.index,len(self.queue)-1));self.refresh_queue();self.save_session();self.room_local_intent()
         menu.addAction("Play now",lambda:self.play_index(index));menu.addAction("Move up",lambda:move(-1));menu.addAction("Move down",lambda:move(1));menu.addAction("Remove from queue",remove)
-        menu.exec(self.queue_list.mapToGlobal(point))
+        menu.exec(listing.mapToGlobal(point))
 
     def position_changed(self,position):
         if self.loaded_epoch!=self.epoch:return
         if not self.seek.isSliderDown():self.seek.setValue(position)
         self.elapsed.setText(clock(position))
+        if not self.mini_seek.isSliderDown():self.mini_seek.setValue(position)
         if self.current() and self.player.playbackState()==QMediaPlayer.PlaybackState.PlayingState and time.monotonic()-self.last_history>5:
             self.last_history=time.monotonic();self.store.history(self.current(),position);self.save_session()
 
     def duration_changed(self,duration):
-        self.seek.setRange(0,max(1,duration));self.remaining.setText(clock(duration) if duration>0 else "—")
+        self.seek.setRange(0,max(1,duration));self.mini_seek.setRange(0,max(1,duration));self.remaining.setText(clock(duration) if duration>0 else "—")
 
     def playback_changed(self,state):
-        playing=state==QMediaPlayer.PlaybackState.PlayingState;self.play_button.setText("Pause" if playing else "Play")
+        playing=state==QMediaPlayer.PlaybackState.PlayingState;self.update_play_button()
         if playing and self.current() and self.loaded_epoch==self.epoch:self.store.history(self.current(),self.player.position())
 
     def tick(self):
         if self.sleep_at is not None and time.monotonic()>=self.sleep_at:
-            self.sleep_at=None;self.desired_playing=False;self.player.pause();self.preview_player.stop();self.notify("Sleep timer ended. Playback will not resume automatically.")
+            self.sleep_at=None;self.desired_playing=False;self.player.pause();self.preview_player.stop();self.update_play_button();self.room_local_intent();self.notify("Sleep timer ended. Playback will not resume automatically.")
 
     def sleep_timer(self):
         minutes,ok=QInputDialog.getInt(self,"Sleep timer","Minutes (0 cancels the timer)",30,0,1440)
         if ok:self.sleep_at=time.monotonic()+minutes*60 if minutes else None;self.notify(f"Sleep timer: {minutes} minutes" if minutes else "Sleep timer cancelled")
-
-    def lyrics(self):
-        track=self.current()
-        if not track:return
-        dialog=QDialog(self);dialog.setWindowTitle("Lyrics — "+track.title);dialog.resize(650,650);layout=QVBoxLayout(dialog)
-        text=QTextEdit();text.setReadOnly(True);text.setPlainText("Loading LRCLIB lyrics…");layout.addWidget(text)
-        def fetch(event,progress):
-            import requests
-            response=requests.get("https://lrclib.net/api/get",params={"track_name":track.title,"artist_name":track.artist,"duration":track.durationSec},timeout=15)
-            response.raise_for_status();data=response.json();return data.get("syncedLyrics") or data.get("plainLyrics") or "No lyrics returned for this track."
-        self.run(fetch,lambda value:text.setPlainText(value) if not sip.isdeleted(text) else None,failed=lambda value:text.setPlainText(value) if not sip.isdeleted(text) else None)
-        dialog.exec()
 
     def clear_history(self):
         if QMessageBox.question(self,"Clear listening history?","Remove history entries only? Likes, playlists, queue and downloads remain.")==QMessageBox.StandardButton.Yes:
             self.store.remove_history();self.navigate("Listen Again")
 
     def studio_page(self):
-        self.reset_content("Mashup Studio", "Online song → private project source → precise clips → one real M4A. No manual download prerequisite.")
+        self.reset_content(self.tr("studio_title"),self.tr("studio_intro"))
         projects=self.store.projects()
         if self.studio_id not in {p["id"] for p in projects}:self.studio_id=projects[0]["id"] if projects else None
         toolbar=QWidget();row=QHBoxLayout(toolbar);row.setContentsMargins(0,0,0,0)
@@ -867,19 +728,6 @@ class MainWindow(QMainWindow):
             progress=lambda value:self.studio_status.setText(f"Merging audio · {value*100:.0f}% · original snapshot") if self.page=="Mashup Studio" and not sip.isdeleted(self.studio_status) else None,finished=finished)
         self.studio_page()
 
-    def settings_page(self):
-        self.reset_content("Make Dkord yours", "Local settings, clear storage choices and platform-matched updates. Your library is outside the application installation folder.")
-        panel=QWidget();form=QFormLayout(panel)
-        theme=QComboBox();theme.addItems(["dark","light","amoled"]);theme.setCurrentText(self.store.setting("theme","dark"));theme.currentTextChanged.connect(self.apply_theme);form.addRow("Appearance",theme)
-        quality=QComboBox();quality.addItems(["high","medium","low"]);quality.setCurrentText(self.store.setting("quality","high"));quality.currentTextChanged.connect(lambda v:self.store.set_setting("quality",v));form.addRow("Download quality",quality)
-        autoplay=QCheckBox("Use music-only radio after a chosen Search/Home song");autoplay.setChecked(self.store.setting("autoplay",True));autoplay.toggled.connect(lambda v:self.store.set_setting("autoplay",v));form.addRow("Autoplay",autoplay)
-        data=QLineEdit(str(self.store.root));data.setReadOnly(True);form.addRow("Private user-data folder",data)
-        form.addRow("Version",label(__version__+" · desktop preview · "+sys.platform))
-        form.addRow("Update channel",label("Desktop only · signed manifest · OS + CPU matched · no APK substitution"))
-        check=button("Check for desktop updates",self.check_updates,True);form.addRow(check)
-        form.addRow(label("Preview installers are not official trusted/notarized releases. The production update key/channel is not configured yet; untrusted installers are refused.","muted"))
-        self.content_layout.addWidget(panel);self.content_layout.addStretch()
-
     def check_updates(self):
         self.notify("Checking the desktop release channel…")
         def checked(update):
@@ -893,18 +741,11 @@ class MainWindow(QMainWindow):
                      progress=lambda value:self.notify(f"Desktop update · {value[0]/1024**2:.1f}/{value[1]/1024**2:.1f} MiB"))
         self.run(lambda event,progress:self.updater.check(),checked)
 
-    def about(self):
-        dialog=QDialog(self);dialog.setWindowTitle("About Dkord");dialog.resize(640,560);layout=QVBoxLayout(dialog)
-        layout.addWidget(label("Dkord", "brand"));layout.addWidget(label("YOUR MUSIC. YOUR MIX. YOUR SPACE.","eyebrow"))
-        layout.addWidget(label("An open-source music player and audio Mashup Studio by DeepuGupta. Search the real music catalogue, keep a private offline library and turn your selected audio into precise, playable mixes."))
-        layout.addWidget(label(f"Desktop {__version__} preview · GPL-3.0-only · native Qt multimedia + FFmpeg", "muted"))
-        layout.addWidget(label("This is a desktop preview, not a finished Android-parity release. Listen Together, optional in-app video, enhanced Android radio ranking, synchronized lyric highlighting and all native signing/notarization remain acceptance gaps. Android v0.9.1 stays the official stable release."))
-        layout.addWidget(label("No cloud media synchronization or automatic phone-download transfer is included. Ordinary updates keep this device's user-data folder; JSON can transfer playlists/likes, not audio bytes."))
-        layout.addWidget(label("Public providers: YouTube / YouTube Music and LRCLIB. Guest/provider restrictions are not bypassed. Only download, import or edit audio you have permission to use. No demo songs, invented search statistics or custom paid backend."))
-        layout.addStretch();layout.addWidget(button("Close",dialog.accept));dialog.exec()
-
     def closeEvent(self,event):
         self.closing=True;self.timer.stop();self.desired_playing=False
+        self.rooms.close();self.artwork_cache.close();self.cancel_home()
+        if self.full_player:self.full_player.hide()
+        if self.video_window:self.video_window.close()
         self.save_session();self.store.set_setting("volume",self.audio.volume());self.store.set_setting("speed",self.speed.value());self.store.set_setting("repeat",self.repeat.currentIndex());self.store.set_setting("shuffle",self.shuffle.isChecked())
         for task in list(self.tasks):task.cancel.set()
         for id in list(self.library.active):self.library.pause(id)

@@ -25,3 +25,16 @@ Node.js22.22.3's matching complete upstream license is vendored as `assets/Node-
 - **PyQt5 5.15.11 / Qt5 5.15.2 / PyQt5-sip12.20.0**: legacy Win32 native widgets/multimedia. GPL-3.0 / upstream Qt open-source terms; PyQt source at https://pypi.org/project/PyQt5/5.15.11/ and corresponding Qt modules at https://github.com/qt/qtbase/tree/v5.15.2, https://github.com/qt/qtmultimedia/tree/v5.15.2 and https://github.com/qt/qtsvg/tree/v5.15.2. No QtWebEngine/browser is bundled.
 - **FFmpeg/ffprobe8.1.3 (native x86 source build)**: configured GPL-3.0-or-later, no nonfree/external codec libraries, local file/pipe protocols only. Exact source commit `1041abdc962f4cc4f394aa8de9dc5236c0c3b9e7`, archive SHA256 `a406fe831cbb605f5fe50e43eb566e502ae63ff3b3206bfa744e4b31b8bb73ac`; complete corresponding source https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/1041abdc962f4cc4f394aa8de9dc5236c0c3b9e7. `licenses/FFmpeg-COPYING.GPLv3` and `licenses/FFmpeg-source.json` preserve the license, source URL/hash, exact configuration and built-binary hashes. The obsolete imageio Win32 FFmpeg4.2.2 is neither used nor bundled.
 - The other targets keep their previous Qt6/PyAV/imageio profiles and notices. Bundled Node22.22.3 is CPU matched (`ia32` for Windows x86), with the same vendored/digest-verified upstream Node license.
+
+## Shared phone presentation assets
+
+- **Material Icons** — Google, Apache-2.0. The 24 original SVG paths and the full
+  license are bundled under `assets/material/`; `sources.json` pins the upstream
+  revision and each Git blob. These are the same Material icon family used by the
+  Android UI, not a separate desktop icon design.
+- **Roboto** and **Noto Sans Devanagari** — SIL Open Font License 1.1. Original
+  font binaries, their full license texts and revision/blob receipts are bundled
+  under `assets/fonts/`. No font has been modified or renamed.
+- Phone colors, English/Hindi strings, navigation and curated shelf declarations
+  are exported from this GPL-3.0 project's Android sources. Run
+  `python desktop/scripts/export_phone_contract.py --check` to reject drift.

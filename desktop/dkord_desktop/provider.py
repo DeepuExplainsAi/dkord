@@ -20,6 +20,8 @@ class Entry:
     title: str
     subtitle: str = ""
     track: Track | None = None
+    thumbnail: str | None = None
+    params: str | None = None
 
 
 def provider_track(row: dict, album: str | None = None) -> Track | None:
@@ -75,7 +77,7 @@ class Provider:
 
     @staticmethod
     def music() -> YTMusic:
-        return YTMusic(language="en", requests_session=True)
+        return YTMusic(language="en", location="IN", requests_session=True)
 
     @staticmethod
     def options(**extra) -> dict:
@@ -106,6 +108,44 @@ class Provider:
             artist = ", ".join(a.get("name", "") for a in row.get("artists", []) if isinstance(a, dict))
             entries.append(Entry(kind, id, row.get("title") or row.get("artist") or "", artist or row.get("author") or "", track))
         return entries
+
+    def home_page(self, chip=None):
+        from .catalogue import parse_page
+        body = {"browseId": chip.browse_id if chip else "FEmusic_home"}
+        if chip and chip.params:
+            body["params"] = chip.params
+        return parse_page(self.music()._send_request("browse", body))
+
+    def catalogue_page(self, entry=None, continuation=None, browse_id=None):
+        from .catalogue import parse_page, parse_continuation
+        body = {}
+        if continuation:
+            if not isinstance(continuation, str) or len(continuation) > 8192:
+                raise ValueError("Unsupported catalogue continuation")
+            body["continuation"] = continuation
+        else:
+            id = browse_id or (entry.id if entry else "")
+            if not re.fullmatch(r"[A-Za-z0-9_-]{1,256}", id):
+                raise ValueError("Unsupported catalogue reference")
+            body["browseId"] = id
+            if entry and entry.params:
+                body["params"] = entry.params
+        response = self.music()._send_request("browse", body)
+        return parse_continuation(response) if continuation else parse_page(response, bool(entry and entry.kind in {"album", "albums"}))
+
+    def suggestions(self, query):
+        query = " ".join(query.split())[:500]
+        return self.music().get_search_suggestions(query)[:12] if query else []
+
+    def resolve_video(self, track):
+        track.validate()
+        if track.local:
+            raise ValueError("Local audio has no online video")
+        with YoutubeDL(self.options(format="best[protocol=https][ext=mp4]/best[protocol=https]", skip_download=True)) as ydl:
+            info = ydl.extract_info("https://www.youtube.com/watch?v=" + track.id, download=False)
+            if not info or not info.get("url") or info.get("vcodec") in {None, "none"}:
+                raise ValueError("No accessible combined video/audio stream was returned")
+            return info["url"], info.get("http_headers") or {}
 
     def home(self) -> list[Entry]:
         response = self.music().get_charts(country="IN")
