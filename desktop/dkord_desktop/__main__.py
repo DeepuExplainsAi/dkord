@@ -25,7 +25,14 @@ def main():
         QMessageBox.information(None,"Dkord is already running","Close the existing Dkord window before opening this user-data library in another process.")
         return 1
     try:
-        window=MainWindow(Store(root));window.show();result=app.exec();lock.unlock();return result
+        window=MainWindow(Store(root));window.show();result=app.exec()
+        if window.restart_after_close:
+            # closeEvent has cancelled work. Finish its bounded cleanup/SQLite writes
+            # before another process can acquire the user-data library.
+            window.pool.waitForDone();window.download_pool.waitForDone()
+        lock.unlock()
+        if window.restart_after_close:window.restart_after_close()
+        return result
     except Exception as error:
         QMessageBox.critical(None,"Dkord could not open this library",str(error)+"\nExisting data has not been reset or deleted.")
         lock.unlock();return 1

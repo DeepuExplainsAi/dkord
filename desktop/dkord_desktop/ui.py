@@ -79,6 +79,7 @@ class MainWindow(QMainWindow):
         self.download_pool = QThreadPool(self); self.download_pool.setMaxThreadCount(1)
         self.download_running = False
         self.closing = False
+        self.restart_after_close = None
         self.epoch = 0
         self.revision = 0
         self.loaded_epoch = -1
@@ -880,7 +881,7 @@ class MainWindow(QMainWindow):
             if QMessageBox.question(self,"Dkord desktop update",f"Download version {update.version} for {update.platform}?\n{update.size/1024**2:.1f} MiB. Your user-data folder is retained.")!=QMessageBox.StandardButton.Yes:return
             def ready(file):
                 if QMessageBox.question(self,"Verified update ready","Open the matching native installer now? No release-page browsing is required.")==QMessageBox.StandardButton.Yes:
-                    try:self.updater.install(update,file);self.close()
+                    try:self.restart_after_close=self.updater.install(update,file);self.close()
                     except Exception as e:self.notify(str(e))
             self.run(lambda event,progress:self.updater.download(update,event,lambda done,total:progress((done,total))),ready,
                      progress=lambda value:self.notify(f"Desktop update · {value[0]/1024**2:.1f}/{value[1]/1024**2:.1f} MiB"))

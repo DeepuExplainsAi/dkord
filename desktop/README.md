@@ -31,13 +31,15 @@ python -m dkord_desktop --self-test
 python packaging/build.py
 ```
 
-Linux needs glibc2.34+ for x64 (2.39+ for arm64), system GL/EGL, DBus, xkbcommon/XCB, and a supported audio/display stack. CI installs these explicitly and executes real native widget and codec tests. macOS baseline13+; Windows10/11 x64. Unsupported OS/CPU updates are refused, not silently replaced with another build.
+Packaged Linux previews are built on Ubuntu24.04 and require glibc2.39+ on both x64 and arm64, system GL/EGL, DBus, xkbcommon/XCB, and a supported audio/display stack. CI installs these explicitly and executes real native widget and codec tests. macOS baseline13+; Windows10/11 x64. Unsupported OS/CPU updates are refused, not silently replaced with another build.
 
 Preview native outputs are built in read-only pull-request CI for Windows x64, macOS x64/arm64 and Linux x64/arm64. `.exe`/`.pkg`/`.deb`/`.AppImage` files, reports and hashes belong in Actions artifacts, **never Git**. A successful source test alone is not proof these packages built or installed; see the exact workflow run before claiming readiness.
 
 ## Local data and updates
 `platformdirs.user_data_path("Dkord", "Dkord", roaming=False)` is stable across versions: Windows LocalAppData, macOS Application Support, Linux XDG data. SQLite/WAL, metadata and audio live there, outside the executable installation folder. Corrupt/newer schemas are refused without reset. Installers do not contain user-data delete scripts. Do not uninstall/clear data to test an update.
 
-A future official desktop tag is `desktop-vX.Y.Z`, distinct from Android's `vX.Y.Z`. The signed manifest must list each real native artifact, exact version/platform/architecture/installer type/size/digest. Publishing requires fresh owner authorization, verified native packages, corresponding-source/license distribution, protected signing secrets and the installed public key. **No publication or signing is performed by the PR-validation workflow.**
+A future official desktop tag is `desktop-vX.Y.Z`, distinct from Android's `vX.Y.Z`. The signed manifest must list each real native artifact, exact version/platform/architecture/installer type/size/digest. AppImage relaunch is deferred until the old Qt loop has exited, cancelled workers have drained and the real data lock has been released. The copied image is reverified before launch with a fresh PyInstaller environment; this still needs actual update-over acceptance.
+
+Publishing requires fresh owner authorization, verified native packages, corresponding-source/license distribution, protected signing secrets and the installed public key. **No publication or signing is performed by the PR-validation workflow.**
 
 Copyright/platform terms still apply: import/download/edit only audio you have permission to use. Dependencies and native runtimes have their own license/source notices; see [THIRD_PARTY.md](THIRD_PARTY.md). No measured search-volume or similarity guarantees are claimed.

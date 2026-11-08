@@ -89,4 +89,25 @@ class UpdateTest(unittest.TestCase):
         for url in ('http://rr.googlevideo.com/a','https://googlevideo.com.attacker.test/a','https://localhost/a','file:///etc/passwd','https://user:pass@rr.googlevideo.com/a','https://rr.googlevideo.com:444/a'):
             self.assertFalse(valid_audio_url(url),url)
 
+    def test_appimage_replacement_defers_relaunch_until_release_and_rechecks_bytes(self):
+        header=bytearray(64);header[:6]=b'\x7fELF\x02\x01';header[18:20]=(62).to_bytes(2,'little')
+        body=bytes(header)+b'native signed fixture'*100
+        name='Dkord-desktop-v0.11.0-linux-x64.AppImage'
+        self.payload['assets']['linux-x64']['appimage']={'name':name,'kind':'appimage','url':f'https://github.com/DeepuExplainsAi/dkord/releases/download/desktop-v0.11.0/{name}','size':len(body),'sha256':hashlib.sha256(body).hexdigest()}
+        update=verify_manifest(self.signed(),self.keys,target='linux-x64',image=True)
+        with tempfile.TemporaryDirectory() as tmp,patch('dkord_desktop.updates.platform_key',return_value='linux-x64'):
+            root=Path(tmp);target=root/'Installed-Dkord.AppImage';target.write_bytes(b'old app bytes')
+            data=root/'user-data';data.mkdir();sentinel=data/'library.sqlite3';sentinel.write_bytes(b'existing user database')
+            file=root/name;file.write_bytes(body);updater=Updater(root/'updates',self.keys)
+            with patch.dict('os.environ',{'APPIMAGE':str(target)}),patch('dkord_desktop.updates.subprocess.Popen') as launch:
+                after_release=updater.install(update,file)
+                launch.assert_not_called();self.assertTrue(callable(after_release))
+                self.assertEqual(body,target.read_bytes());self.assertEqual(b'existing user database',sentinel.read_bytes())
+                # Represents main's post-event-loop / worker-drain / QLockFile-unlock callback.
+                after_release();launch.assert_called_once()
+                self.assertEqual([str(target)],launch.call_args.args[0]);self.assertEqual('1',launch.call_args.kwargs['env']['PYINSTALLER_RESET_ENVIRONMENT'])
+                target.write_bytes(b'corrupt replacement')
+                with self.assertRaises(ValueError):after_release()
+                launch.assert_called_once();self.assertEqual(b'existing user database',sentinel.read_bytes())
+
 if __name__=='__main__':unittest.main()

@@ -2,8 +2,10 @@
 import tempfile
 import time
 import unittest
+import sys
+from unittest.mock import patch
 from pathlib import Path
-from PyQt6.QtCore import Qt,QTimer
+from PyQt6.QtCore import Qt,QTimer,QLockFile
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication,QDialog,QLineEdit,QPushButton
 from dkord_desktop.ui import MainWindow
@@ -57,5 +59,29 @@ class NativeWidgetTest(unittest.TestCase):
             start.setText('0.123');end.setText('1.234');save.click()
         QTimer.singleShot(50,edit);self.window.edit_clip(source)
         clip=self.window.store.project(project)['clips'][-1];self.assertEqual((123,1234),(clip['startMs'],clip['endMs']));self.assertTrue(file.is_file())
+
+    def test_update_restart_drains_workers_and_releases_real_data_lock_before_relaunch(self):
+        from dkord_desktop.__main__ import main
+        root=Path(self.temp.name)/'entry-library';store=Store(root);store.set_setting('retained','existing playlists and offline data')
+        observations=[];spawned=[]
+        def create_window(actual_store):
+            window=MainWindow(actual_store,self.provider,autoload=False);spawned.append(window)
+            def cleanup(cancel,progress):
+                cancel.wait(5);time.sleep(.75);actual_store.set_setting('drained','cleanup committed')
+            window.run(cleanup)
+            def restarted():
+                next_lock=QLockFile(str(root/'application.lock'));acquired=next_lock.tryLock(0)
+                observations.append((acquired,actual_store.setting('drained'),window.pool.activeThreadCount(),actual_store.setting('retained')))
+                if acquired:next_lock.unlock()
+            window.restart_after_close=restarted
+            def quit():
+                window.close();self.app.quit()
+            QTimer.singleShot(0,quit)
+            return window
+        with patch.object(sys,'argv',['dkord','--data-dir',str(root)]),patch('PyQt6.QtWidgets.QApplication',return_value=self.app),patch('PyQt6.QtWidgets.QMessageBox.critical') as error,patch('dkord_desktop.ui.MainWindow',side_effect=create_window):
+            code=main()
+        self.assertEqual(0,code,str(error.call_args));error.assert_not_called()
+        self.assertEqual([(True,'cleanup committed',0,'existing playlists and offline data')],observations)
+        self.assertEqual([],self.provider.calls)
 
 if __name__=='__main__':unittest.main()

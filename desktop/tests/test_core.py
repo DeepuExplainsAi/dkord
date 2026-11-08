@@ -112,7 +112,7 @@ class CoreTest(unittest.TestCase):
         self.assertFalse(thread.is_alive());self.assertIsInstance(result[0],Track);self.assertTrue(self.media.local_file(result[0]).is_file());self.media.gc_sources();self.assertFalse(source.exists())
     def test_json_round_trip_uses_android_app_version_playlists_liked_contract(self):
         self.store.like(self.track,True);self.store.save_playlist('दोस्त',[self.track,self.track]);file=self.root/'library.json';export_library(self.store,file)
-        data=json.loads(file.read_text());self.assertEqual('dkord',data['app']);self.assertEqual(1,data['version']);self.assertEqual('दोस्त',data['playlists'][0]['name'])
+        data=json.loads(file.read_text(encoding="utf-8"));self.assertEqual('dkord',data['app']);self.assertEqual(1,data['version']);self.assertEqual('दोस्त',data['playlists'][0]['name'])
         other=Store(self.root/'other');import_library(other,file);self.assertEqual([self.track],other.library('liked'));self.assertEqual(2,len(other.playlists()[0]['data']))
     def test_bad_json_import_is_atomic_and_history_clear_does_not_delete_likes_or_tracks(self):
         self.store.like(self.track,True);self.store.history(self.track,1)

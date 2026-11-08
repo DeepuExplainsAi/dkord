@@ -1,5 +1,6 @@
 """Read-only desktop source/build contracts, not a substitute for 5-host native execution."""
 import json
+import hashlib
 from pathlib import Path
 import re
 import os
@@ -13,7 +14,7 @@ class DesktopContractsTest(unittest.TestCase):
     def test_native_validation_covers_all_os_and_cpu_builds_without_publication_or_secrets(self):
         flow=read('.github/workflows/validate-desktop.yml')
         for target in ('windows-x64','macos-x64','macos-arm64','linux-x64','linux-arm64'):self.assertIn('target: '+target,flow)
-        for required in ('contents: read','--self-test','packaging/build.py','no failures/errors/skips','assert len(cases) >= 26','include-hidden-files: true','packaging/ci_run.py','PYTHONUTF8: 1'):
+        for required in ('contents: read','--self-test','packaging/build.py','no failures/errors/skips','assert len(cases) >= 28','include-hidden-files: true','packaging/ci_run.py','PYTHONUTF8: 1'):
             self.assertIn(required,flow)
         for forbidden in ('secrets.','contents: write','gh release','continue-on-error'):self.assertNotIn(forbidden,flow)
     def test_desktop_has_real_native_widgets_codec_renderer_and_no_mock_browser(self):
@@ -33,6 +34,11 @@ class DesktopContractsTest(unittest.TestCase):
     def test_stable_user_data_is_outside_installation_and_uninstall_has_no_data_delete(self):
         entry=read('desktop/dkord_desktop/__main__.py');installer=read('desktop/packaging/windows.iss')
         self.assertIn('user_data_path("Dkord","Dkord",roaming=False)',entry)
+        self.assertLess(entry.index('window.pool.waitForDone()'),entry.index('lock.unlock()'))
+        self.assertLess(entry.index('lock.unlock()'),entry.index('window.restart_after_close()'))
+        update=read('desktop/dkord_desktop/updates.py')
+        self.assertIn('return relaunch',update)
+        self.assertIn('PYINSTALLER_RESET_ENVIRONMENT',update)
         self.assertIn('AppId=app.dkord.desktop',installer)
         self.assertNotIn('[UninstallDelete]',installer)
         self.assertNotIn('fallbackToDestructiveMigration',read('app/src/main/java/app/dkord/data/db/AppDatabase.kt'))
@@ -55,4 +61,10 @@ class DesktopContractsTest(unittest.TestCase):
                 self.assertIn('native हिन्दी',result.stdout)
                 self.assertEqual(code!=0,'::error title=Desktop tests failed' in result.stdout)
                 self.assertTrue((Path(tmp)/'dkord-desktop-tests.log').is_file())
+    def test_native_builder_bundles_pinned_upstream_node_license_without_live_api_dependency(self):
+        build=read('desktop/packaging/build.py')
+        digest=re.search("NODE_LICENSE_SHA256='([a-f0-9]{64})'",build)[1]
+        self.assertEqual(digest,hashlib.sha256((ROOT/'desktop/assets/Node-LICENSE.txt').read_bytes()).hexdigest())
+        self.assertNotIn('api.github.com/repos/nodejs/node/contents/LICENSE',build)
+        self.assertIn("(runtime/'NODE-LICENSE.txt').write_bytes(license)",build)
 if __name__=='__main__':unittest.main()

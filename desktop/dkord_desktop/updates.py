@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass
+from typing import Callable
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -167,8 +168,8 @@ class Updater:
         return None
 
     @staticmethod
-    def validate_file(path: Path, update: Update) -> None:
-        if path.name != update.name or path.stat().st_size != update.size:
+    def validate_file(path: Path, update: Update, *, require_name: bool = True) -> None:
+        if (require_name and path.name != update.name) or path.stat().st_size != update.size:
             raise ValueError("Installer size/name mismatch")
         digest = hashlib.sha256()
         with path.open("rb") as file:
@@ -226,7 +227,7 @@ class Updater:
             partial.unlink(missing_ok=True)
             raise
 
-    def install(self, update: Update, file: Path) -> None:
+    def install(self, update: Update, file: Path) -> Callable[[], None] | None:
         self.verify_plan(update)
         if update.platform != platform_key() or version(update.version) <= version(__version__):
             raise ValueError("Wrong-platform or downgrade installation refused")
@@ -245,6 +246,14 @@ class Updater:
             # Linux keeps the running inode mounted; atomic replace changes only the executable, never user data.
             atomic_copy(file, target)
             target.chmod(target.stat().st_mode | 0o111)
-            subprocess.Popen([str(target)], shell=False)
+            # Do not race the old process's QLockFile: main calls this only after Qt
+            # has exited, cancelled workers have drained and the data lock is released.
+            def relaunch():
+                self.verify_plan(update)
+                self.validate_file(target, update, require_name=False)  # installed AppImages may be user-renamed
+                env = os.environ.copy()
+                env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+                subprocess.Popen([str(target)], shell=False, env=env)
+            return relaunch
         else:
             raise ValueError("Unsupported native installer for this running distribution")

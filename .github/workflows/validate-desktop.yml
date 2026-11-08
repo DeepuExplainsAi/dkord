@@ -5,6 +5,8 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'desktop/**'
+      - '.gitattributes'
+      - 'LICENSE'
       - '.github/workflows/validate-desktop.yml'
       - '.github/scripts/test_desktop_contracts.py'
 permissions:
@@ -70,7 +72,7 @@ jobs:
           cases = root.findall('.//testcase')
           for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest'):
               assert any(cls in c.attrib.get('classname', '') for c in cases), f'Missing {cls}'
-          assert len(cases) >= 26, f'Only {len(cases)} desktop cases'
+          assert len(cases) >= 28, f'Only {len(cases)} desktop cases'
           assert not root.findall('.//failure') and not root.findall('.//error') and not root.findall('.//skipped')
           print(f'::notice title=Native desktop tests::{len(cases)} cases passed; all3 classes; no failures/errors/skips.')
           PY

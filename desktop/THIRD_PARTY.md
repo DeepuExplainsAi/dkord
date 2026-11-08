@@ -18,3 +18,5 @@ Dkord desktop source is **GPL-3.0-only**, matching the repository [LICENSE](../L
 | AppImage tooling / Inno Setup | Native preview packages | Respective upstream licenses; https://github.com/AppImage/appimagetool and https://github.com/jrsoftware/issrc |
 
 Before an owner-authorized public release, inspect native dependency reports, include all applicable notices/license texts, provide the required complete corresponding sources/build recipes alongside binary distribution, and complete native signing/notarization. PR preview packages are explicitly unsigned/not notarized and are not an official trusted update channel. No paid service, provider credentials, browser cookies or private signing key is included in this source tree.
+
+Node.js22.22.3's matching complete upstream license is vendored as `assets/Node-LICENSE.txt` (SHA256 `c738ae413cf561f174e34f6961f8ca458aae2369a73640dda6234c629b98bcc4`, source `https://github.com/nodejs/node/blob/v22.22.3/LICENSE`). The builder checks this digest before copying it to `licenses/NODE-LICENSE.txt`; no live license API quota or user first-play runtime download is required.

@@ -1,7 +1,6 @@
 """Native host packaging only, read-only preview output. No release writes or signing secrets."""
 from __future__ import annotations
 import argparse
-import base64
 import hashlib
 import json
 import os
@@ -21,6 +20,7 @@ from dkord_desktop.updates import platform_key
 OUT=ROOT/'.artifacts'
 DIST=OUT/'bundle'
 NODE_VERSION='22.22.3'
+NODE_LICENSE_SHA256='c738ae413cf561f174e34f6961f8ca458aae2369a73640dda6234c629b98bcc4'
 APPIMAGE={
  'x64':('x86_64','e8c1169c4af66c3184d7ee110713d4be04befe671fa358e2c1591ee840553b03'),
  'arm64':('aarch64','d6a061996de690434996c2a523eafedd0a23780aaf02d69ce364537e71607e94'),
@@ -49,10 +49,11 @@ def resources():
     if subprocess.check_output([node,'-p','process.arch'],text=True).strip()!=expected:raise RuntimeError('JS runtime architecture mismatch')
     runtime=ROOT/'.runtime';runtime.mkdir(exist_ok=True)
     target=runtime/('node.exe' if os.name=='nt' else 'node');shutil.copy2(node,target)
-    # Public source/license only. Never download a hidden runtime component on the user's first playback.
-    request=urllib.request.Request(f'https://api.github.com/repos/nodejs/node/contents/LICENSE?ref=v{NODE_VERSION}',headers={'User-Agent':'Dkord-native-builder'})
-    with urllib.request.urlopen(request,timeout=30) as response:license=json.load(response)
-    (runtime/'NODE-LICENSE.txt').write_bytes(base64.b64decode(license['content']))
+    # Matching upstream license, vendored and digest pinned. Parallel hosted builds
+    # must not depend on unauthenticated GitHub API quota for mandatory attribution.
+    license=(ROOT/'assets/Node-LICENSE.txt').read_bytes()
+    if hashlib.sha256(license).hexdigest()!=NODE_LICENSE_SHA256:raise RuntimeError('Bundled Node license differs from the pinned upstream22.22.3 text')
+    (runtime/'NODE-LICENSE.txt').write_bytes(license)
     return target
 
 
