@@ -9,11 +9,9 @@ bottom navigation. This is a real Qt application, not an APK, website or mockup.
 
 ## Version 0.10.1
 
-This version is being prepared for the requested **Android + PC release**. Release
-publication requires passing exact-source Android tests, six native OS/CPU builds,
-actual frozen Windows32 captures, real old-to-new installer fixture checks and the original Android signing identity. The
-release page is [Dkord releases](https://github.com/DeepuExplainsAi/dkord/releases).
-Historical v0.10.0 and Desktop Preview2 assets are preserved, not replaced.
+**[Download Dkord v0.10.1 — Android & PC](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.1).** The common release is public/latest, with eight installers across six native OS/CPU profiles and the original-key Android APK. Exact released source passed436 JVM +43 Android regressions,121 cases on each native host, real old-to-new installer fixtures and genuine frozen Windows32 capture gates. The actual original-key Android app code14→15 data/download/Studio upgrade also passed. [Publication, signing and unchanged-asset receipt](../docs/releases/v0.10.1-publication.md).
+
+Historical v0.10.0 and Desktop Preview2 releases/tags/assets are preserved, not replaced.
 
 ### Included
 
@@ -57,8 +55,9 @@ run once **over the old installation**. No reinstall/data deletion is required.
 0.10.1 pins the **existing v0.10.0 APK's public signing identity**, verified against
 its immutable APK SHA-256 and `apksigner` report. No replacement key is generated.
 `assets/update-trust-provenance.json` records the public-only verification receipt.
-Future common `vX.Y.Z` releases can carry a format-2 desktop manifest signed by
-that same protected identity, with explicit desktop-protocol domain separation.
+The published0.10.1 manifest has been signed and verified by the actual client
+for all six targets/eight installers. Future common `vX.Y.Z` releases can carry a
+format-2 desktop manifest signed by that same protected identity, with explicit desktop-protocol domain separation.
 The app verifies signature, exact OS/CPU/installer kind, version, bounded size,
 SHA-256 and native file format before a consent-based install. It never offers an
 APK as a PC update. Legacy pinned Ed25519 desktop channels remain verified and
