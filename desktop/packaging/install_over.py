@@ -7,6 +7,7 @@ virtual-host fixture acceptance, not a claim about a physical user's computer.
 """
 from __future__ import annotations
 import hashlib
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
@@ -63,7 +64,10 @@ def verify_installed(executable,folder,target,*,image=False):
     return data
 
 
-def verify_install_over(target,packages):
+@contextmanager
+def baseline_session(target):
+    # Install the baseline BEFORE freezing the new .app. Otherwise Apple's old
+    # relocatable pkg may discover/overwrite the build-tree app via Spotlight.
     if os.environ.get('GITHUB_ACTIONS')!='true' or os.environ.get('GITHUB_REPOSITORY')!=REPO or target!=platform_key():
         raise ValueError('Real installer execution is restricted to the exact native disposable CI profile')
     release=api('releases/tags/'+BASELINE)
@@ -72,32 +76,37 @@ def verify_install_over(target,packages):
         raise ValueError('Historical baseline identity changed; never substitute an arbitrary old installer')
     assets={item['name']:item for item in release['assets']}
     kinds=('deb','AppImage') if target.startswith('linux-') else ('exe',) if target.startswith('windows-') else ('pkg',)
-    checked=[]
     root=user_data_path('Dkord','Dkord',roaming=False)
     with tempfile.TemporaryDirectory(prefix='dkord-real-install-over-',dir=os.environ['RUNNER_TEMP']) as temporary:
-        folder=Path(temporary);old_folder=folder/'baseline';old_folder.mkdir()
+        folder=Path(temporary);old_folder=folder/'baseline';old_folder.mkdir();baselines={};old_executables={}
         for kind in kinds:
-            name=f'Dkord-desktop-v0.10.0-{target}.{kind}'
-            item=assets[name]
+            name=f'Dkord-desktop-v0.10.0-{target}.{kind}';item=assets[name]
             if not isinstance(item.get('digest'),str) or not item['digest'].startswith('sha256:') or item['size']<=0:
                 raise ValueError('Original baseline requires its GitHub byte digest')
             call(['gh','release','download',BASELINE,'--repo',REPO,'--pattern',name,'--dir',old_folder])
             old=old_folder/name
             if old.stat().st_size!=item['size'] or 'sha256:'+file_digest(old)!=item['digest']:
                 raise ValueError('Original installer bytes differ from immutable release asset')
-            new=next(path for path in packages if path.suffix=='.'+kind)
             if kind=='AppImage':
-                portable=folder/'Dkord.AppImage';shutil.copyfile(old,portable);portable.chmod(0o755)
-                call([portable,'--appimage-extract-and-run','--self-test'])
-                # Actual same-path portable replacement, not an extracted relabelled build.
-                shutil.copyfile(new,portable);portable.chmod(0o755)
-                data=verify_installed(portable,folder,target,image=True)
+                executable=folder/'Dkord.AppImage';shutil.copyfile(old,executable);executable.chmod(0o755)
+                call([executable,'--appimage-extract-and-run','--self-test'])
             else:
-                old_exe=install(old,target);call([old_exe,'--self-test'])
-                seed(root,folder/'accessible-device')
-                new_exe=install(new,target)
-                if old_exe!=new_exe:raise ValueError('Install-over moved the existing executable path')
-                data=verify_installed(new_exe,folder,target)
-            checked.append(dict(kind=kind,baselineName=name,baselineSha256=item['digest'][7:],checks=data['checks']))
-    return dict(format=1,baselineTag=BASELINE,baselineSource=BASELINE_SOURCE,toVersion=__version__,target=target,
-                source=os.environ['DKORD_SOURCE_SHA'],noUninstall=True,standardUserData=True,frozenClient=True,packages=checked)
+                executable=install(old,target);call([executable,'--self-test'])
+            baselines[kind]=item;old_executables[kind]=executable
+        seed(root,folder/'accessible-device')
+        def upgrade(packages):
+            checked=[]
+            for kind in kinds:
+                new=next(path for path in packages if path.suffix=='.'+kind)
+                if kind=='AppImage':
+                    executable=old_executables[kind];shutil.copyfile(new,executable);executable.chmod(0o755)
+                    data=verify_installed(executable,folder,target,image=True)
+                else:
+                    executable=install(new,target)
+                    if executable!=old_executables[kind]:raise ValueError('Install-over moved the existing executable path')
+                    data=verify_installed(executable,folder,target)
+                item=baselines[kind]
+                checked.append(dict(kind=kind,baselineName=item['name'],baselineSha256=item['digest'][7:],checks=data['checks']))
+            return dict(format=1,baselineTag=BASELINE,baselineSource=BASELINE_SOURCE,toVersion=__version__,target=target,
+                        source=os.environ['DKORD_SOURCE_SHA'],noUninstall=True,standardUserData=True,frozenClient=True,packages=checked)
+        yield upgrade

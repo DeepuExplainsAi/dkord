@@ -121,6 +121,9 @@ same signed instrumentation APK, performs `adb install -r` to code15, and verifi
 that the package UID and all those rows/files survive. It never clears data,
 uninstalls, hides failures or retries a failing case.
 
+Packaging needs the native platform tools and GitHub CLI for pinned build assets.
+The packaged application needs no separate Python, Node or GitHub CLI install.
+
 Six-host PR CI is read-only: no signing secrets, release/tag writes or fake search
 results. It tests real Qt widgets/codecs, packages native binaries and captures
 the actual frozen Win32 app with explicitly labelled generated audio. Source,

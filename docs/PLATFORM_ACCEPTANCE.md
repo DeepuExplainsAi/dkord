@@ -1,7 +1,7 @@
 # Current 0.10.1 acceptance gates
 
 The checks below retain historical receipts/physical checklists. For the new
-release, executable gates now require **120 cases across13 native classes**, all
+release, executable gates now require **121 cases across13 native classes**, all
 six genuine OS/CPU profiles and no skips/failures, Android unit +43 emulator
 regressions (including the two JVM room interop vectors), current frozen Win32
 screenshots and real install-over fixture execution. Counts must come from actual

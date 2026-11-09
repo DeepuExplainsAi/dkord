@@ -263,7 +263,8 @@ class MainWindow(PhoneExperience, QMainWindow):
                 def art_ready(pixmap, table=table, row=row):
                     if not sip.isdeleted(table) and table.item(row,0):table.item(row,0).setIcon(QIcon(pixmap))
                 self.artwork_cache.request(image,art_ready)
-            more=button("⋮" if entry.track else "›",lambda checked=False,entry=entry,row=row:self.track_menu(entry.track,table.mapToGlobal(table.visualItemRect(table.item(row,0)).bottomRight())) if entry.track else self.open_entry(entry))
+            more=button("" if entry.track else "›",lambda checked=False,entry=entry,row=row:self.track_menu(entry.track,table.mapToGlobal(table.visualItemRect(table.item(row,0)).bottomRight())) if entry.track else self.open_entry(entry))
+            if entry.track:more.setIcon(icon('more_vert',palette(self.effective_theme())['onSurface']))
             more.setObjectName("track-more");more.setAccessibleName(self.tr("more"));table.setCellWidget(row,3,more)
             table.setItem(row, 1, QTableWidgetItem(clock(entry.track.durationSec * 1000) if entry.track and entry.track.durationSec else "—"))
             offline = entry.track and self.library.local_file(entry.track)

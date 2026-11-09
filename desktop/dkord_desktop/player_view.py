@@ -21,7 +21,7 @@ def plain(value, style=None):
 
 def action(caption, callback, primary=False):
     widget = QPushButton(caption); widget.clicked.connect(callback); widget.setIconSize(QSize(24,24))
-    if not caption: widget.setProperty('iconOnly',True)
+    if not caption: widget.setProperty('iconOnly',True);widget.setFixedSize(44,44)
     widget.setCursor(Qt.CursorShape.PointingHandCursor)
     if primary:
         widget.setProperty('primary', True)
@@ -82,7 +82,7 @@ class FullPlayer(QDialog):
             ('previous', 'skip_previous', lambda: owner.next_track(-1)),
             ('play', 'play_arrow', owner.toggle), ('next', 'skip_next', lambda: owner.next_track(1)),
         ):
-            widget = action('', callback, key == 'play'); widget.setFixedSize(56, 56); widget.setIcon(icon(symbol)); widget.setIconSize(QSize(32, 32)); widget.setAccessibleName(owner.tr(key))
+            widget = action('', callback); side=72 if key=='play' else 56; widget.setFixedSize(side,side); widget.setIcon(icon(symbol,'#000000' if key=='play' else palette(owner.effective_theme())['onSurface'])); widget.setIconSize(QSize(40,40) if key=='play' else QSize(36,36)); widget.setAccessibleName(owner.tr(key))
             if key == 'play': self.play_toggle = widget; widget.setObjectName('full-play-toggle')
             transport.addWidget(widget)
         transport.addStretch(); outer.addLayout(transport)
@@ -125,7 +125,7 @@ class FullPlayer(QDialog):
         track = self.owner.current()
         if not track:
             return
-        self.play_toggle.setIcon(icon('pause' if self.owner.desired_playing else 'play_arrow', palette(self.owner.effective_theme())['onPrimary'], 32))
+        self.play_toggle.setIcon(icon('pause' if self.owner.desired_playing else 'play_arrow', '#000000', 40))
         self.play_toggle.setAccessibleName(self.owner.tr('pause' if self.owner.desired_playing else 'play'))
         changed = track.id != self.track_id
         if changed:

@@ -1,6 +1,7 @@
 """Native host packaging only, read-only preview output. No release writes or signing secrets."""
 from __future__ import annotations
 import argparse
+from contextlib import nullcontext
 import hashlib
 import json
 import os
@@ -11,13 +12,13 @@ import struct
 import subprocess
 import sys
 import tempfile
-import urllib.request
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from dkord_desktop import __version__
 from dkord_desktop.platforms import platform_key, WINDOWS_X86
 from dkord_desktop.binaries import require_pe_architecture
+from pinned_assets import download_asset
 
 OUT=ROOT/'.artifacts'
 DIST=OUT/'bundle'
@@ -26,6 +27,14 @@ NODE_LICENSE_SHA256='c738ae413cf561f174e34f6961f8ca458aae2369a73640dda6234c629b9
 APPIMAGE={
  'x64':('x86_64','e8c1169c4af66c3184d7ee110713d4be04befe671fa358e2c1591ee840553b03'),
  'arm64':('aarch64','d6a061996de690434996c2a523eafedd0a23780aaf02d69ce364537e71607e94'),
+}
+APPIMAGE_TOOL_IDS={'x64':715388534,'arm64':715388203}
+# Public asset API receipts at AppImage/type2-runtime commit below. No mutable,
+# unchecked runtime download is delegated to appimagetool during the build.
+APPIMAGE_RUNTIME_SOURCE='fedfad51acc2860b2916a1eef32ba4a500ff31ef'
+APPIMAGE_RUNTIME={
+ 'x64':(657374641,'617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46'),
+ 'arm64':(657373827,'9a72a744d221576c9347ec074243acc5c3c7568896b12714e0e82e9f0bf47900'),
 }
 
 def call(args,**kwargs):
@@ -107,8 +116,17 @@ def windows(target):
 
 
 def macos(target):
-    call(['pkgbuild','--component',DIST/'Dkord.app','--identifier','app.dkord.desktop','--version',__version__,
-          '--install-location','/Applications',OUT/f'Dkord-desktop-v{__version__}-{target}.pkg'])
+    import plistlib
+    with tempfile.TemporaryDirectory() as temporary:
+        stage=Path(temporary);root=stage/'root';root.mkdir();shutil.copytree(DIST/'Dkord.app',root/'Dkord.app',symlinks=True)
+        components=stage/'components.plist'
+        call(['pkgbuild','--analyze','--root',root,components])
+        with components.open('rb') as file:entries=plistlib.load(file)
+        for entry in entries:
+            entry['BundleIsRelocatable']=False;entry['BundleOverwriteAction']='upgrade'
+        with components.open('wb') as file:plistlib.dump(entries,file)
+        call(['pkgbuild','--root',root,'--component-plist',components,'--identifier','app.dkord.desktop','--version',__version__,
+              '--install-location','/Applications',OUT/f'Dkord-desktop-v{__version__}-{target}.pkg'])
 
 
 def linux(target):
@@ -130,14 +148,14 @@ def linux(target):
         appdir=Path(temp)/'Dkord.AppDir';appdir.mkdir();shutil.copytree(DIST/'Dkord',appdir/'usr/lib/Dkord')
         run=appdir/'AppRun';run.write_text('#!/bin/sh\nHERE=$(dirname "$(readlink -f "$0")")\nexec "$HERE/usr/lib/Dkord/Dkord" "$@"\n');run.chmod(0o755)
         (appdir/'app.dkord.desktop').write_text(text);shutil.copy2(OUT/'dkord.png',appdir/'dkord.png')
-        native_arch,digest=APPIMAGE[target.split('-')[1]];tool=Path(temp)/'appimagetool.AppImage'
-        url=f'https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-{native_arch}.AppImage'
-        urllib.request.urlretrieve(url,tool)
-        if hashlib.sha256(tool.read_bytes()).hexdigest()!=digest:raise RuntimeError('Pinned AppImage tool changed; review upstream before updating the digest')
+        profile=target.split('-')[1];native_arch,digest=APPIMAGE[profile];tool=Path(temp)/'appimagetool.AppImage'
+        download_asset('AppImage/appimagetool',APPIMAGE_TOOL_IDS[profile],tool,digest)
+        runtime_id,runtime_digest=APPIMAGE_RUNTIME[profile];runtime=Path(temp)/('runtime-'+native_arch)
+        download_asset('AppImage/type2-runtime',runtime_id,runtime,runtime_digest)
         tool.chmod(0o755);call([tool,'--appimage-extract'],cwd=temp)
         image=OUT/f'Dkord-desktop-v{__version__}-{target}.AppImage'
         env=dict(os.environ,ARCH=native_arch)
-        call([Path(temp)/'squashfs-root/AppRun','-n',appdir,image],env=env)
+        call([Path(temp)/'squashfs-root/AppRun','--runtime-file',runtime,'-n',appdir,image],env=env)
         image.chmod(0o755)
         call([image,'--appimage-extract-and-run','--self-test'],env=env)
 
@@ -145,31 +163,32 @@ def linux(target):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--target',default=platform_key());args=parser.parse_args()
     if args.target!=platform_key():raise RuntimeError('Native package target must match the actual build host OS/CPU')
-    OUT.mkdir(parents=True,exist_ok=True);node=resources();freeze(node)
-    if os.name=='nt':windows(args.target)
-    elif sys.platform=='darwin':macos(args.target)
-    else:linux(args.target)
-    artifacts=[]
-    for file in OUT.iterdir():
-        if file.suffix in {'.exe','.pkg','.deb','.AppImage'}:
-            artifacts.append({'name':file.name,'bytes':file.stat().st_size,'sha256':hashlib.sha256(file.read_bytes()).hexdigest()})
-    if not artifacts:raise RuntimeError('No real native packages were produced')
-    from dkord_desktop.qt import BINDING, QtCore
-    if os.name=='nt':
-        from dkord_desktop.codec import ffmpeg_exe
-        require_pe_architecture(Path(ffmpeg_exe()),'x86' if WINDOWS_X86 else 'x64')
-    preview={'channel':'development-preview','version':__version__,'target':args.target,'source':os.environ.get('DKORD_SOURCE_SHA','local'),
-             'trusted_signed_release':False,'notarized':False,'artifacts':artifacts}
-    from install_over import verify_install_over
-    preview['installOver']=verify_install_over(args.target,[OUT/item['name'] for item in artifacts]) if os.environ.get('GITHUB_ACTIONS')=='true' else None
-    preview['runtime']={'python_bits':struct.calcsize('P')*8,'qt_binding':BINDING,'qt_version':QtCore.QT_VERSION_STR,
-                        'audio_probe':'ffmpeg' if WINDOWS_X86 else 'pyav'}
-    if os.name=='nt':preview['runtime']['verified_pe_payloads']={'application':'x86' if WINDOWS_X86 else 'x64','node':'x86' if WINDOWS_X86 else 'x64','ffmpeg':'x86' if WINDOWS_X86 else 'x64'}
-    if WINDOWS_X86:
-        preview['codec_source']=json.loads((ROOT/'.runtime/FFmpeg-source.json').read_text(encoding='utf-8'))
-        preview['runtime']['verified_pe_payloads']['ffprobe']='x86'
-    if args.target.startswith('linux-'):preview['minimum_glibc']='2.39'
-    (OUT/f'preview-{args.target}.json').write_text(json.dumps(preview,indent=2)+'\n')
-    print(json.dumps(preview,indent=2))
+    from install_over import baseline_session
+    with baseline_session(args.target) if os.environ.get('GITHUB_ACTIONS')=='true' else nullcontext() as upgrade:
+        OUT.mkdir(parents=True,exist_ok=True);node=resources();freeze(node)
+        if os.name=='nt':windows(args.target)
+        elif sys.platform=='darwin':macos(args.target)
+        else:linux(args.target)
+        artifacts=[]
+        for file in OUT.iterdir():
+            if file.suffix in {'.exe','.pkg','.deb','.AppImage'}:
+                artifacts.append({'name':file.name,'bytes':file.stat().st_size,'sha256':hashlib.sha256(file.read_bytes()).hexdigest()})
+        if not artifacts:raise RuntimeError('No real native packages were produced')
+        from dkord_desktop.qt import BINDING, QtCore
+        if os.name=='nt':
+            from dkord_desktop.codec import ffmpeg_exe
+            require_pe_architecture(Path(ffmpeg_exe()),'x86' if WINDOWS_X86 else 'x64')
+        preview={'channel':'development-preview','version':__version__,'target':args.target,'source':os.environ.get('DKORD_SOURCE_SHA','local'),
+                 'trusted_signed_release':False,'notarized':False,'artifacts':artifacts}
+        preview['installOver']=upgrade([OUT/item['name'] for item in artifacts]) if upgrade else None
+        preview['runtime']={'python_bits':struct.calcsize('P')*8,'qt_binding':BINDING,'qt_version':QtCore.QT_VERSION_STR,
+                            'audio_probe':'ffmpeg' if WINDOWS_X86 else 'pyav'}
+        if os.name=='nt':preview['runtime']['verified_pe_payloads']={'application':'x86' if WINDOWS_X86 else 'x64','node':'x86' if WINDOWS_X86 else 'x64','ffmpeg':'x86' if WINDOWS_X86 else 'x64'}
+        if WINDOWS_X86:
+            preview['codec_source']=json.loads((ROOT/'.runtime/FFmpeg-source.json').read_text(encoding='utf-8'))
+            preview['runtime']['verified_pe_payloads']['ffprobe']='x86'
+        if args.target.startswith('linux-'):preview['minimum_glibc']='2.39'
+        (OUT/f'preview-{args.target}.json').write_text(json.dumps(preview,indent=2)+'\n')
+        print(json.dumps(preview,indent=2))
 
 if __name__=='__main__':main()

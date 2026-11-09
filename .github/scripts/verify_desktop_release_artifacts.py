@@ -131,7 +131,7 @@ def verify_and_stage(root, output, sha, version):
         if proof.is_symlink() or not proof.is_file() or proof.stat().st_size > 4 * 1024 * 1024:
             raise ValueError('Missing/bounded native JUnit proof')
         if tuple(map(int,version.split('.'))) >= (0,10,1):
-            verify_tests(proof,120,PARITY_CLASSES)
+            verify_tests(proof,121,PARITY_CLASSES)
         else:
             verify_tests(proof)
         expected = {f'Dkord-desktop-v{version}-{target}.{kind}': kind for kind in KINDS[target]}
@@ -171,7 +171,7 @@ def main():
     parser.add_argument('--version', required=True)
     args = parser.parse_args()
     paths = verify_and_stage(args.root, args.output, args.sha, args.version)
-    minimum=120 if tuple(map(int,args.version.split('.'))) >= (0,10,1) else 36
+    minimum=121 if tuple(map(int,args.version.split('.'))) >= (0,10,1) else 36
     print(f'::notice title=Native build release proof::{len(paths)} native files verified for {args.sha}: all6 targets, hashes, formats and actual minimum {minimum}-case proof. Build-stage artifacts require separate owner manifest attestation; no OS signing/notarization is claimed.')
 
 if __name__ == '__main__':

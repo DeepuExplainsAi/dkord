@@ -83,5 +83,7 @@ QMenu {{ border:1px solid {p['outline']}; padding:6px; }} QMenu::item {{ padding
 QToolTip {{ background:{p['surfaceContainerHighest']}; color:{p['onSurface']}; border:1px solid {p['outline']}; }}
 QStatusBar {{ color:{p['onSurfaceVariant']}; font-size:12px; }}
 QLabel {{ background: transparent; }}
-QPushButton[iconOnly="true"] {{ padding: 0; min-width: 0; }}
+QPushButton[iconOnly="true"] {{ background:transparent; padding:0; min-width:0; min-height:0; border-radius:20px; }}
+QPushButton[iconOnly="true"]:hover {{ background:{p['surfaceContainerHighest']}; }}
+QPushButton#full-play-toggle {{ background:white; color:black; padding:0; border:0; border-radius:36px; }}
 '''

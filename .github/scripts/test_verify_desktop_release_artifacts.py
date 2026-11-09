@@ -55,9 +55,9 @@ class NativeReleaseProofTest(unittest.TestCase):
                                      target=target,source=self.sha,noUninstall=True,standardUserData=True,frozenClient=True,
                                      packages=[dict(kind=kind,baselineName=f'Dkord-desktop-v0.10.0-{target}.{kind}',baselineSha256='1'*64,checks=checks) for kind in KINDS[target]])
             self.save(target,data)
-            names=list(PARITY_CLASSES)+['CoreTest']*(120-len(PARITY_CLASSES))
+            names=list(PARITY_CLASSES)+['CoreTest']*(121-len(PARITY_CLASSES))
             cases=''.join(f'<testcase classname="desktop.tests.{name}" name="synthetic{i}"/>' for i,name in enumerate(names))
-            (self.folder(target)/'test-results.xml').write_text('<testsuites><testsuite tests="120" failures="0" errors="0" skipped="0">'+cases+'</testsuite></testsuites>')
+            (self.folder(target)/'test-results.xml').write_text('<testsuites><testsuite tests="121" failures="0" errors="0" skipped="0">'+cases+'</testsuite></testsuites>')
     def test_current_release_requires_actual_new_minimum_classes_and_all_data_categories(self):
         self.current_fixture();files=self.verify();self.assertEqual(14,len(files))
     def test_old_36_case_execution_cannot_be_promoted_as_the_new_release(self):

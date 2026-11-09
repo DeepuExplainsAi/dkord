@@ -211,6 +211,21 @@ class NativeWidgetTest(unittest.TestCase):
         self.assertEqual('Home',self.window.page);self.assertEqual([],self.provider.calls)
         self.window.new_releases_page();self.assertFalse(self.window.release_expanded)
 
+    def test_phone_mini_player_icon_buttons_and_white_circular_full_play_control_keep_phone_dimensions(self):
+        # Android PlayerUi.kt: transparent mini IconButtons; 56dp/36dp skip,
+        # 72dp WHITE filled full-player play with a 40dp BLACK Material icon.
+        self.assertFalse(self.window.play_button.property('primary'))
+        self.assertEqual((44,44),(self.window.play_button.width(),self.window.play_button.height()))
+        self.assertEqual(24,self.window.play_button.iconSize().width())
+        track=Track('online00001','Generated UI fixture','Test only');self.window.browse_result('Fixture',[track])
+        menu=self.window.table.cellWidget(0,3);self.assertTrue(menu.property('iconOnly'));self.assertFalse(menu.icon().isNull());self.assertEqual(24,menu.iconSize().width())
+        self.window.queue=[track];self.window.index=0
+        self.window.show_full_player();self.app.processEvents();full=self.window.full_player
+        self.assertEqual((72,72),(full.play_toggle.width(),full.play_toggle.height()))
+        self.assertEqual(40,full.play_toggle.iconSize().width());self.assertFalse(full.play_toggle.icon().isNull())
+        self.assertIn('QPushButton#full-play-toggle',self.window.styleSheet());self.assertIn('border-radius:36px',self.window.styleSheet())
+        full.close();self.assertFalse(self.window.desired_playing);self.assertTrue(self.window.player.source().isEmpty())
+
     def test_optional_video_has_a_separate_native_player_and_never_auto_resumes_music_on_close(self):
         from dkord_desktop.video_view import VideoPlayer
         video=VideoPlayer(self.window,Track('online00001','Video','Artist'),autoload=False)

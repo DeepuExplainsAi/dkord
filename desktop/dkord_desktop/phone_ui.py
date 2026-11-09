@@ -58,7 +58,9 @@ class PhoneExperience:
         for widget, name in ((self.settings_button, 'settings'), (self.together_button, 'groups'), (self.back_button, 'arrow_back'),
                              (self.previous_button, 'skip_previous'), (self.next_button, 'skip_next')):
             widget.setIcon(icon(name, p['onSurface']))
-        self.play_button.setIcon(icon('pause' if self.desired_playing else 'play_arrow', p['onPrimary']))
+        self.play_button.setIcon(icon('pause' if self.desired_playing else 'play_arrow', p['onSurface']))
+        for widget in self.findChildren(QPushButton,'track-more'):
+            if widget.property('iconOnly'):widget.setIcon(icon('more_vert',p['onSurface']))
 
     def build_shell(self):
         app = QApplication.instance(); app.setProperty('dkord-language', self.store.setting('language', 'en'))
@@ -158,7 +160,7 @@ class PhoneExperience:
     def update_play_button(self):
         if hasattr(self, 'play_button'):
             self.play_button.setText('')
-            self.play_button.setIcon(icon('pause' if self.desired_playing else 'play_arrow', palette(self.effective_theme())['onPrimary']))
+            self.play_button.setIcon(icon('pause' if self.desired_playing else 'play_arrow', palette(self.effective_theme())['onSurface']))
             self.play_button.setAccessibleName(self.tr('pause' if self.desired_playing else 'play'))
 
     def select_navigation(self, page):
@@ -472,7 +474,7 @@ class PhoneExperience:
         self.now.setMaximumWidth(10000); self.now_artist.setMaximumWidth(10000); info.addWidget(self.now); info.addWidget(self.now_artist); top.addLayout(info, 1)
         expand = button('', self.show_full_player); expand.setIcon(icon('expand_more')); expand.setToolTip(self.tr('room_open_player')); expand.setAccessibleName(self.tr('room_open_player')); top.addWidget(expand)
         self.previous_button = button('', lambda: self.next_track(-1)); self.previous_button.setFixedSize(40, 40); self.previous_button.setAccessibleName(self.tr('previous'))
-        self.play_button = button('', self.toggle, True); self.play_button.setObjectName('play-toggle'); self.play_button.setFixedSize(44, 44); self.play_button.setAccessibleName(self.tr('play'))
+        self.play_button = button('', self.toggle); self.play_button.setObjectName('play-toggle'); self.play_button.setFixedSize(44, 44); self.play_button.setAccessibleName(self.tr('play'))
         self.next_button = button('', lambda: self.next_track(1)); self.next_button.setFixedSize(40, 40); self.next_button.setAccessibleName(self.tr('next'))
         top.addWidget(self.previous_button); top.addWidget(self.play_button); top.addWidget(self.next_button); body.addLayout(top)
         self.mini_seek = QSlider(Qt.Orientation.Horizontal); self.mini_seek.setRange(0, 1); self.mini_seek.setMaximumHeight(8)

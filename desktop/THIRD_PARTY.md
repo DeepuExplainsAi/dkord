@@ -12,12 +12,12 @@ Dkord desktop source is **GPL-3.0-only**, matching the repository [LICENSE](../L
 | imageio-ffmpeg0.8.1 / bundled FFmpeg | Actual audio rendering | BSD wrapper; bundled FFmpeg licenses/configuration vary by wheel and must be preserved; https://github.com/imageio/imageio-ffmpeg/tree/v0.8.1 and https://ffmpeg.org/download.html |
 | PyAV16.0.1 / bundled libav | Native audio probing/decoding | BSD wrapper / FFmpeg terms; https://github.com/PyAV-Org/PyAV/tree/v16.0.1 |
 | Node22.22.3 | Included OS/CPU-matched JS runtime, no first-play install | MIT and included third-party terms; https://github.com/nodejs/node/tree/v22.22.3 ; full NODE-LICENSE.txt is included in native output |
-| cryptography46.0.3 | Ed25519 update verification | Apache-2.0/BSD; https://github.com/pyca/cryptography/tree/46.0.3 |
+| cryptography46.0.3 | Legacy Ed25519 and original-identity RSA/P-256 update verification | Apache-2.0/BSD; https://github.com/pyca/cryptography/tree/46.0.3 |
 | Requests / platformdirs and locked transitive dependencies | HTTPS / stable per-user data directory | Respective Apache/MIT/BSD licenses; versions in constraints.lock |
 | PyInstaller6.22.3 | Native executable bundling | GPL with bootloader exception; https://github.com/pyinstaller/pyinstaller/tree/v6.22.3 |
 | AppImage tooling / Inno Setup | Native preview packages | Respective upstream licenses; https://github.com/AppImage/appimagetool and https://github.com/jrsoftware/issrc |
 
-Before an owner-authorized public release, inspect native dependency reports, include all applicable notices/license texts, provide the required complete corresponding sources/build recipes alongside binary distribution, and complete native signing/notarization. PR preview packages are explicitly unsigned/not notarized and are not an official trusted update channel. No paid service, provider credentials, browser cookies or private signing key is included in this source tree.
+Before an owner-authorized public release, inspect native dependency reports, include all applicable notices/license texts, provide the required complete corresponding sources/build recipes alongside binary distribution, and state OS publisher-signing/notarization status honestly. The separate original-identity application update-manifest attestation is not Windows Authenticode or Apple Developer ID/notarization. Old previews cannot bootstrap a new root automatically; this source pins the independently verified original APK public identity. No paid service, provider credentials, browser cookies or private signing key is included in this source tree.
 
 Node.js22.22.3's matching complete upstream license is vendored as `assets/Node-LICENSE.txt` (SHA256 `c738ae413cf561f174e34f6961f8ca458aae2369a73640dda6234c629b98bcc4`, source `https://github.com/nodejs/node/blob/v22.22.3/LICENSE`). The builder checks this digest before copying it to `licenses/NODE-LICENSE.txt`; no live license API quota or user first-play runtime download is required.
 
@@ -38,3 +38,19 @@ Node.js22.22.3's matching complete upstream license is vendored as `assets/Node-
 - Phone colors, English/Hindi strings, navigation and curated shelf declarations
   are exported from this GPL-3.0 project's Android sources. Run
   `python desktop/scripts/export_phone_contract.py --check` to reject drift.
+
+## Pinned AppImage runtime
+
+Linux builds use explicit upstream asset IDs and SHA-256 checks for both
+appimagetool and the embedded type2 runtime; appimagetool is not allowed to fetch
+an unpinned runtime. Runtime source/build recipes are pinned to
+`fedfad51acc2860b2916a1eef32ba4a500ff31ef`:
+https://github.com/AppImage/type2-runtime/tree/fedfad51acc2860b2916a1eef32ba4a500ff31ef
+and https://codeload.github.com/AppImage/type2-runtime/tar.gz/fedfad51acc2860b2916a1eef32ba4a500ff31ef.
+The complete upstream runtime notice is included as
+`assets/AppImage-runtime-LICENSE.txt`; it includes the MIT runtime notice and
+upstream terms for statically linked musl, libfuse, squashfuse, libzstd and zlib.
+Exact per-CPU runtime hashes and upstream asset identities are in
+`packaging/build.py`. Only transient dependency transport errors may retry (max3);
+hash drift, codec tests, real installers and acceptance cases never retry or
+silently substitute different binaries.
