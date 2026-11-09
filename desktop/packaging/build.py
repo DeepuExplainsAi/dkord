@@ -135,7 +135,7 @@ def linux(target):
         stage=Path(temp)/'deb';install=stage/'opt/Dkord';install.parent.mkdir(parents=True);shutil.copytree(DIST/'Dkord',install)
         control=stage/'DEBIAN';control.mkdir()
         glibc='2.39' # Both binaries are built on Ubuntu24.04, never promise an untested older libc.
-        (control/'control').write_text(f'Package: dkord\nVersion: {__version__}\nSection: sound\nPriority: optional\nArchitecture: {arch}\nMaintainer: DeepuGupta\nDepends: libc6 (>= {glibc}), libgl1, libegl1, libdbus-1-3, libxkbcommon0, libxcb-cursor0, libpulse0\nDescription: Dkord music and Mashup Studio\n')
+        (control/'control').write_text(f'Package: dkord\nVersion: {__version__}\nSection: sound\nPriority: optional\nArchitecture: {arch}\nMaintainer: DeepuGupta\nDepends: libc6 (>= {glibc}), libgl1, libegl1, libdbus-1-3, libxkbcommon0, libxcb-cursor0, libxcb-shape0, libx11-xcb1, libxkbcommon-x11-0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-render-util0, libxcb-xinerama0, libxcb-xkb1, libxcb-randr0, libxcb-sync1, libxcb-xfixes0, libxcb-shm0, libpulse0\nDescription: Dkord music and Mashup Studio\n')
         binary=stage/'usr/bin';binary.mkdir(parents=True);launcher=binary/'dkord';launcher.write_text('#!/bin/sh\nexec /opt/Dkord/Dkord "$@"\n');launcher.chmod(0o755)
         desktop=stage/'usr/share/applications';desktop.mkdir(parents=True)
         text='[Desktop Entry]\nType=Application\nName=Dkord\nComment=Music, private offline audio and Mashup Studio\nExec=dkord\nIcon=dkord\nTerminal=false\nCategories=AudioVideo;Audio;Music;\nKeywords=Music;YouTube Music;Offline;Audio editor;Mashup;Choliwood;\n'

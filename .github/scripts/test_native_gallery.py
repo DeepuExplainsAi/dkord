@@ -130,6 +130,19 @@ class NativeGalleryGuardTest(unittest.TestCase):
         (folder / receipt['parts'][0]['name']).write_bytes(b'changed')
         with self.assertRaises(ValueError): transport.emit(folder, 0, 0)
 
+    def test_frozen_linux_x11_shape_dependency_is_installed_before_freezing_and_declared_in_deb(self):
+        native=(ROOT/'.github/workflows/validate-desktop.yml').read_text()
+        package=(ROOT/'desktop/packaging/build.py').read_text()
+        self.assertIn('libxcb-shape0',native);self.assertIn('libxcb-shape0',package)
+        self.assertLess(native.index('libxcb-shape0'),native.index('Build and execute the real native package'))
+
+    def test_captures_use_real_native_platform_plugins_without_offscreen_fallback(self):
+        capture=(ROOT/'desktop/packaging/capture_gallery.py').read_text()
+        for value in ("'windows'", "'cocoa'", "'xcb'", 'xvfb-run'):
+            self.assertIn(value,capture)
+        self.assertNotIn("'offscreen'",capture)
+        self.assertIn('check=True',capture)
+
     def test_signed_release_requires_fresh_gallery_baseline_and_no_historical_route_reuse(self):
         workflow = (ROOT / '.github/workflows/release-v0102.yml').read_text()
         for requirement in ('v0.10.2.json', 'gallery_proof.py', 'v0.10.1', '--target-code 16', 'desktop-complete-gallery', 'test "${#assets[@]}" -eq 22'):
