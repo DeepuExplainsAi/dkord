@@ -56,17 +56,36 @@ phone/PC contract. The native page is Qt, not an embedded website or browser.
   platform parser suites.
 - Local sandbox: **108 non-GUI native tests +99 subtests** and **240 repository
   guard tests passed**. Python syntax, EN/HI XML and phone-contract checks passed.
-- Android main compilation/APK and **458 JVM tests /52 reports** passed at the
-  initial feature checkpoint; no failures/errors/skips. The device-test compile
-  helper needed separate IME/set-text calls; the corrected device suite is pending.
+- Exact application/test source: **`64e178b45dda68785b5eea787d768d53a5a511d4`**.
+  [Android validation42602798355](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798355)
+  **succeeded**: main/APK compilation, **458 JVM cases /52 XML reports**, and
+  **50 API35 emulator device cases /1 XML report**, including seven production
+  Compose link-page cases. Zero test failures/errors/skips. The same run's
+  independent Linux native job passed **142 cases +actual codec/widget entry**.
+- [Native validation42602798430](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430)
+  **succeeded at the same exact source on all six genuine targets**. Each ran
+  **142 cases with zero failures/errors/skips**, real codec/data/update/widget
+  tests, the native entry-point smoke, and real package/frozen-executable smokes.
+  Windows32 compiled and executed its actual x86 codec/runtime; it is not x64
+  renamed as x86. This generated development artifacts, not a public release.
+
+  | Native target | Successful job |
+  |---|---|
+  | Windows x64 | [129114755268](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430/job/129114755268) |
+  | Windows x86 /32-bit | [129114755357](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430/job/129114755357) |
+  | macOS x64 | [129114754950](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430/job/129114754950) |
+  | macOS arm64 | [129114755084](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430/job/129114755084) |
+  | Linux x64 | [129114755127](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430/job/129114755127) |
+  | Linux arm64 | [129114754952](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430/job/129114754952) |
+
+  Released v0.10.1 proof remains separate history, not evidence for this feature.
+  The final receipt/HANDOFF edits are documentation-only after the source above.
 - A real native crash trace identified a Python `QObject.destroyed` closure during
   garbage collection. The fix cancels the page explicitly on the GUI thread,
   before page replacement/close/deferred deletion, rather than in a destructor.
-  **142 real native cases plus the actual codec/widget entry smoke passed** on
-  Linux at source `038b7cc26a1f5cc8ee10a083e47880090b9984fe`, including a new
-  deleted-widget/late-callback regression and the original metadata-thread tests.
-- Full Android device and six-host native package gates are still running. Do
-  not treat pending checks as passed. Released v0.10.1 proof is separate history.
+  The deleted-widget/late-callback regression and original metadata-thread tests
+  remain in the full suite. The Android IME helper now uses separate set-text and
+  IME calls; no production behavior/assertions were weakened to get a pass.
 - The sandbox has no Android SDK or GL/EGL/DBus/xkbcommon runtime. It cannot
   independently establish Android/native GUI execution or heard/live audio.
 

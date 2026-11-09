@@ -1,0 +1,220 @@
+name: Publish requested Android and PC 0.10.2 update
+on:
+  push:
+    branches: [arena/a6a6bbda-dkord]
+    paths: [.github/release-requests/v0.10.2.json]
+permissions:
+  contents: write
+  actions: read
+  checks: read
+concurrency:
+  group: dkord-v0.10.2
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'DeepuExplainsAi/dkord' && github.ref == 'refs/heads/arena/a6a6bbda-dkord' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: v0.10.2
+    outputs:
+      gallery_matrix: ${{ steps.gallery_transport.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Validate the fresh direct-child Android and PC publication request
+        run: python3 -B .github/scripts/validate_release_request_v0102.py
+      - name: Run safety regressions and require a brand-new version without historical mutation
+        run: |
+          python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
+          python3 -B .github/scripts/publish_v0102.py ensure-new-release
+          python3 -B .github/scripts/publish_v0102.py snapshot-release --output "$RUNNER_TEMP/previous-release-integrity.json"
+      - name: Require successful Android and six-host native validation at parent and this exact release source
+        run: |
+          previous=$(python3 -c 'import json; print(json.load(open(".github/release-requests/v0.10.2.json"))["validatedHead"])')
+          for source in "$previous" "$GITHUB_SHA"; do
+            for workflow in validate-pr.yml validate-desktop.yml; do
+              run_id=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs" \
+                -f head_sha="$source" -f event=pull_request -f per_page=1 --jq '.workflow_runs[0].id // empty')
+              if [[ ! "$run_id" =~ ^[1-9][0-9]*$ ]]; then
+                echo "::error::No matching-head $workflow run; old or partially validated packages cannot publish."
+                exit 1
+              fi
+              gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status --interval 30
+              if [ "$source" = "$GITHUB_SHA" ]; then
+                if [ "$workflow" = validate-desktop.yml ]; then
+                  echo "NATIVE_RUN_ID=$run_id" >> "$GITHUB_ENV"
+                else
+                  echo "ANDROID_RUN_ID=$run_id" >> "$GITHUB_ENV"
+                fi
+              fi
+            done
+          done
+      - name: Download and verify all exact-source native packages and real frozen Windows32 captures
+        run: |
+          gh run download "$NATIVE_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'desktop-preview-*' --dir "$RUNNER_TEMP/native-inputs"
+          python3 -B .github/scripts/verify_desktop_release_artifacts.py --root "$RUNNER_TEMP/native-inputs" \
+            --output "$RUNNER_TEMP/release-assets" --sha "$GITHUB_SHA" --version 0.10.2
+          gh run download "$NATIVE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name desktop-windows-ui-x86 --dir "$RUNNER_TEMP/windows-captures"
+          python3 desktop/packaging/screenshot_proof.py "$RUNNER_TEMP/windows-captures" --source "$GITHUB_SHA" --verify-only
+          cp -- "$RUNNER_TEMP/windows-captures/windows-x86-player.png" "$RUNNER_TEMP/windows-captures/windows-x86-studio.png" \
+            "$RUNNER_TEMP/windows-captures/windows-x86-screenshot-proof.json" "$RUNNER_TEMP/release-assets/"
+      - name: Verify all180 actual native screenshots and stage the complete offline gallery
+        run: |
+          gh run download "$NATIVE_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'desktop-gallery-*' --dir "$RUNNER_TEMP/gallery-inputs"
+          python3 desktop/packaging/gallery_proof.py --root "$RUNNER_TEMP/gallery-inputs" --output "$RUNNER_TEMP/release-assets" --source "$GITHUB_SHA" --version 0.10.2
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Require the existing stable Android signing identity, never generate a key
+        env:
+          KS: ${{ secrets.DKORD_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.DKORD_KEYSTORE_PASS }}
+        run: |
+          if [ -z "$KS" ] || [ -z "$KS_PASS" ]; then
+            echo "::error::Existing stable signing secrets are required; no replacement/debug key is permitted."
+            exit 1
+          fi
+          umask 077
+          keystore="$RUNNER_TEMP/dkord.p12"
+          printf '%s' "$KS" | base64 --decode > "$keystore"
+          test -s "$keystore"
+          keytool -list -storetype pkcs12 -keystore "$keystore" -alias dkord -storepass:env KS_PASS > /dev/null
+          delimiter="DKORD_PASS_$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
+          {
+            printf 'DKORD_KEYSTORE=%s\n' "$keystore"
+            printf 'DKORD_KEYSTORE_PASS<<%s\n' "$delimiter"
+            printf '%s\n' "$KS_PASS"
+            printf '%s\n' "$delimiter"
+          } >> "$GITHUB_ENV"
+      - name: Test exact-source Android and build with the original signing identity
+        run: |
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --no-parallel --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8' --stacktrace
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/debug/*.apk)
+          if [ "${#apks[@]}" -ne 1 ] || [ ! -s "${apks[0]}" ]; then
+            echo "::error::Expected exactly one original-key APK after successful tests."
+            exit 1
+          fi
+          cp -- "${apks[0]}" "$RUNNER_TEMP/release-assets/Dkord-v0.10.2.apk"
+          echo "RELEASE_APK=$RUNNER_TEMP/release-assets/Dkord-v0.10.2.apk" >> "$GITHUB_ENV"
+      - name: Verify original APK certificate, package and increasing install-over versionCode
+        run: |
+          mkdir -p "$RUNNER_TEMP/previous-apk"
+          gh release download v0.10.1 --repo "$GITHUB_REPOSITORY" --pattern Dkord-v0.10.1.apk --dir "$RUNNER_TEMP/previous-apk"
+          printf '%s  %s\n' 04ad9ef99e7d4eb913d08aca6eda03af5796d69fe9eecdc1adb8225895098e4d \
+            "$RUNNER_TEMP/previous-apk/Dkord-v0.10.1.apk" | sha256sum -c -
+          python3 -B .github/scripts/verify_apk_update.py
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Attest native updates with the existing pinned APK identity and verify all eight client update plans
+        run: |
+          python -m pip install 'cryptography==46.0.3' 'requests==2.32.5'
+          python desktop/scripts/sign_update_manifest.py --folder "$RUNNER_TEMP/release-assets" --version 0.10.2 --tag "$TAG" --source "$GITHUB_SHA"
+      - name: Remove the temporary keystore before any publication operation
+        if: always()
+        run: |
+          rm -f -- "$RUNNER_TEMP/dkord.p12"
+          printf 'DKORD_KEYSTORE=\nDKORD_KEYSTORE_PASS=\n' >> "$GITHUB_ENV"
+      - name: Enable isolated Android upgrade emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Actually install the original APK then install-over and verify its real data and downloads
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: >-
+            python3 -B .github/scripts/verify_android_install_over.py
+            --old "$RUNNER_TEMP/previous-apk/Dkord-v0.10.1.apk"
+            --new "$RELEASE_APK"
+            --test app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            --output "$RUNNER_TEMP/android-install-over-proof.json" --baseline v0.10.1 --target-code 16
+      - name: Stage complete checksums and truthful Android and PC release notes
+        run: |
+          python3 -B .github/scripts/publish_v0102.py checksums --folder "$RUNNER_TEMP/release-assets"
+          python3 -B .github/scripts/publish_v0102.py notes --source "$GITHUB_SHA" --android-run "$ANDROID_RUN_ID" \
+            --native-run "$NATIVE_RUN_ID" --output "$RUNNER_TEMP/release-notes.md"
+          python3 -B .github/scripts/publish_v0102.py ensure-new-release
+      - name: Create a fresh draft, verify uploaded bytes and preserve all historical releases
+        run: |
+          shopt -s nullglob
+          assets=("$RUNNER_TEMP/release-assets/"*)
+          test "${#assets[@]}" -eq 22
+          gh release create "$TAG" "${assets[@]}" --repo "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" \
+            --title 'Dkord v0.10.2 — Android & PC' --notes-file "$RUNNER_TEMP/release-notes.md"
+          python3 -B .github/scripts/publish_v0102.py verify-release --folder "$RUNNER_TEMP/release-assets" --source "$GITHUB_SHA" \
+            --baseline "$RUNNER_TEMP/previous-release-integrity.json" --draft
+      - name: Publish the verified new Android and PC update without replacing any old release
+        run: |
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+          python3 -B .github/scripts/publish_v0102.py verify-release --folder "$RUNNER_TEMP/release-assets" --source "$GITHUB_SHA" \
+            --baseline "$RUNNER_TEMP/previous-release-integrity.json"
+      - name: Upload public publication receipts, never private signing material
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: v0.10.2-publication-receipts
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/previous-release-integrity.json
+            ${{ runner.temp }}/release-notes.md
+            ${{ runner.temp }}/android-install-over-proof.json
+            ${{ runner.temp }}/release-assets/SHA256SUMS
+            ${{ runner.temp }}/release-assets/Dkord-desktop-v0.10.2-manifest.json
+            app/build/test-results/testDebugUnitTest/
+      - name: Prepare bounded transport of only the verified public screenshot archive
+        id: gallery_transport
+        run: python3 -B .github/scripts/gallery_transport.py plan --archive "$RUNNER_TEMP/release-assets/Dkord-PC-screenshots-v0.10.2.zip" --output "$RUNNER_TEMP/gallery-transport" --source "$GITHUB_SHA"
+      - name: Upload public screenshot chunks for read-only workspace delivery
+        uses: actions/upload-artifact@v7
+        with:
+          name: v0.10.2-public-gallery-transport
+          retention-days: 7
+          path: ${{ runner.temp }}/gallery-transport/
+          if-no-files-found: error
+
+  screenshot-delivery:
+    name: Deliver actual PC screenshot chunk ${{ matrix.part }}
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix: ${{ fromJSON(needs.publish.outputs.gallery_matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: v0.10.2-public-gallery-transport
+          path: gallery-transport
+      - name: Expose hash-bound original screenshot bytes batch 1 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 0
+      - name: Expose hash-bound original screenshot bytes batch 2 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 1
+      - name: Expose hash-bound original screenshot bytes batch 3 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 2
+      - name: Expose hash-bound original screenshot bytes batch 4 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 3
+      - name: Expose hash-bound original screenshot bytes batch 5 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 4
+      - name: Expose hash-bound original screenshot bytes batch 6 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 5

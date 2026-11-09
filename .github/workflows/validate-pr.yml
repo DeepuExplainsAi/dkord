@@ -133,8 +133,8 @@ jobs:
           import xml.etree.ElementTree as ET
           root = ET.parse('desktop/.artifacts/fast-native-tests.xml').getroot()
           cases = root.findall('.//testcase')
-          assert len(cases) >= 142, f'Missing native regressions: {len(cases)}'
-          for cls in ('NativeWidgetTest', 'NativeLinkWidgetTest', 'YouTubeLinkTest', 'NewReleasesTest'):
+          assert len(cases) >= 144, f'Missing native regressions: {len(cases)}'
+          for cls in ('NativeWidgetTest', 'NativeLinkWidgetTest', 'YouTubeLinkTest', 'NewReleasesTest', 'NativeGalleryWidgetTest'):
               assert any(cls in case.get('classname', '') for case in cases), f'Missing {cls}'
           assert not any(root.findall('.//' + marker) for marker in ('failure', 'error', 'skipped'))
           print(f'::notice title=Fast native regressions::{len(cases)} actual cases; zero failures/errors/skips.')

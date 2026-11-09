@@ -92,7 +92,9 @@ def verify_and_stage(root, output, sha, version):
         if (data.get('channel') != 'development-preview' or data.get('version') != version or data.get('target') != target
                 or data.get('source') != sha or data.get('trusted_signed_release') is not False or data.get('notarized') is not False):
             raise ValueError('Wrong source/version/target or misleading signing claim')
-        if tuple(map(int,version.split('.'))) >= (0,10,1):
+        if tuple(map(int,version.split('.'))) >= (0,10,2):
+            verify_tests(proof,144,PARITY_CLASSES + ('YouTubeLinkTest','NativeLinkWidgetTest','NativeGalleryWidgetTest'))
+        elif tuple(map(int,version.split('.'))) >= (0,10,1):
             evidence=data.get('installOver',{})
             if (evidence.get('format')!=1 or evidence.get('baselineTag')!='desktop-v0.10.0-preview.2'
                     or evidence.get('baselineSource')!='0d97e6413d999cdfbb562397cc230f1798f02606'
@@ -130,7 +132,9 @@ def verify_and_stage(root, output, sha, version):
         proof = folder / 'test-results.xml'
         if proof.is_symlink() or not proof.is_file() or proof.stat().st_size > 4 * 1024 * 1024:
             raise ValueError('Missing/bounded native JUnit proof')
-        if tuple(map(int,version.split('.'))) >= (0,10,1):
+        if tuple(map(int,version.split('.'))) >= (0,10,2):
+            verify_tests(proof,144,PARITY_CLASSES + ('YouTubeLinkTest','NativeLinkWidgetTest','NativeGalleryWidgetTest'))
+        elif tuple(map(int,version.split('.'))) >= (0,10,1):
             verify_tests(proof,121,PARITY_CLASSES)
         else:
             verify_tests(proof)
@@ -171,7 +175,7 @@ def main():
     parser.add_argument('--version', required=True)
     args = parser.parse_args()
     paths = verify_and_stage(args.root, args.output, args.sha, args.version)
-    minimum=121 if tuple(map(int,args.version.split('.'))) >= (0,10,1) else 36
+    minimum=144 if tuple(map(int,args.version.split('.'))) >= (0,10,2) else 121 if tuple(map(int,args.version.split('.'))) >= (0,10,1) else 36
     print(f'::notice title=Native build release proof::{len(paths)} native files verified for {args.sha}: all6 targets, hashes, formats and actual minimum {minimum}-case proof. Build-stage artifacts require separate owner manifest attestation; no OS signing/notarization is claimed.')
 
 if __name__ == '__main__':

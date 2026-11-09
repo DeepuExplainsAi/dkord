@@ -75,6 +75,24 @@ class AndroidInstallOverGuardTest(unittest.TestCase):
                     upgrade.verify(old,root/'new.apk',root/'test.apk',output)
                 self.assertFalse(output.exists());phase.assert_called_once_with('seed')
                 self.assertFalse(any('uninstall' in call.args or 'clear' in call.args for call in command.call_args_list))
+    def test_new_original_key_code15_to16_uses_immutable_v0101_baseline_and_keeps_actual_uid(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);old=root/'synthetic.apk';old.write_bytes(b'SYNTHETIC ONLY');output=root/'receipt.json'
+            fake=Mock();fake.hexdigest.return_value=upgrade.BASELINES['v0.10.1'][2]
+            env={'GITHUB_ACTIONS':'true','GITHUB_REPOSITORY':'DeepuExplainsAi/dkord','GITHUB_SHA':'7'*40}
+            with patch.dict(os.environ,env),patch.object(upgrade,'command',return_value='1') as command,patch.object(upgrade,'package',side_effect=[(15,10123),(16,10123)]),patch.object(upgrade,'phase') as phase,patch.object(upgrade.hashlib,'sha256',return_value=fake),patch('builtins.print'):
+                upgrade.verify(old,root/'new.apk',root/'test.apk',output,'v0.10.1',16)
+            result=json.loads(output.read_text());self.assertEqual(('v0.10.1',15,16),(result['baselineTag'],result['fromVersionCode'],result['toVersionCode']))
+            self.assertTrue(result['sameUid']);self.assertTrue(result['noDataReset'])
+            self.assertEqual([('seed',),('verify',)],[call.args for call in phase.call_args_list])
+            self.assertFalse(any('uninstall' in call.args or 'clear' in call.args for call in command.call_args_list))
+
+    def test_arbitrary_baseline_or_code_pair_is_refused_before_installing_any_apk(self):
+        for baseline,code in (('v0.10.1',15),('v0.10.1',17),('untrusted',16),('v0.10.0',True)):
+            with self.subTest(baseline=baseline,code=code),patch.object(upgrade,'command') as command,self.assertRaises(ValueError):
+                upgrade.verify(Path('old'),Path('new'),Path('test'),Path('receipt'),baseline,code)
+            command.assert_not_called()
+
     def test_release_requires_real_upgrade_before_draft_creation_and_wipes_no_app_data(self):
         root=Path(__file__).resolve().parents[2];workflow=(root/'.github/workflows/release-v0101.yml').read_text()
         self.assertLess(workflow.index('verify_android_install_over.py'),workflow.index('gh release create'))

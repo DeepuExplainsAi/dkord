@@ -15,6 +15,10 @@ import subprocess
 
 CLASS='app.dkord.InstallOverPersistenceTest'
 RUNNER='app.dkord.test/androidx.test.runner.AndroidJUnitRunner'
+BASELINES={
+    'v0.10.0': (14,15,'d2a354903e3eda3707aab77721a391ee0eee3134010284e7ffd1a3e28f2deed9'),
+    'v0.10.1': (15,16,'04ad9ef99e7d4eb913d08aca6eda03af5796d69fe9eecdc1adb8225895098e4d'),
+}
 
 
 def diagnostic(title,text):
@@ -59,29 +63,34 @@ def phase(name):
         raise ValueError('Real Android install-over '+name+' assertions failed; no retries/reset permitted')
 
 
-def verify(old,new,test,output):
+def verify(old,new,test,output,baseline='v0.10.0',target_code=15):
+    if baseline not in BASELINES or type(target_code) is not int or target_code!=BASELINES[baseline][1]:
+        raise ValueError('Only recorded immutable baseline/next-code upgrade pairs are allowed')
+    expected_old,expected_new,old_hash=BASELINES[baseline]
     if os.environ.get('GITHUB_ACTIONS')!='true' or os.environ.get('GITHUB_REPOSITORY')!='DeepuExplainsAi/dkord':
         raise ValueError('Production APK installer fixture is restricted to disposable CI')
     if command('shell','getprop','ro.kernel.qemu').strip()!='1':raise ValueError('An isolated emulator is required')
-    if hashlib.sha256(old.read_bytes()).hexdigest()!='d2a354903e3eda3707aab77721a391ee0eee3134010284e7ffd1a3e28f2deed9':
-        raise ValueError('Only the immutable published original code14 APK can be the baseline')
+    if hashlib.sha256(old.read_bytes()).hexdigest()!=old_hash:
+        raise ValueError('Only the immutable published original-key APK can be the baseline')
     command('install','-r','-t',old)
     old_code,old_uid=package()
-    if old_code!=14:raise ValueError('Wrong original installed version')
+    if old_code!=expected_old:raise ValueError('Wrong original installed version')
     command('install','-r','-t',test);phase('seed')
     command('shell','am','force-stop','app.dkord')
     command('install','-r','-t',new)
     new_code,new_uid=package()
-    if new_code!=15 or old_uid!=new_uid:raise ValueError('Real install-over failed to keep app UID/increase version')
+    if new_code!=expected_new or old_uid!=new_uid:raise ValueError('Real install-over failed to keep app UID/increase version')
     phase('verify')
-    receipt=dict(format=1,package='app.dkord',baselineTag='v0.10.0',fromVersionCode=old_code,toVersionCode=new_code,
+    receipt=dict(format=1,package='app.dkord',baselineTag=baseline,fromVersionCode=old_code,toVersionCode=new_code,
                  source=os.environ['GITHUB_SHA'],sameUid=True,noUninstall=True,noDataReset=True,
                  realRoom=True,settings=True,queue=True,privateDownload=True,mediaStoreExport=True,studioProjectAndSourceBytes=True)
     with output.open('x') as file:json.dump(receipt,file,indent=2)
-    print('::notice title=Actual Android install-over::Original signed code14 -> code15, same UID, actual Room/likes/history/playlist/settings/queue/private and device audio/Studio source bytes preserved on isolated API35 emulator. Not a physical-device pass.')
+    print(f'::notice title=Actual Android install-over::Original signed code{old_code} -> code{new_code}, same UID, actual Room/likes/history/playlist/settings/queue/private and device audio/Studio source bytes preserved on isolated API35 emulator. Not a physical-device pass.')
 
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     for arg in ('old','new','test','output'):parser.add_argument('--'+arg,type=Path,required=True)
-    args=parser.parse_args();verify(args.old,args.new,args.test,args.output)
+    parser.add_argument('--baseline',choices=tuple(BASELINES),default='v0.10.0')
+    parser.add_argument('--target-code',type=int,default=15)
+    args=parser.parse_args();verify(args.old,args.new,args.test,args.output,args.baseline,args.target_code)

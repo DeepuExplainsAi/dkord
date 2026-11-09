@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dkord-desktop"
-version = "0.10.0"
+version = "0.10.2"
 description = "Dkord desktop: music, a private offline library and a native audio Mashup Studio"
 readme = "README.md"
 requires-python = ">=3.11"
