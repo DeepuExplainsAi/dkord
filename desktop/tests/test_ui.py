@@ -171,7 +171,39 @@ class NativeWidgetTest(unittest.TestCase):
         self.wait(lambda:full.lyrics_view.count()==2)
         self.assertEqual(3,full.tabs.count());self.assertEqual('पहली पंक्ति',full.lyrics_view.item(0).text())
         full.seek_lyric(full.lyrics_view.item(0));self.assertEqual(1230,self.window.pending_seek)
+        # Actual Windows/Qt5 and macOS frozen captures exposed white-on-white
+        # native tab labels. Check rendered pixels, not just the stylesheet text:
+        # all three selected/unselected tabs must retain the phone palette on
+        # every supported explicit theme, including the legacy Win32 Qt5 runtime.
+        from dkord_desktop.experience import palette
+        from dkord_desktop.qt import QColor
+        bar=full.tabs.tabBar()
+        QTest.mouseMove(full.title,full.title.rect().center())
+        for mode in ('dark','light','amoled'):
+            self.window.apply_theme(mode);self.app.processEvents()
+            colors=palette(mode)
+            for selected in range(3):
+                full.tabs.setCurrentIndex(selected);self.app.processEvents();QTest.qWait(20)
+                image=bar.grab().toImage()
+                scale_x=image.width()/bar.width();scale_y=image.height()/bar.height()
+                for index in range(3):
+                    rect=bar.tabRect(index)
+                    self.assertTrue(bar.rect().contains(rect),(mode,index,rect,bar.rect()))
+                    background=QColor(colors['primary' if index==selected else 'surfaceContainerHigh'])
+                    foreground=QColor(colors['onPrimary' if index==selected else 'onSurface'])
+                    hits=[0,0]
+                    for y in range(rect.top(),rect.bottom()+1):
+                        for x in range(rect.left(),rect.right()+1):
+                            pixel=image.pixelColor(min(image.width()-1,int(x*scale_x)),min(image.height()-1,int(y*scale_y)))
+                            for color_index,color in enumerate((background,foreground)):
+                                if max(abs(pixel.red()-color.red()),abs(pixel.green()-color.green()),abs(pixel.blue()-color.blue()))<=12:
+                                    hits[color_index]+=1
+                    identity=(mode,selected,index,hits,rect)
+                    self.assertGreater(hits[0],rect.width()*rect.height()*.25,identity)
+                    self.assertGreater(hits[1],5,identity)
+        self.window.apply_theme('dark')
         self.assertTrue(self.window.player.source().isEmpty());self.assertFalse(self.window.desired_playing)
+        self.assertEqual([],self.provider.calls)
 
     def test_selecting_a_song_in_any_collection_keeps_its_whole_playlist_and_selected_index(self):
         tracks=[Track('abcdefghijk','One','Artist'),Track('lmnopqrstuv','Two','Artist')]

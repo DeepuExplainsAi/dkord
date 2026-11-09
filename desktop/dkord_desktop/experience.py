@@ -50,6 +50,9 @@ def branding(title: str, language='en') -> str:
 
 
 def stylesheet(mode='dark') -> str:
+    # Native Qt5/Windows and macOS tab chrome otherwise keeps a white/blue fill
+    # under inherited white text. Scope explicit phone-palette tab subcontrols
+    # to the full player; do not change navigation, media or persistence logic.
     p = palette(mode)
     return f'''
 QWidget {{ background:{p['background']}; color:{p['onSurface']}; font-family:'Roboto','Noto Sans Devanagari','Segoe UI','Noto Sans','Arial'; font-size:14px; }}
@@ -71,6 +74,11 @@ QLineEdit,QComboBox,QSpinBox,QDoubleSpinBox {{ background:{p['surfaceContainerHi
 QLineEdit:focus {{ border-color:{p['primary']}; }} QComboBox::drop-down {{ border:0; width:22px; }}
 QTableWidget,QListWidget,QTextEdit {{ background:{p['background']}; border:0; selection-background-color:{p['surfaceVariant']}; }}
 QTableWidget::item {{ padding:8px; border:0; }} QHeaderView::section {{ background:{p['background']}; color:{p['onSurfaceVariant']}; border:0; padding:8px; }}
+QTabWidget#full-player-tabs::pane {{ border:0; background:{p['background']}; }}
+QTabWidget#full-player-tabs QTabBar {{ background:transparent; qproperty-drawBase:0; }}
+QTabWidget#full-player-tabs QTabBar::tab {{ background:{p['surfaceContainerHigh']}; color:{p['onSurface']}; border:0; border-radius:16px; min-height:20px; padding:8px 16px; margin:2px 3px; }}
+QTabWidget#full-player-tabs QTabBar::tab:selected {{ background:{p['primary']}; color:{p['onPrimary']}; }}
+QTabWidget#full-player-tabs QTabBar::tab:hover:!selected {{ background:{p['surfaceContainerHighest']}; }}
 QListWidget::item {{ padding:8px; border-radius:6px; }} QListWidget::item:selected {{ background:{p['surfaceVariant']}; }}
 QScrollArea {{ border:0; }} QScrollBar:vertical {{ background:transparent; width:8px; }}
 QScrollBar::handle:vertical {{ background:{p['outline']}; border-radius:4px; min-height:30px; }}
