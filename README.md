@@ -78,6 +78,19 @@ The Search screen shows **Recent searches** below the filter chips when the fiel
 
 Search has a separate 48dp submit button alongside the input (and keyboard Search), a compact non-wrapping placeholder, and the existing clear action. Player secondary actions wrap as whole buttons so Add to playlist / Play video are not squeezed into vertical letters on narrower screens.
 
+### Open an exact YouTube link — next update (unreleased)
+
+A separate **Open YouTube link** action in Search, the top bar and Library accepts
+an individual YouTube / youtu.be / Shorts / live / YouTube Music video link.
+**Paste link → Show video → Play** previews that exact upload by ID, even when
+Songs search does not find it. The usual menu retains queue, playlists, both
+Downloads choices and online Studio. Pasting/previewing does not start audio or
+save a search; normal music search/radio are unchanged. Playlist-only, invalid,
+private/unavailable and network failures show an error, not a substitute song.
+
+This is Android + native PC source work for the **next update**, not a change to
+the published v0.10.1 installers. [Behavior, proof status and acceptance limits](docs/YOUTUBE_LINKS.md).
+
 ### Search / Home playback and related autoplay
 Tap a Search result or an ordinary Home song card to start **that exact song first**, not every search result or the whole mixed Home shelf. Home has a separate accessible **Play all** action when the full shelf is desired. Explicit album/playlist/category/New Releases playback keeps its chosen queue/order.
 
@@ -124,7 +137,7 @@ python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
 ./gradlew testDebugUnitTest assembleDebug --stacktrace
 ```
 
-**Validate pull request** automatically runs for PRs targeting main, including draft PR updates. It uses a read-only token, no signing secrets, and runs the Python checks, full Android unit suite and APK compile. A separate Android35 emulator job requires all ten native regression classes: Search keyboard viewport, Studio audio export, Studio editor, export publication, Listen Again, related-playback routing, online source/storage migration, destination chooser, the online picker’s own-window IME, and room co-host UI/Android-crypto/actor cases. It uses an installed real keyboard with wake/unlock/hardware-keyboard policy setup. A minimal **androidTest-only idle HOME** prevents the image’s Google launcher/widgets from owning an ANR overlay between cases; the default HOME is verified before instrumentation and never changes the production app. Error dialogs are not hidden, failed tests are not retried, and real IME visibility, original keyboard deadlines, viewport geometry and navigation/font assertions remain mandatory. Failure-only diagnostics identify WindowManager focus ownership and keyguard state; there are no automatic test retries or fake insets. Actual JUnit XML counts and checked PR/merge SHAs are reported; no missing-class/empty/all-skipped report can establish a successful validation. Only test reports are uploaded—no release/tag or installer APK is published. This is the validation path when the agent cannot dispatch a manual workflow (integration HTTP403). It may still require owner approval if GitHub flags a contributor run.
+**Validate pull request** automatically runs for PRs targeting main, including draft PR updates. It uses a read-only token, no signing secrets, and runs the Python checks, full Android unit suite and APK compile. A separate Android35 emulator job retains the existing regression classes and adds the explicit YouTube-link page: Search keyboard viewport, Studio audio export, Studio editor, export publication, Listen Again, related-playback routing, online source/storage migration, destination chooser, the online picker’s own-window IME, and room co-host UI/Android-crypto/actor cases. It uses an installed real keyboard with wake/unlock/hardware-keyboard policy setup. A minimal **androidTest-only idle HOME** prevents the image’s Google launcher/widgets from owning an ANR overlay between cases; the default HOME is verified before instrumentation and never changes the production app. Error dialogs are not hidden, failed tests are not retried, and real IME visibility, original keyboard deadlines, viewport geometry and navigation/font assertions remain mandatory. Failure-only diagnostics identify WindowManager focus ownership and keyguard state; there are no automatic test retries or fake insets. Actual JUnit XML counts and checked PR/merge SHAs are reported; no missing-class/empty/all-skipped report can establish a successful validation. Only test reports are uploaded—no release/tag or installer APK is published. This is the validation path when the agent cannot dispatch a manual workflow (integration HTTP403). It may still require owner approval if GitHub flags a contributor run.
 
 **v0.10.1 publication is completed and its requests are consumed.** The narrowly scoped new release request and existing-draft finalization require the original signing identity, exact parent/child Android/native/capture/installer proof, original CI checksums, all20 original asset IDs and unchanged historical releases. A GitHub unpublished-draft REST lookup404 was corrected using the authenticated release list; the same tested files were finalized without rebuilding, resigning or replacing any asset. Never replay either request or overwrite this tag. [Publication audit](docs/releases/v0.10.1-publication.md).
 
@@ -136,7 +149,7 @@ python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
 ## How playback works (and why it can break)
 Streams are resolved on the phone through a chain: NewPipeExtractor, then the YouTube InnerTube ANDROID_VR and IOS clients, then both again with fresh visitor data. Only audio-only streams (m4a/opus) are used. URLs are cached until they expire and re-resolved automatically on HTTP 403.
 
-YouTube changes often, so extraction can break. **Settings → Troubleshooting → Update extractor** checks the bundled extractor's upstream version; updating the extractor requires an app update. **Report broken playback** copies a redacted log and opens a GitHub issue; **Debug log** shows recent events. Bot checks, age/kids restrictions, private/region-locked/unavailable tracks and network errors have explicit messages. Guest mode does not bypass account/age restrictions.
+YouTube changes often, so extraction can break. **Settings → Troubleshooting → Update extractor** checks the bundled extractor's upstream version; updating the extractor requires an app update. **Copy playback diagnostics** copies a redacted local report without uploading it or navigating to a repository/issue; **Debug log** shows recent events. Bot checks, age/kids restrictions, private/region-locked/unavailable tracks and network errors have explicit messages. Guest mode does not bypass account/age restrictions.
 
 ## Downloads
 **Stable0.9.1:** a single song downloads as tagged M4A from its three-dot menu → Download. A playlist/album's top-bar export saves a **JSON file** (name + tracks), not all of its audio; import it again from Library. Normal music downloads use WorkManager and support pause/resume across app restarts independently of the in-app APK updater.

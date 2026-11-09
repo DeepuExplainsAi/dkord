@@ -56,7 +56,9 @@ class YouTubeLinkScreenTest {
     }
 
     private fun submit(input: String = raw) {
-        rule.onNodeWithTag("youtube-link-input").performTextReplacement(input).performImeAction()
+        val field = rule.onNodeWithTag("youtube-link-input")
+        field.performTextReplacement(input)
+        field.performImeAction()
         rule.waitForIdle()
     }
 

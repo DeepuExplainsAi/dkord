@@ -80,6 +80,18 @@ Windows7/8 and unlisted CPUs are not claimed. The genuine Win32 profile does not
 bundle unavailable Qt6/PyAV Win32 wheels or the obsolete 2019 FFmpeg4.2.2 wheel.
 Linux needs system GL/EGL, DBus, xkbcommon/XCB and an appropriate audio/display stack.
 
+## Next update — exact YouTube links (unreleased)
+
+**Search → Open YouTube link → Paste link → Show video → Play** opens the exact
+upload, not a title-search substitute. The same separate action is in the top bar
+and Library, with phone-owned English/Hindi labels and ordinary queue/library,
+download-destination and Studio actions. Normal Songs search/radio and stored
+music are unchanged. Pasting or previewing does not start audio or save a query.
+
+This is native Qt source for the next update, **not included in the published
+0.10.1 packages above**. Playlist-only/invalid/unavailable links fail visibly;
+provider restrictions still apply. [Details and actual validation status](../docs/YOUTUBE_LINKS.md).
+
 ## Acceptance boundaries
 
 **Physical install-over**, heard audio/video, live-provider restrictions,

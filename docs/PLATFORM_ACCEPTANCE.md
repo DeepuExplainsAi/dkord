@@ -27,6 +27,15 @@ Android app code14→15 persistence passed. Finalization42588462082 checked ever
 uploaded byte/ID and actual-client signature plan before and after public/latest
 publication. These results do not mark physical/live-provider boxes below.
 
+## Next unreleased feature: exact YouTube links
+
+The separate Android/native PC link form is **not part of the v0.10.1 downloads**.
+Its parser/source/controller/widget regressions and live-device checklist are in
+[YOUTUBE_LINKS.md](YOUTUBE_LINKS.md). Do not reuse the released121/436/43 counts or
+old screenshots as evidence for this new UI. No release publication, signing-key,
+version/schema change, data reset or old asset replacement is authorized by the
+feature request.
+
 ---
 
 # Historical0.10.0 context and remaining physical-device acceptance
