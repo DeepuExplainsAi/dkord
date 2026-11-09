@@ -55,7 +55,7 @@ class PhoneExperience:
             page = PAGES[item['id']]
             for widget in (self.nav_buttons[page], self.bottom_buttons[page]):
                 widget.setIcon(icon(NAV_ICONS[item['id']], p['onSurface']))
-        for widget, name in ((self.settings_button, 'settings'), (self.together_button, 'groups'), (self.back_button, 'arrow_back'),
+        for widget, name in ((self.settings_button, 'settings'), (self.together_button, 'groups'), (self.youtube_link_button, 'link'), (self.back_button, 'arrow_back'),
                              (self.previous_button, 'skip_previous'), (self.next_button, 'skip_next')):
             widget.setIcon(icon(name, p['onSurface']))
         self.play_button.setIcon(icon('pause' if self.desired_playing else 'play_arrow', p['onSurface']))
@@ -99,6 +99,8 @@ class PhoneExperience:
         top = QHBoxLayout()
         self.back_button = button('', self.go_back); self.back_button.setFixedSize(40, 40); self.back_button.setAccessibleName(self.tr('back')); top.addWidget(self.back_button)
         self.heading = label(self.tr('tab_home'), 'pageTitle'); top.addWidget(self.heading, 1)
+        self.youtube_link_button = button('', lambda: self.navigate('YouTube link')); self.youtube_link_button.setObjectName('global-youtube-link'); self.youtube_link_button.setFixedSize(42, 42)
+        self.youtube_link_button.setToolTip(self.tr('youtube_link_open')); self.youtube_link_button.setAccessibleName(self.tr('youtube_link_open')); top.addWidget(self.youtube_link_button)
         self.together_button = button('', lambda: self.navigate('Listen Together')); self.together_button.setObjectName('global-listen-together'); self.together_button.setFixedSize(42, 42)
         self.together_button.setToolTip(self.tr('listen_together')); self.together_button.setAccessibleName(self.tr('listen_together')); top.addWidget(self.together_button)
         self.settings_button = button('', lambda: self.navigate('Settings')); self.settings_button.setFixedSize(42, 42)
@@ -108,6 +110,8 @@ class PhoneExperience:
         self.query = QLineEdit(); self.query.setObjectName('global-search'); self.query.setPlaceholderText(self.tr('search_hint')); self.query.returnPressed.connect(self.search)
         self.scope = QComboBox(self.search_box); self.scope.addItems(list(Provider.scopes)); self.scope.hide()
         query_row.addWidget(self.query, 1); query_row.addWidget(button(self.tr('search_submit'), self.search, True)); search.addLayout(query_row)
+        self.search_link_button = button(self.tr('youtube_link_open'), lambda: self.navigate('YouTube link')); self.search_link_button.setObjectName('open-youtube-link')
+        self.search_link_button.setIcon(icon('link', palette(self.effective_theme())['primary'])); search.addWidget(self.search_link_button)
         self.scope_labels = dict(zip(Provider.scopes, ('songs','albums','artists','playlists','search_music_videos','search_videos','search_all')))
         self.scope_buttons = {}
         filters = QScrollArea(); filters.setWidgetResizable(True); filters.setFixedHeight(54)
@@ -164,13 +168,18 @@ class PhoneExperience:
             self.play_button.setAccessibleName(self.tr('pause' if self.desired_playing else 'play'))
 
     def select_navigation(self, page):
-        parent = page if page in self.nav_buttons else 'Library' if page in ('Library', 'Playlists', 'Liked songs', 'Mashup Studio', 'Listen Together', 'Catalogue') else None
+        parent = page if page in self.nav_buttons else 'Search' if page == 'YouTube link' else 'Library' if page in ('Library', 'Playlists', 'Liked songs', 'Mashup Studio', 'Listen Together', 'Catalogue') else None
         for name, widget in self.nav_buttons.items():
             widget.setChecked(name == parent); self.bottom_buttons[name].setChecked(name == parent)
         self.search_box.setVisible(page == 'Search'); self.back_button.setVisible(page not in PAGES.values())
 
     def navigate(self, page, fetch=True):
         previous = self.page
+        if page == 'YouTube link' and previous != page:
+            # Returning from the separate link form restores a shown search without another search/history write.
+            self.youtube_link_search = (list(self.entries), self.query.text(), self.scope.currentText()) if previous == 'Search' and self.table is not None else None
+        if previous == 'YouTube link' and previous != page and getattr(self, 'youtube_link_panel', None):
+            self.youtube_link_panel.deactivate()
         if previous != page and not self._going_back:
             self.back_stack.append(previous)
             self.back_stack = self.back_stack[-30:]
@@ -187,7 +196,15 @@ class PhoneExperience:
         elif page in ('Library', 'Playlists'):
             self.library_page()
         elif page == 'Search':
-            self.reset_content(self.tr('tab_search')); self.saved_queries()
+            previous_search = getattr(self, 'youtube_link_search', None) if previous == 'YouTube link' else None
+            if previous_search and (self.query.text(), self.scope.currentText()) == previous_search[1:]:
+                self.show_entries(previous_search[0], 'Search', ' '.join(previous_search[1].split()), previous_search[2])
+            else:
+                self.reset_content(self.tr('tab_search')); self.saved_queries()
+        elif page == 'YouTube link':
+            from .link_view import YouTubeLinkPanel
+            self.reset_content(self.tr('youtube_link_open')); self.youtube_link_panel = YouTubeLinkPanel(self)
+            self.content_layout.addWidget(self.youtube_link_panel)
         elif page == 'Listen Together':
             self.reset_content(self.tr('listen_together')); self.content_layout.addWidget(RoomPanel(self))
         elif page == 'Settings':
@@ -327,7 +344,7 @@ class PhoneExperience:
         self.content_layout.addWidget(label(self.tr('listen_together'), 'pageTitle'))
         room = button(self.tr('room_anywhere_title')+'  ›', lambda: self.navigate('Listen Together')); room.setObjectName('library-listen-together')
         self.content_layout.addWidget(room); self.content_layout.addWidget(label(self.tr('room_anywhere_hint'), 'muted'))
-        for key, page, symbol in (('studio_title','Mashup Studio','library_music'), ('liked_songs','Liked songs','favorite'), ('recently_played','Listen Again','history')):
+        for key, page, symbol in (('youtube_link_open','YouTube link','link'), ('studio_title','Mashup Studio','library_music'), ('liked_songs','Liked songs','favorite'), ('recently_played','Listen Again','history')):
             b = button(self.tr(key), lambda checked=False, page=page: self.navigate(page)); b.setIcon(icon(symbol, palette(self.effective_theme())['primary'])); self.content_layout.addWidget(b)
         header = QWidget(); row = QHBoxLayout(header); row.setContentsMargins(0, 0, 0, 0)
         row.addWidget(label(self.tr('my_playlists'), 'pageTitle'), 1)
@@ -550,6 +567,7 @@ class PhoneExperience:
         for item in contract()['navigation']:
             page=PAGES[item['id']];self.nav_buttons[page].setText(self.tr(item['label']));self.bottom_buttons[page].setText(self.tr(item['label']))
         self.query.setPlaceholderText(self.tr('search_hint'))
+        self.search_link_button.setText(self.tr('youtube_link_open')); self.youtube_link_button.setToolTip(self.tr('youtube_link_open')); self.youtube_link_button.setAccessibleName(self.tr('youtube_link_open'))
         for name,widget in self.scope_buttons.items():widget.setText(self.tr(self.scope_labels[name]))
         self.adjust_layout(); self.navigate('Settings')
 

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.ui.platform.testTag
 import androidx.compose.material.icons.filled.Login
@@ -79,6 +80,7 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     onOpenStudio: () -> Unit = {},
     onOpenTogether: () -> Unit = {},
+    onOpenYouTubeLink: () -> Unit = {},
 ) {
     val actions: Actions = koinInject()
     val library = actions.library
@@ -119,6 +121,7 @@ fun LibraryScreen(
         }
         item("quick") {
             Column {
+                NavRow(Icons.Default.Link, stringResource(R.string.youtube_link_open), onOpenYouTubeLink)
                 NavRow(Icons.Default.ContentCut, stringResource(R.string.studio_title), onOpenStudio)
                 NavRow(Icons.Default.Favorite, stringResource(R.string.liked_songs), onOpenLiked)
                 NavRow(Icons.Default.History, stringResource(R.string.recently_played), onOpenRecent)

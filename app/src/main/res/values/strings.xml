@@ -388,4 +388,17 @@
     <string name="video_disabled">Enable video playback in Settings to watch a video.</string>
     <string name="check_update">Check for updates</string>
     <string name="custom">Custom</string>
+
+    <!-- Explicit link opening is separate from music search and its saved queries. -->
+    <string name="youtube_link_open">Open YouTube link</string>
+    <string name="youtube_link_hint">Open the exact upload, even if it is missing from music search. Preview first, then play.</string>
+    <string name="youtube_link_label">YouTube video link</string>
+    <string name="youtube_link_formats">Video, youtu.be, Shorts, live and YouTube Music links</string>
+    <string name="youtube_link_paste">Paste link</string>
+    <string name="youtube_link_show">Show video</string>
+    <string name="youtube_link_loading">Opening linked video…</string>
+    <string name="youtube_link_preview">Linked video</string>
+    <string name="youtube_link_invalid">Paste a valid YouTube video link. Other websites, channel links and clip links are not supported.</string>
+    <string name="youtube_link_playlist_only">This link only opens a playlist. Copy a specific video link instead.</string>
+    <string name="youtube_link_clipboard_empty">No text link to paste. Copy a YouTube video link first.</string>
 </resources>

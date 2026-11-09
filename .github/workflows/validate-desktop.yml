@@ -9,6 +9,10 @@ on:
       - 'app/src/main/java/app/dkord/ui/theme/Theme.kt'
       - 'app/src/main/java/app/dkord/ui/screens/Home.kt'
       - 'app/src/main/java/app/dkord/ui/App.kt'
+      - 'app/src/main/java/app/dkord/ui/screens/YouTubeLink.kt'
+      - 'app/src/main/java/app/dkord/ui/links/**'
+      - 'app/src/main/java/app/dkord/data/links/**'
+      - 'app/src/test/resources/youtube-links.json'
       - '.gitattributes'
       - 'LICENSE'
       - '.github/workflows/validate-desktop.yml'
@@ -111,10 +115,11 @@ jobs:
           import xml.etree.ElementTree as ET
           root = ET.parse('desktop/.artifacts/test-results.xml').getroot()
           cases = root.findall('.//testcase')
-          for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest', 'RoomProtocolTest', 'LyricsTest', 'PhoneContractTest', 'NewReleasesTest', 'DiagnosticsTest', 'ModernUpdateIdentityTest', 'PublicUpdateIdentityTest', 'CatalogueTest', 'ManifestSignerTest', 'UpgradeFixtureTest'):
+          for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest', 'RoomProtocolTest', 'LyricsTest', 'PhoneContractTest', 'NewReleasesTest', 'DiagnosticsTest', 'ModernUpdateIdentityTest', 'PublicUpdateIdentityTest', 'CatalogueTest', 'ManifestSignerTest', 'UpgradeFixtureTest', 'YouTubeLinkTest', 'NativeLinkWidgetTest'):
               assert any(cls in c.attrib.get('classname', '') for c in cases), f'Missing {cls}'
           assert len(cases) >= 36, f'Only {len(cases)} desktop cases'
           assert len(cases) >= 121, f'New phone/desktop parity regressions missing: {len(cases)} cases'
+          assert len(cases) >= 141, f'Exact YouTube-link regressions missing: {len(cases)} cases'
           for case in cases:
               for marker in ('failure','error','skipped'):
                   error=case.find(marker)

@@ -102,6 +102,24 @@ class Provider:
                 "socket_timeout": 15, "retries": 2, "fragment_retries": 2,
                 "js_runtimes": {"node": {"path": node}} if node else {}, "remote_components": [], **extra}
 
+    def open_youtube_link(self, link, cancel: threading.Event | None = None) -> Track:
+        from .media import Cancelled, check_cancel
+        from .youtube_links import YouTubeVideoLink, YouTubeLinkError, link_track, extraction_problem
+        if not isinstance(link, YouTubeVideoLink):
+            raise YouTubeLinkError('invalid_link')
+        check_cancel(cancel)
+        try:
+            # Exact-ID extraction only. No title search, music-category gate, download or session capture.
+            with YoutubeDL(self.options(skip_download=True)) as ydl:
+                info = ydl.extract_info(link.url, download=False)
+            check_cancel(cancel)
+            return link_track(link, info)
+        except Cancelled:
+            raise
+        except Exception as error:
+            check_cancel(cancel)
+            raise YouTubeLinkError(extraction_problem(error)) from None
+
     def search(self, query: str, scope: str = "Songs", limit: int = 20) -> list[Entry]:
         query = " ".join(query.split())[:500]
         if not query or scope not in self.scopes or limit < 1 or limit > 200:

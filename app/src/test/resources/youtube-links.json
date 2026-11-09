@@ -1,0 +1,307 @@
+{
+  "schema": 1,
+  "valid": [
+    {
+      "input": "https://www.youtube.com/watch?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://youtube.com/watch?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "http://youtube.com/watch?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://m.youtube.com/watch?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://music.youtube.com/watch?v=AbCdEf012_-&si=share",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://www.youtube.com/watch?v=AbCdEf012_-&list=PL_playlist&index=4&start_radio=1#t=30",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://www.youtube.com/watch?feature=shared&v=AbCdEf012_-&t=42s",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://www.youtube.com/watch/?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://youtu.be/AbCdEf012_-?si=share&t=5",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://www.youtu.be/AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "http://youtu.be/AbCdEf012_-/",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://youtube.com/shorts/AbCdEf012_-?si=share",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://www.youtube.com/live/AbCdEf012_-?feature=share",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://m.youtube.com/embed/AbCdEf012_-?start=2",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://www.youtube.com/v/AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://www.youtube-nocookie.com/embed/AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://youtube-nocookie.com/embed/AbCdEf012_-/?rel=0",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "youtube.com/watch?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "www.youtube.com/watch?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "music.youtube.com/watch?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "youtu.be/AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "//www.youtube.com/watch?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "HTTPS://WWW.YOUTUBE.COM/watch?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://www.youtube.com:443/watch?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "http://www.youtube.com:80/watch?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "youtube.com:443/watch?v=AbCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": " \nhttps://youtu.be/AbCdEf012_- \t",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://youtube.com/watch?%76=%41bCdEf012_-",
+      "id": "AbCdEf012_-"
+    },
+    {
+      "input": "https://youtu.be/AbCdEf012_-#https://untrusted.test/never-fetched",
+      "id": "AbCdEf012_-"
+    }
+  ],
+  "invalid": [
+    {
+      "input": "",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "not a link",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "Watch this https://youtu.be/AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://untrusted.test/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com.untrusted.test/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://notyoutube.com/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtu.be.untrusted.test/AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://127.0.0.1/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://localhost/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "file:///etc/passwd",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "javascript:alert(1)",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "ftp://youtube.com/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://user:password@youtube.com/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://untrusted.test@youtube.com/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com@untrusted.test/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com.:443/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com:444/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com:80/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtu.be/AbCdEf012_-/another",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtu.be/AbCdEf012_",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtu.be/AbCdEf012_-x",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/watch",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/watch?v=",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/watch?v=AbCdEf012_-&v=ZyXwVu987_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/watch?v=AbCdEf012_-&%76=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/watch?v=AbCdEf012_-%2F",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/watch?v=AbCdEf012_-%0A",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/watch?v=AbCdEf012_-&si=%XX",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/shorts/%41bCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/shorts/AbCdEf012_-/extra",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/@channel",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/channel/UCchannel",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/clip/UgkxClipId",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/redirect?q=https%3A%2F%2Fyoutu.be%2FAbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/attribution_link?u=%2Fwatch%3Fv%3DAbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://www.youtube-nocookie.com/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com\\@untrusted.test/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/watch?v=AbCdEf012_-\nhttps://untrusted.test",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/watch?v=AbCdEf012_-\u0000&si=share",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/watch?v=AbCdEf012_-",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://youtube.com/watch?v=AbCdEf012_é",
+      "problem": "invalid_link"
+    },
+    {
+      "input": "https://www.youtube.com/playlist?list=PL_playlist",
+      "problem": "playlist_only"
+    },
+    {
+      "input": "https://music.youtube.com/playlist?list=OLAK5uy_playlist",
+      "problem": "playlist_only"
+    },
+    {
+      "input": "https://youtube.com/watch?list=PL_playlist",
+      "problem": "playlist_only"
+    },
+    {
+      "input": "https://youtube.com/?list=PL_playlist",
+      "problem": "playlist_only"
+    }
+  ]
+}

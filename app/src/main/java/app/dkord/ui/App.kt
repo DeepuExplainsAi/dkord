@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -79,6 +80,7 @@ import app.dkord.ui.screens.LikedScreen
 import app.dkord.ui.screens.LocalPlaylistScreen
 import app.dkord.ui.screens.RecentScreen
 import app.dkord.ui.screens.SearchScreen
+import app.dkord.ui.screens.YouTubeLinkScreen
 import app.dkord.ui.screens.ListenAgainScreen
 import app.dkord.ui.screens.ListenTogetherScreen
 import app.dkord.ui.screens.SettingsScreen
@@ -132,7 +134,7 @@ fun App() {
         KeyboardAwareScaffold(
             snackbarHost = { SnackbarHost(snack) },
             bottomBar = {
-                if (top == null || top is Dest.Detail || top is Dest.Playlist || top is Dest.Liked || top is Dest.Recent) Column {
+                if (top == null || top is Dest.Detail || top is Dest.Playlist || top is Dest.Liked || top is Dest.Recent || top is Dest.YouTubeLink) Column {
                     MiniPlayer(state, player, onOpen = { playerOpen = true })
                     if (top == null) NavigationBar {
                         tabs.forEach { (t, icon, label) ->
@@ -166,6 +168,7 @@ fun App() {
                     Dest.Settings -> SettingsScreen(::pop, { push(Dest.Logs) }, ::say)
                     Dest.ListenTogether -> ListenTogetherScreen(onBack = ::pop, onOpenPlayer = { pop(); playerOpen = true }, onMessage = ::say,
                         onChooseMusic = { stack = emptyList(); tab = Tab.LIBRARY })
+                    Dest.YouTubeLink -> YouTubeLinkScreen(::pop, ::play, { menuTrack = it }, ::say)
                     Dest.Logs -> DebugLogScreen(::pop, ::say)
                     is Dest.Video -> VideoScreen(dest.id, dest.title, ::pop)
                     is Dest.Studio -> StudioScreen(dest.track, { list, index -> play(list, index); playerOpen = true }, { menuTrack = it }, ::say, ::pop)
@@ -228,6 +231,7 @@ private fun TabContent(
                         }
                     },
                     actions = {
+                        IconButton({ push(Dest.YouTubeLink) }) { Icon(Icons.Default.Link, stringResource(R.string.youtube_link_open)) }
                         IconButton({ push(Dest.ListenTogether) }) { Icon(Icons.Default.Groups, stringResource(R.string.listen_together)) }
                         IconButton(openSettings) { Icon(Icons.Default.Settings, stringResource(R.string.settings)) }
                     },
@@ -247,9 +251,9 @@ private fun TabContent(
                 val m = Modifier.fillMaxSize()
                 when (selected) {
                     Tab.HOME -> HomeScreen(onItem, onPlay, m, onRelated = onRelated)
-                    Tab.SEARCH -> SearchScreen(onItem, onPlay, onMenu, m, onMessage = say, onRelated = onRelated)
+                    Tab.SEARCH -> SearchScreen(onItem, onPlay, onMenu, m, onMessage = say, onRelated = onRelated, onOpenYouTubeLink = { push(Dest.YouTubeLink) })
                     Tab.LISTEN, Tab.REELS -> ListenAgainScreen(onPlay, onMenu, onOpenPlayer, onSearch, say, m)
-                    Tab.LIBRARY -> LibraryScreen({ push(Dest.Playlist(it)) }, { push(Dest.Liked) }, { push(Dest.Recent) }, onItem, say, m, onOpenStudio = { push(Dest.Studio()) }, onOpenTogether = { push(Dest.ListenTogether) })
+                    Tab.LIBRARY -> LibraryScreen({ push(Dest.Playlist(it)) }, { push(Dest.Liked) }, { push(Dest.Recent) }, onItem, say, m, onOpenStudio = { push(Dest.Studio()) }, onOpenTogether = { push(Dest.ListenTogether) }, onOpenYouTubeLink = { push(Dest.YouTubeLink) })
                     Tab.DOWNLOADS -> DownloadsScreen(onPlay, onMenu, m)
                 }
             }

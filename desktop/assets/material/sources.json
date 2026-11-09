@@ -98,6 +98,10 @@
     "refresh": {
       "path": "src/navigation/refresh/materialicons/24px.svg",
       "blob": "b8d69f402eeaac63a1c07435958c05c079459fee"
+    },
+    "link": {
+      "path": "src/content/link/materialicons/24px.svg",
+      "blob": "50ce54c18b7769f93df92326c3faf3ee61b9f085"
     }
   }
 }

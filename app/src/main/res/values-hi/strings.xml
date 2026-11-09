@@ -388,4 +388,17 @@
     <string name="video_disabled">वीडियो देखने के लिए सेटिंग्स में वीडियो प्लेबैक चालू करें।</string>
     <string name="check_update">अपडेट जाँचें</string>
     <string name="custom">कस्टम</string>
+
+    <!-- Explicit link opening is separate from music search and its saved queries. -->
+    <string name="youtube_link_open">YouTube लिंक खोलें</string>
+    <string name="youtube_link_hint">खोज में न मिलने पर भी लिंक वाला वही वीडियो खोलें। पहले देखें, फिर चलाएँ।</string>
+    <string name="youtube_link_label">YouTube वीडियो लिंक</string>
+    <string name="youtube_link_formats">वीडियो, youtu.be, Shorts, लाइव और YouTube Music लिंक</string>
+    <string name="youtube_link_paste">लिंक पेस्ट करें</string>
+    <string name="youtube_link_show">वीडियो दिखाएँ</string>
+    <string name="youtube_link_loading">लिंक वाला वीडियो खुल रहा है…</string>
+    <string name="youtube_link_preview">लिंक वाला वीडियो</string>
+    <string name="youtube_link_invalid">सही YouTube वीडियो लिंक पेस्ट करें। दूसरी वेबसाइट, चैनल और क्लिप लिंक नहीं खुलते।</string>
+    <string name="youtube_link_playlist_only">यह केवल प्लेलिस्ट का लिंक है। किसी एक वीडियो का लिंक कॉपी करें।</string>
+    <string name="youtube_link_clipboard_empty">पेस्ट करने के लिए टेक्स्ट लिंक नहीं है। पहले YouTube वीडियो का लिंक कॉपी करें।</string>
 </resources>

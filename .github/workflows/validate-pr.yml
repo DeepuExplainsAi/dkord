@@ -43,7 +43,7 @@ jobs:
         env:
           ANDROID_BUILD_OUTCOME: ${{ steps.android_build.outcome }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          REQUIRED_ANDROID_CLASSES: app.dkord.DesktopRoomInteropTest
+          REQUIRED_ANDROID_CLASSES: app.dkord.DesktopRoomInteropTest app.dkord.YouTubeLinkParserTest app.dkord.YouTubeLinkSourceTest app.dkord.YouTubeLinkControllerTest
         run: |
           python3 - <<'PY'
           import os
@@ -139,6 +139,7 @@ jobs:
         run: >-
           python3 -B .github/scripts/summarize_device_tests.py
           --required-class app.dkord.SearchKeyboardViewportTest
+          --required-class app.dkord.YouTubeLinkScreenTest
           --required-class app.dkord.StudioAudioExportTest
           --required-class app.dkord.StudioClipEditorTest
           --required-class app.dkord.StudioExportPublicationTest

@@ -27,7 +27,7 @@ from .ui import MainWindow
 class NoNetwork(Provider):
     def unavailable(self,*args,**kwargs):
         raise AssertionError('Screenshot mode cannot fetch or invent live catalogue results')
-    search=home=browse=related=resolve=home_page=catalogue_page=suggestions=resolve_video=search_page=search_more=unavailable
+    search=home=browse=related=resolve=home_page=catalogue_page=suggestions=resolve_video=search_page=search_more=open_youtube_link=unavailable
 
 
 def tone(path, hz):

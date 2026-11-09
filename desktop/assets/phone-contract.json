@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "sources": {
-    "app/src/main/res/values/strings.xml": "c2ba692519e0e827527e139301e9512fac63bc91dba2cf1657e44455cd93db48",
-    "app/src/main/res/values-hi/strings.xml": "49779e9ffa254cba2fc33f47e9ae7dfb1065cfe55de50c4f9deac97a647107c4",
+    "app/src/main/res/values/strings.xml": "baa8122513547fa58db0365d27f4a3e8086fb010de9cb6fe64868c1e9cbb6994",
+    "app/src/main/res/values-hi/strings.xml": "cee5ce24cb1d24dcdf178c41b1e75cfb8d6d14e22f5b16bf74b58e8e09bbcf8c",
     "app/src/main/java/app/dkord/ui/theme/Theme.kt": "6418f30204dc0efe07a0e26a98823dcd8ee89fe20047bc0ceff80a5f45112b8e",
     "app/src/main/java/app/dkord/ui/screens/Home.kt": "182688ecaf716442a3a59d1041ce8b5dbf277718da44ea1db2ca90b1079d5e02",
-    "app/src/main/java/app/dkord/ui/App.kt": "7a036f31e0850e9a31b63a8a085d8e5f9a5cbe80fe2c7172e441200127a539c1"
+    "app/src/main/java/app/dkord/ui/App.kt": "7936b161bbb3e086bfdfa806c855a396cbe3560bf49c03df4ab0fc078e810846"
   },
   "navigation": [
     {
@@ -518,7 +518,18 @@
       "video_playback": "Video playback",
       "video_disabled": "Enable video playback in Settings to watch a video.",
       "check_update": "Check for updates",
-      "custom": "Custom"
+      "custom": "Custom",
+      "youtube_link_open": "Open YouTube link",
+      "youtube_link_hint": "Open the exact upload, even if it is missing from music search. Preview first, then play.",
+      "youtube_link_label": "YouTube video link",
+      "youtube_link_formats": "Video, youtu.be, Shorts, live and YouTube Music links",
+      "youtube_link_paste": "Paste link",
+      "youtube_link_show": "Show video",
+      "youtube_link_loading": "Opening linked video…",
+      "youtube_link_preview": "Linked video",
+      "youtube_link_invalid": "Paste a valid YouTube video link. Other websites, channel links and clip links are not supported.",
+      "youtube_link_playlist_only": "This link only opens a playlist. Copy a specific video link instead.",
+      "youtube_link_clipboard_empty": "No text link to paste. Copy a YouTube video link first."
     },
     "hi": {
       "tab_home": "होम",
@@ -900,7 +911,18 @@
       "video_playback": "वीडियो प्लेबैक",
       "video_disabled": "वीडियो देखने के लिए सेटिंग्स में वीडियो प्लेबैक चालू करें।",
       "check_update": "अपडेट जाँचें",
-      "custom": "कस्टम"
+      "custom": "कस्टम",
+      "youtube_link_open": "YouTube लिंक खोलें",
+      "youtube_link_hint": "खोज में न मिलने पर भी लिंक वाला वही वीडियो खोलें। पहले देखें, फिर चलाएँ।",
+      "youtube_link_label": "YouTube वीडियो लिंक",
+      "youtube_link_formats": "वीडियो, youtu.be, Shorts, लाइव और YouTube Music लिंक",
+      "youtube_link_paste": "लिंक पेस्ट करें",
+      "youtube_link_show": "वीडियो दिखाएँ",
+      "youtube_link_loading": "लिंक वाला वीडियो खुल रहा है…",
+      "youtube_link_preview": "लिंक वाला वीडियो",
+      "youtube_link_invalid": "सही YouTube वीडियो लिंक पेस्ट करें। दूसरी वेबसाइट, चैनल और क्लिप लिंक नहीं खुलते।",
+      "youtube_link_playlist_only": "यह केवल प्लेलिस्ट का लिंक है। किसी एक वीडियो का लिंक कॉपी करें।",
+      "youtube_link_clipboard_empty": "पेस्ट करने के लिए टेक्स्ट लिंक नहीं है। पहले YouTube वीडियो का लिंक कॉपी करें।"
     }
   }
 }
