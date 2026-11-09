@@ -1,46 +1,47 @@
-# Current 0.10.1 acceptance gates
+# Current 0.10.2 acceptance gates
 
-The checks below retain historical receipts/physical checklists. For the new
-release, executable gates now require **121 cases across13 native classes**, all
-six genuine OS/CPU profiles and no skips/failures, Android unit +43 emulator
-regressions (including the two JVM room interop vectors), current frozen Win32
-screenshots and real install-over fixture execution. Counts must come from actual
-JUnit reports, not this document. Signing is the original published Android
-identity; its format2 domain-separated manifest is independent of OS
-Authenticode/Developer ID/notarization, which remain unconfigured.
+**[Published Android + PC receipt](releases/v0.10.2-publication.md)**, exact source
+`3e71ff57432232641e1e69f3c4b6c2c7a49b9b18`. [Android](https://github.com/DeepuExplainsAi/dkord/actions/runs/42618720910), [native](https://github.com/DeepuExplainsAi/dkord/actions/runs/42618720890) and
+[original-key publisher](https://github.com/DeepuExplainsAi/dkord/actions/runs/42618713053) all **SUCCESS**.
 
-Every native host must install the immutable Preview2 package, then install the
-new package **over** it and have its installed frozen executable verify/restore
-standard-path seeded library/settings/queue/download/Studio bytes. Both Linux
-package kinds are tested. The release-only Android emulator seeds the actual
-original-key code14 app, installs code15 with `-r`, and reads the real Room,
-preferences, queue, private+MediaStore audio and Studio sources through the new
-app with the same package UID. These virtual-host fixtures do not tick any
-physical-device, heard-audio or live-provider box below. The initial old empty-root
-PC preview still needs a one-time manual install-over; subsequent common releases
-can be attested to the pinned original identity. No replacement key/data reset.
+Actual reports: 458 JVM/52 XML + 50 API35 device/1 XML, 144 fast native cases, and
+**144 cases across 16 required classes on each of six real native OS/CPU hosts**,
+zero failures/errors/skips. All six frozen native builds captured 30 production
+screens each—[180 verified, visually reviewed original PNGs](PC_SCREENSHOTS.md).
+Counts describe executed reports, not a physical/live-provider pass.
 
-**Published proof:** [v0.10.1 receipt](releases/v0.10.1-publication.md), released
-source `e0e925a674f106f6291731f5b143d3800a476cd3`. All six121-case native suites,
-436 JVM/43 Android regressions, actual native install-over and original-key
-Android app code14→15 persistence passed. Finalization42588462082 checked every original
-uploaded byte/ID and actual-client signature plan before and after public/latest
-publication. These results do not mark physical/live-provider boxes below.
+Each native host retained the same normal-path seed through immutable Preview2
+→actual public 0.10.1→new 0.10.2 installers; both Linux kinds and installed frozen
+client/audio checks passed, without uninstall/reset/reseed. The release-only
+API35 fixture installed original-key 0.10.1/code 15, seeded the real app, installed
+code 16 with `-r`, retained UID, and verified actual Room/settings/queue/private+
+MediaStore/Studio data/source hashes. No failing-test retry or destructive reset.
 
-## Next unreleased feature: exact YouTube links
+The original APK identity signed the format2 domain-separated desktop manifest;
+all eight actual client installer plans verified. This is **not** OS Authenticode,
+Apple Developer ID/notarization or physical GUI update acceptance. Old empty-key
+previews require one manual install-over; official 0.10.1+ can verify subsequent
+compatible updates in the app. All four older releases/53 original assets remain
+unchanged. This new publication request is consumed; it does not authorize PR9
+merge, key replacement, data reset or historical asset/tag mutation.
 
-The separate Android/native PC link form is **not part of the v0.10.1 downloads**.
-Its parser/source/controller/widget regressions and live-device checklist are in
-[YOUTUBE_LINKS.md](YOUTUBE_LINKS.md). Do not reuse the released121/436/43 counts or
-old screenshots as evidence for this new UI. No release publication, signing-key,
-version/schema change, data reset or old asset replacement is authorized by the
-feature request.
+## Exact YouTube links — included in 0.10.2
+
+The separate Android/native PC form is included in the new downloads, not added
+to old 0.10.1 assets. [Behavior, exact-source proof and device/provider checklist](YOUTUBE_LINKS.md).
+Paste/Show preview never starts audio; only explicit Play acts on the exact video.
+The fixtures and screenshot metadata do not prove a live upload or heard sound.
+
+Earlier [0.10.1 proof](releases/v0.10.1-publication.md) remains immutable history:
+436 JVM/43 device,121 cases per native host, original code 14 → 15 retention and its
+original 20 uploaded asset IDs/hashes. Do not reuse those counts/images as proof
+of the new link UI. The physical/provider checkboxes below remain unchecked.
 
 ---
 
-# Historical0.10.0 context and remaining physical-device acceptance
+# Historical 0.10.0 context and remaining physical-device acceptance
 
-Android0.10.0/code14 and its [historical publication receipt](releases/v0.10.0-publication.md) remain preserved; its desktop assets were explicitly development previews. Current0.10.1 executed virtual-host/emulator proof and configured update identity are recorded above, separately from this real-device checklist. Do **not** uninstall, reset, clear data or replace the original signing key to test an upgrade. Record actual device/OS/version/results; CI fixtures are not OEM/heard-audio/live-provider or OS signing/notarization acceptance.
+Android 0.10.0/code14 and its [historical publication receipt](releases/v0.10.0-publication.md) remain preserved; its desktop assets were explicitly development previews. Current 0.10.2 executed virtual-host/emulator proof and configured update identity are recorded above, separately from this real-device checklist. Do **not** uninstall, reset, clear data or replace the original signing key to test an upgrade. Record actual device/OS/version/results; CI fixtures are not OEM/heard-audio/live-provider or OS signing/notarization acceptance.
 
 ## Android existing data and destination intent
 - Before an authorized signed upgrade, record real playlists/likes/history/queue/position, downloaded primary URIs/file hashes, public Music copies, settings and Studio source/projects/exports. Install over the existing original-key package, without uninstalling. Verify old records/file hashes/access remain, including legacy DONE/public and PAUSED partial rows.
@@ -63,22 +64,22 @@ Android0.10.0/code14 and its [historical publication receipt](releases/v0.10.0-p
 - Online/device/offline Studio sources, accurate clip editing/preview/order, real heterogeneous-source AAC rendering, cancellation, project deletion during a pinned snapshot and original/export preservation must work in the packaged binary.
 - Exercise the implemented native Listen Together hub, recommendation context, optional video, timed lyrics and EN/HI controls on actual devices alongside Android. Source/fixture coverage does not establish full live-provider/ranking, OS media integration or physical cross-device equivalence. Account sign-in is intentionally unavailable on both clients, not a supported feature to fake.
 
-## Genuine Windows32 x86 and screenshot acceptance
-- CI runs Python32/Qt5.15.2/Node22ia32 and freshly source-built FFmpeg+ffprobe8.1.3. Actual application/Node/FFmpeg/ffprobe PEheaders must be x86 and real execution/codec/frozen smoke must succeed. Source/archive/license/config/binary receipts are mandatory; do not substitute old imageioFFmpeg4.2.2 or rename an x64 package. Five other targets retain Qt6/PyAV. The suite now also captures actual source-window pixels on every target, isolated/no network/no original-file overwrite, then captures the frozen x86 app on Windows itself; Historical Preview2 had36 cases/all3classes; the released0.10.1 proof requires and passed121 cases/all13classes perhost/no skips.
-- [ ] Install on **physical Windows10 32-bit** with a32-bit CPU/OS, plus WoW64 separately. Record Windows build, architecture, prerequisites, cold-launch, heard playback/output device/seek/volume and a real mixed-rate Studio export. Windows7/8 are unsupported; a32-bit process on an x64 CI runner is not this physical32-bit OS result.
+## Genuine Windows 32 x86 and screenshot acceptance
+- CI runs Python32/Qt 5.15.2/Node 22ia32 and freshly source-built FFmpeg+ffprobe 8.1.3. Actual application/Node/FFmpeg/ffprobe PEheaders must be x86 and real execution/codec/frozen smoke must succeed. Source/archive/license/config/binary receipts are mandatory; do not substitute old imageioFFmpeg 4.2.2 or rename an x64 package. Five other targets retain Qt6/PyAV. The suite now also captures actual source-window pixels on every target, isolated/no network/no original-file overwrite, then captures the frozen x86 app on Windows itself; Historical Preview2 had36 cases/all3classes; historical 0.10.1 passed 121 cases/all13classes; current 0.10.2 passed 144 cases/all16classes perhost/no skips.
+- [ ] Install on **physical Windows 10 32-bit** with a32-bit CPU/OS, plus WoW64 separately. Record Windows build, architecture, prerequisites, cold-launch, heard playback/output device/seek/volume and a real mixed-rate Studio export. Windows 7/8 are unsupported; a32-bit process on an x64 CI runner is not this physical32-bit OS result.
 - [ ] Install x86 beside the original x64 build on WoW64; verify separate `Dkord-x86` payload/ID and **Dkord (32-bit)** shortcuts without overwriting Qt6 files/shortcuts. Both retain the stable per-user library/lock, not concurrent writers. Record unchanged original user-file hashes/projects/downloads, including installer/update-over and interrupted installer cases; never uninstall/reset to pass.
-- [x] [Published0.10.1 actual frozen-window PNGs and source/runtime/hash receipt](releases/v0.10.1-publication.md#genuine-computer-app-captures) for the requested computer-app preview. Fixtures are clearly marked generated offline audio; do not invent live provider results, reuse phone images or substitute an AI/mock browser render. PNG evidence is not a claim of heard sound, live-provider or physical installation acceptance.
-- [ ] Real signed future `windows-x86` updates must stay x86 even when WoW64 reports hostAMD64. Wrong/missing x86 artifacts must fail rather than fall back tox64. Released0.10.1 verifies all eight current installer plans against the pinned original Android identity; future physical update execution remains unchecked. OS publisher signing remains unconfigured.
+- [x] [Published 0.10.2: 180 native screenshots and source/runtime/hash receipt](releases/v0.10.2-publication.md#180-genuine-native-pc-screenshots) for the requested computer-app preview. Fixtures are clearly marked generated offline audio; do not invent live provider results, reuse phone images or substitute an AI/mock browser render. PNG evidence is not a claim of heard sound, live-provider or physical installation acceptance.
+- [ ] Real signed future `windows-x86` updates must stay x86 even when WoW64 reports hostAMD64. Wrong/missing x86 artifacts must fail rather than fall back tox64. Released 0.10.2 verifies all eight current installer plans against the pinned original Android identity; future physical update execution remains unchecked. OS publisher signing remains unconfigured.
 
 ## Desktop updates and data retention (manifest identity configured; physical acceptance open)
 - Preview with empty installed key set must refuse untrusted updates. It must never offer Android APK latest, an incompatible CPU/OS, wrong package type/size/SHA, unknown-key/tampered/duplicate-field manifest, older/equal version or mutable forged plan.
-- Released0.10.1 pins the original APK public identity; its format2 desktop manifest was actually signed and verified for all eight native packages. Windows Authenticode / Apple Developer ID + notarization remain unconfigured and are separate from that manifest. Never put private signing material/passwords in chat/Git. PR validation workflows remain read-only, with no release secrets/writes.
+- Released 0.10.1+ pins the original APK public identity; its format2 desktop manifest was actually signed and verified for all eight native packages. Windows Authenticode / Apple Developer ID + notarization remain unconfigured and are separate from that manifest. Never put private signing material/passwords in chat/Git. PR validation workflows remain read-only, with no release secrets/writes.
 - With real authorized releases, check/download/verify/install from the app after consent. Windows gets Windows; Intel Mac gets Intel and Apple Silicon gets arm64; Linux deb/AppImage stays appropriate to the installed distribution. No repeated release-page browsing. Skipped versions and ready-file replacement must remain safe.
 - Record user-data directory and audio/database/settings hashes before/after installing over a real previous desktop version. No installer/uninstaller path should delete that directory. Handle app close, interrupted update download, readonly AppImage location, invalid packages and OS permission prompts without losing media/projects.
 - There is no automatic phone-to-PC/cloud audio synchronization. JSON moves metadata, not audio; do not record cross-device sync as passed.
 
 
-## Room co-host controls (Android + PC0.10.1; physical acceptance still unchecked)
+## Room co-host controls (Android + PC 0.10.1; physical acceptance still unchecked)
 - [ ] On at least three real updated devices, creator selects exactly one, then two members; each can play/pause/change song/seek for all opted-in followers. Non-selected member controls remain local.
 - [ ] Everyone also admits a newly joined updated member; co-hosts cannot administer permissions. Creator unticks one, reclaims all with Only me, and continues controlling playback.
 - [ ] Grant/revoke never opts listeners into audio; verify Sync & play/Follow off, explicit consent, Hindi/large font, duplicate nicknames/IDs and narrow-screen scrolling.

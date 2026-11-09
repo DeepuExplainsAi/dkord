@@ -3,46 +3,64 @@
   <h1>Dkord</h1>
   <p><strong>Your music. Your mix. Your space.</strong></p>
   <p>Open-source music player · private offline audio · real Mashup Studio</p>
-  <p><a href="https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.1">Download Android &amp; PC</a> · <a href="desktop/README.md">Dkord for PC</a> · <a href="#features">Features</a> · <a href="#build-and-regression-checks">Build & tests</a></p>
+  <p><a href="https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.2">Download Android &amp; PC</a> · <a href="desktop/README.md">Dkord for PC</a> · <a href="#features">Features</a> · <a href="#build-and-regression-checks">Build & tests</a></p>
   <p>By <strong>DeepuGupta</strong> · GPL-3.0 · no paid custom backend</p>
 </div>
 
 **Dkord is a music-first YouTube / YouTube Music client and audio editor.** Discover a particular song/version, keep a local listening library, or turn selected audio into a real playable mix. Android playback, extraction and editing run on the device; optional Listen Together rooms use a public relay. Not affiliated with Google or YouTube.
 
-## Android + PC v0.10.1 — available now
+## Android + PC v0.10.2 — available now
 
-**[Download the latest release](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.1).**
-The phone-derived native PC interface, direct online Mashup Studio, explicit
-private/device downloads and discoverable global **Listen Together** are included.
-Playback diagnostics stay local, with no repository/issue navigation. About is
-concise: **© 2026 dKORD**.
+**[Download the latest release](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.2).** New separate **Open YouTube link**:
+**Paste link → Show video → Play** selects the exact accessible upload, without
+replacing it with a title-search result or starting audio during preview.
+The phone-derived native PC interface, online Mashup Studio, explicit private/
+device downloads, global Listen Together and local-only diagnostics are retained.
+About stays concise: **© 2026 dKORD**.
 
 Install **over your existing app**, without uninstalling or clearing data. Android
-keeps its original signing identity; PC keeps its OS/CPU-specific install profile
-and existing user-data location. The old empty-key PC previews need a **one-time
-manual install-over**; this release configures verified future in-app PC updates.
-Windows Authenticode / Apple Developer ID/notarization are not configured—update
-manifest verification is not OS publisher signing.
+uses its original signing identity and increasing **versionCode 16**. PC keeps
+its installed OS/CPU profile and stable user-data location. Old empty-key PC
+previews need one manual install-over; official 0.10.1+ clients can verify later
+compatible updates in the app. Windows Authenticode / Apple Developer ID and
+notarization are not configured—manifest verification is not OS publisher signing.
 
 ### Downloads
 
 | Platform | Installer | Supported profile |
 |---|---|---|
-| **Android** | **[Dkord-v0.10.1.apk](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/Dkord-v0.10.1.apk)** | Original-key `app.dkord`, versionCode 15 |
-| **Windows 32-bit** | **[x86 setup](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/Dkord-desktop-v0.10.1-windows-x86.exe)** | Windows 10 / WoW64; genuine 32-bit runtime |
-| **Windows 64-bit** | **[x64 setup](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/Dkord-desktop-v0.10.1-windows-x64.exe)** | Windows 10/11 x64 |
-| **macOS** | [Intel](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/Dkord-desktop-v0.10.1-macos-x64.pkg) · [Apple Silicon](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/Dkord-desktop-v0.10.1-macos-arm64.pkg) | macOS 13+, choose the installed CPU profile |
-| **Linux x64** | [deb](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/Dkord-desktop-v0.10.1-linux-x64.deb) · [AppImage](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/Dkord-desktop-v0.10.1-linux-x64.AppImage) | glibc 2.39+ |
-| **Linux arm64** | [deb](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/Dkord-desktop-v0.10.1-linux-arm64.deb) · [AppImage](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/Dkord-desktop-v0.10.1-linux-arm64.AppImage) | glibc 2.39+ |
+| **Android** | **[Dkord-v0.10.2.apk](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-v0.10.2.apk)** | Original-key `app.dkord`, versionCode 16 |
+| **Windows 32-bit** | **[x86 setup](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-windows-x86.exe)** | Windows 10 / WoW64; genuine 32-bit runtime |
+| **Windows 64-bit** | **[x64 setup](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-windows-x64.exe)** | Windows 10/11 x64 |
+| **macOS** | [Intel](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-macos-x64.pkg) · [Apple Silicon](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-macos-arm64.pkg) | macOS 13+, installed CPU profile |
+| **Linux x64** | [deb](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-linux-x64.deb) · [AppImage](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-linux-x64.AppImage) | glibc 2.39+ |
+| **Linux arm64** | [deb](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-linux-arm64.deb) · [AppImage](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-linux-arm64.AppImage) | glibc 2.39+ |
 
-All eight PC packages, the APK, real screenshots, build receipts, signed PC update
-manifest and complete checksums are on the same release page. **Earlier releases
-remain unchanged.** [Exact-source tests, real install-over proof and asset hashes](docs/releases/v0.10.1-publication.md).
+Eight native installers, original-key APK, build receipts, signed PC update
+manifest, extensive screenshots and complete checksums: **22 assets** on one
+release. **All four earlier releases/53 original assets remain unchanged.**
+[Exact-source tests, install-over, signing and all asset hashes](docs/releases/v0.10.2-publication.md).
 
-### Windows32 x86 + real computer-app screenshots
-[PR9](https://github.com/DeepuExplainsAi/dkord/pull/9) adds a genuine **Windows10 32-bit / WoW64** profile—not an x64 rename—with CPU-matched Python/Node, the real Qt5 widget/multimedia UI and source-built FFmpeg/ffprobe8.1.3. Existing64-bit Qt6 profiles remain. Its separately named installer avoids overwriting x64 program files while retaining the stable per-user library/data lock. Qt5.15.2 is a legacy compatibility runtime; physical32-bit OS/audio/install-over acceptance remains outstanding.
+### 180 actual PC screenshots — every native OS/CPU build
 
-The v0.10.1 [player screenshot](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/windows-x86-player.png) and [Studio screenshot](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/windows-x86-studio.png) are captures of the **actual frozen Windows32 app**, not AI artwork, a phone screenshot or a browser mockup. Generated offline audio is explicitly labelled; these are not invented live search results. The attached [proof](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/windows-x86-screenshot-proof.json) binds the released source, Windows/Qt/32-bit runtime and image hashes. Physical32-bit OS/heard-audio acceptance remains separate. The earlier [Preview2](https://github.com/DeepuExplainsAi/dkord/releases/tag/desktop-v0.10.0-preview.2) and its [historical receipt](docs/releases/desktop-v0.10.0-preview.2-publication.md) are preserved unchanged.
+**[Download the full screenshot gallery ZIP](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-PC-screenshots-v0.10.2.zip)**,
+extract and open `index.html`. Select a platform and click any image for the
+untouched full-resolution PNG: **30 screens × 6 native builds**—Windows x64 and
+real x86/32-bit, macOS Intel/Apple Silicon, Linux x64/arm64.
+
+Home, Search, new exact-link states, Library/playlists, Downloads and both
+destinations, Studio/editor/online picker, Listen Together, full player/queue/
+lyrics/sleep, Settings/About, Hindi, themes and compact responsive layout.
+These are **actual frozen native Qt captures**, not AI artwork, a phone image or
+a browser app mockup. **OFFLINE DEMO:** generated local tones and labelled sample
+metadata, not invented live YouTube results. Source/runtime/bitness/image hashes
+are included. [Screen list and honest acceptance boundaries](docs/PC_SCREENSHOTS.md).
+
+Genuine Windows 32 uses CPU-matched Python/Node, Qt 5.15.2 and source-built
+FFmpeg/ffprobe 8.1.3; it is not renamed x64. Physical 32-bit OS/heard-audio acceptance
+is still separate. [Preview2](https://github.com/DeepuExplainsAi/dkord/releases/tag/desktop-v0.10.0-preview.2)
+and [v0.10.1's original captures/receipt](docs/releases/v0.10.1-publication.md)
+remain immutable history.
 
 ### Listen. Keep. Create.
 - **Find your version.** Songs-first search, Hindi/Choliwood and Unicode input, explicit broad YouTube scopes, independent uploads kept separate—not a fixed demo catalogue.
@@ -57,7 +75,7 @@ There is **no automatic phone-to-PC/cloud audio sync**. Each installation keeps 
 Listen Again resume/searchable history · real on-device clip/merge Mashup Studio · music-first search with optional broad YouTube scopes · Home with moods, charts and collapsed-by-default New Releases · background audio with notification, lock-screen and Bluetooth controls · music-only related-radio autoplay · queue, shuffle, repeat, speed and sleep timer · synced lyrics (LRCLIB) · tagged M4A downloads with pause/resume · local playlists with JSON import/export · song sharing · Listen Together rooms · compact in-app updates · dark / light / AMOLED / Material You themes.
 
 ## Install and updates
-Latest official **[v0.10.1 / code15](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.1)**: **[download the Android APK](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.1/Dkord-v0.10.1.apk)** or choose the matching native PC installer above. Install over the existing app, **without uninstalling or clearing data**, to retain the local library, downloads, settings and Studio sources. Keep the installed Windows32/64 profile rather than mixing Qt runtimes. Android app code14→15 and Preview2→0.10.1 PC install-over fixtures passed on isolated hosted systems; this is not a physical-device/OEM acceptance claim. Old PC previews require the one-time manual install-over described above. [PC scope and update verification](desktop/README.md).
+Latest official **[v0.10.2 / code 16](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.2)**: **[download the Android APK](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-v0.10.2.apk)** or choose the matching native PC installer above. Install over the existing app, **without uninstalling or clearing data**, to retain the local library, downloads, settings and Studio sources. Keep the installed Windows 32/64 profile rather than mixing Qt runtimes. Android app versionCode 15 → 16 and all-six-target Preview2→0.10.1→0.10.2 PC install-over fixtures passed on isolated hosted systems; this is not a physical-device/OEM acceptance claim. Old PC previews require the one-time manual install-over described above. [PC scope and update verification](desktop/README.md).
 
 Home shows a small **Update / Later** notice, not a blocking dialog. Later defers that version for 24 hours; a different newer version can still appear. Foreground checks are throttled to 30 minutes. Settings also provides a manual check and live downloaded / total / remaining MB. APKs are downloaded only after consent, and `/releases/latest` is resolved again before the download, so skipped releases do not require intermediate installations. An old ready APK does not block newer-release checks.
 
@@ -78,7 +96,7 @@ The Search screen shows **Recent searches** below the filter chips when the fiel
 
 Search has a separate 48dp submit button alongside the input (and keyboard Search), a compact non-wrapping placeholder, and the existing clear action. Player secondary actions wrap as whole buttons so Add to playlist / Play video are not squeezed into vertical letters on narrower screens.
 
-### Open an exact YouTube link — next update (unreleased)
+### Open an exact YouTube link — Android + PC v0.10.2
 
 A separate **Open YouTube link** action in Search, the top bar and Library accepts
 an individual YouTube / youtu.be / Shorts / live / YouTube Music video link.
@@ -88,8 +106,8 @@ Downloads choices and online Studio. Pasting/previewing does not start audio or
 save a search; normal music search/radio are unchanged. Playlist-only, invalid,
 private/unavailable and network failures show an error, not a substitute song.
 
-This is Android + native PC source work for the **next update**, not a change to
-the published v0.10.1 installers. [Behavior, proof status and acceptance limits](docs/YOUTUBE_LINKS.md).
+Included in the **v0.10.2 Android and native PC downloads**. Older installers and
+assets are not changed. [Behavior, exact-source proof and acceptance limits](docs/YOUTUBE_LINKS.md).
 
 ### Search / Home playback and related autoplay
 Tap a Search result or an ordinary Home song card to start **that exact song first**, not every search result or the whole mixed Home shelf. Home has a separate accessible **Play all** action when the full shelf is desired. Explicit album/playlist/category/New Releases playback keeps its chosen queue/order.
@@ -139,7 +157,14 @@ python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
 
 **Validate pull request** automatically runs for PRs targeting main, including draft PR updates. It uses a read-only token, no signing secrets, and runs the Python checks, full Android unit suite and APK compile. A separate Android35 emulator job retains the existing regression classes and adds the explicit YouTube-link page: Search keyboard viewport, Studio audio export, Studio editor, export publication, Listen Again, related-playback routing, online source/storage migration, destination chooser, the online picker’s own-window IME, and room co-host UI/Android-crypto/actor cases. It uses an installed real keyboard with wake/unlock/hardware-keyboard policy setup. A minimal **androidTest-only idle HOME** prevents the image’s Google launcher/widgets from owning an ANR overlay between cases; the default HOME is verified before instrumentation and never changes the production app. Error dialogs are not hidden, failed tests are not retried, and real IME visibility, original keyboard deadlines, viewport geometry and navigation/font assertions remain mandatory. Failure-only diagnostics identify WindowManager focus ownership and keyguard state; there are no automatic test retries or fake insets. Actual JUnit XML counts and checked PR/merge SHAs are reported; no missing-class/empty/all-skipped report can establish a successful validation. Only test reports are uploaded—no release/tag or installer APK is published. This is the validation path when the agent cannot dispatch a manual workflow (integration HTTP403). It may still require owner approval if GitHub flags a contributor run.
 
-**v0.10.1 publication is completed and its requests are consumed.** The narrowly scoped new release request and existing-draft finalization require the original signing identity, exact parent/child Android/native/capture/installer proof, original CI checksums, all20 original asset IDs and unchanged historical releases. A GitHub unpublished-draft REST lookup404 was corrected using the authenticated release list; the same tested files were finalized without rebuilding, resigning or replacing any asset. Never replay either request or overwrite this tag. [Publication audit](docs/releases/v0.10.1-publication.md).
+**v0.10.2 publication is completed; its fresh request is consumed.** Exact-source
+458 JVM/50 API35 regressions,144 cases on each native target,180 genuine frozen
+captures, original-key Android versionCode 15 → 16 retention and all eight signed native update
+plans passed before public/latest publication. All22 uploaded hashes and all 53
+historical asset records were reverified. Never replay the request, replace its
+assets/tag or infer PR9 merge permission. [Current publication audit](docs/releases/v0.10.2-publication.md).
+
+**v0.10.1 publication is completed and its requests are consumed.** The narrowly scoped new release request and existing-draft finalization require the original signing identity, exact parent/child Android/native/capture/installer proof, original CI checksums, all 20 original asset IDs and unchanged historical releases. A GitHub unpublished-draft REST lookup404 was corrected using the authenticated release list; the same tested files were finalized without rebuilding, resigning or replacing any asset. Never replay either request or overwrite this tag. [Publication audit](docs/releases/v0.10.1-publication.md).
 
 **Build debug APK** remains manual-only. **Release APK** keeps its manual entrypoint and mandatory signing/update gates. For the now-completed, consumed **v0.10.0/code14** publication only, it additionally accepts a trusted push changing `.github/release-requests/v0.10.0.json` on `arena/a0209191-dkord`. Its pre-signing guard requires the exact tag/repository/ref and a non-forced/non-deleted, direct metadata-only child of the recorded validated source head. The v0.10.0 authorization is now consumed too; preserve every request as audit history and never replay publication. Historical v0.9.1 and older requests cannot enter this route. Publication additionally requires successful full PR Android validation at the exact release commit, including all10 mandatory native classes, plus successful same-head five-host CI for any attached explicitly experimental desktop previews. Each native package/provenance hash/format and actual30-case/all3-class JUnit proof is checked before upload; missing/failed validation refuses publication without retrying tests. Ordinary PR/code/docs pushes do not publish. The agent's dispatch403 permission is not changed; this is a version-scoped owner-authorized release event, not signing from a PR.
 - **Build debug APK** runs the Python regressions, full Android unit suite and debug build, then uploads `dkord-debug-apk`. Without the existing signing secrets, a developer debug APK cannot update an official install.
@@ -160,7 +185,7 @@ Every UI download action (player, song menu or bulk selection) opens **Download 
 **Online Studio** searches real Songs with its own query/pagination/cancellation ownership. Selected accessible audio is staged privately, probed, then committed as a durable editable source; it does not create a Downloads row or public Music file. Existing phone/download imports, millisecond ranges, clip ordering, preview, snapshot export and sharing remain. Cancelling preparation cleans partial app-owned staging, not existing sources or the project.
 
 ### Native desktop development
-See **[Desktop README](desktop/README.md)** for the actual implementation, OS requirements, build commands and acceptance gaps. **[Native preview validation](.github/workflows/validate-desktop.yml)** builds Windows x64, macOS x64/arm64 and Linux x64/arm64 packages with a matching bundled JS runtime and actual native widget/codec tests. Preview artifacts are not trusted signed/notarized releases. The updater has a separate signed desktop channel and refuses APKs, wrong OS/CPU, malformed packages and downgrades; production keys are intentionally unconfigured until an authorized, verified native release.
+See **[Desktop README](desktop/README.md)** for the actual implementation, OS requirements, build commands and acceptance gaps. **[Native validation](.github/workflows/validate-desktop.yml)** builds genuine Windows x86/x64, macOS x64/arm64 and Linux x64/arm64 packages with matching runtimes, actual native widget/codec/installer tests and 30 frozen screenshots per target. Read-only CI artifacts are unsigned build receipts, not public signing/notarization claims. The official release-only manifest uses the original pinned APK identity; the actual client refuses APKs, wrong OS/CPU/kind, malformed packages and downgrades. OS publisher signing remains separate/unconfigured.
 
 Discoverability terms describe the project—not measured search-volume claims: **open-source music player, YouTube Music client, offline music library, audio editor, mashup maker, Kotlin/Jetpack Compose, native Windows/macOS/Linux music app, Hindi and Choliwood music search**.
 

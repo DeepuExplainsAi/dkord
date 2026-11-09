@@ -1,7 +1,8 @@
-# Open an exact YouTube link — next update (unreleased)
+# Open an exact YouTube link — Android + PC v0.10.2
 
-This is a separate Android and native Windows/macOS/Linux flow. It is **not yet
-in the published v0.10.1 downloads**; no old APK, installer, tag or asset is replaced.
+This separate Android and native Windows/macOS/Linux flow is **included in the
+[public v0.10.2 downloads](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.2)**. No old APK, installer, tag or asset was replaced.
+[Complete signing/install-over/publication receipt](releases/v0.10.2-publication.md).
 
 ## Use it
 
@@ -52,42 +53,35 @@ phone/PC contract. The native page is Qt, not an embedded website or browser.
 
 ## Validation status
 
-- Shared offline URL corpus: **29 valid +46 invalid cases**, executed by both
-  platform parser suites.
-- Local sandbox: **108 non-GUI native tests +99 subtests** and **240 repository
-  guard tests passed**. Python syntax, EN/HI XML and phone-contract checks passed.
-- Exact application/test source: **`64e178b45dda68785b5eea787d768d53a5a511d4`**.
-  [Android validation42602798355](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798355)
-  **succeeded**: main/APK compilation, **458 JVM cases /52 XML reports**, and
-  **50 API35 emulator device cases /1 XML report**, including seven production
-  Compose link-page cases. Zero test failures/errors/skips. The same run's
-  independent Linux native job passed **142 cases +actual codec/widget entry**.
-- [Native validation42602798430](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430)
-  **succeeded at the same exact source on all six genuine targets**. Each ran
-  **142 cases with zero failures/errors/skips**, real codec/data/update/widget
-  tests, the native entry-point smoke, and real package/frozen-executable smokes.
-  Windows32 compiled and executed its actual x86 codec/runtime; it is not x64
-  renamed as x86. This generated development artifacts, not a public release.
-
-  | Native target | Successful job |
-  |---|---|
-  | Windows x64 | [129114755268](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430/job/129114755268) |
-  | Windows x86 /32-bit | [129114755357](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430/job/129114755357) |
-  | macOS x64 | [129114754950](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430/job/129114754950) |
-  | macOS arm64 | [129114755084](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430/job/129114755084) |
-  | Linux x64 | [129114755127](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430/job/129114755127) |
-  | Linux arm64 | [129114754952](https://github.com/DeepuExplainsAi/dkord/actions/runs/42602798430/job/129114754952) |
-
-  Released v0.10.1 proof remains separate history, not evidence for this feature.
-  The final receipt/HANDOFF edits are documentation-only after the source above.
-- A real native crash trace identified a Python `QObject.destroyed` closure during
-  garbage collection. The fix cancels the page explicitly on the GUI thread,
-  before page replacement/close/deferred deletion, rather than in a destructor.
-  The deleted-widget/late-callback regression and original metadata-thread tests
-  remain in the full suite. The Android IME helper now uses separate set-text and
-  IME calls; no production behavior/assertions were weakened to get a pass.
-- The sandbox has no Android SDK or GL/EGL/DBus/xkbcommon runtime. It cannot
-  independently establish Android/native GUI execution or heard/live audio.
+- Shared offline URL corpus: **29 valid + 46 invalid cases**, executed by both
+  platform parser suites. Metadata is not invented for live acceptance.
+- Exact released application/test/tag source: **`3e71ff57432232641e1e69f3c4b6c2c7a49b9b18`**; one metadata-only
+  child of the fully validated `a378de97aa561af551f39e0fe079b92a7bf5ab80`.
+- [Android validation](https://github.com/DeepuExplainsAi/dkord/actions/runs/42618720910) **SUCCESS**: 458 JVM cases/52 XML reports,
+  50 API35 device cases/1 XML report including seven real production Compose link
+  page cases, plus 144 fast native cases. No failures/errors/skips.
+- [All-six native validation](https://github.com/DeepuExplainsAi/dkord/actions/runs/42618720890) **SUCCESS**: 144 cases on every
+  genuine OS/CPU host, actual codecs/Qt widgets, entry/frozen/package/install-over
+  checks and 30 actual frozen native screenshots per target. Real Windows x86
+  runtime and source-built codec, not renamed x64.
+- [Original-key publication](https://github.com/DeepuExplainsAi/dkord/actions/runs/42618713053) **SUCCESS**: original certificate,
+  actual Android versionCode 15 → 16/same-UID retention, all eight client-verified signed PC
+  update plans, 22 uploaded-byte hashes and unchanged four historical releases/
+  53 original assets. [Complete receipt](releases/v0.10.2-publication.md).
+- **[180 actual PC screenshots](PC_SCREENSHOTS.md)**, all decoded/source/runtime/
+  PNG-hash verified and visually reviewed. Clearly labelled offline tone/sample
+  metadata fixtures; they do not establish live-stream availability/heard audio.
+- Local 280 repository guards + 108 non-GUI native cases/99 subtests, phone-owned
+  EN/HI/theme/navigation contract, syntax/XML/YAML/whitespace checks passed.
+- Real pre-release failures were fixed, not hidden: explicit GUI-thread page
+  cancellation before C++ deletion; proper new Android test IME calls; readable
+  real modal sizes; actual frozen Linux X11 shape-library dependency; native
+  white-on-white player tabs. The original tests, strict capture provenance and
+  actual native Windows/cocoa/xcb plugins remained mandatory. Rendered pixel tests
+  now check all player-tab selections in dark/light/AMOLED themes.
+- Sandbox GUI/Android execution is not claimed: actual native/emulator evidence
+  above comes from CI. No physical hardware, heard/live audio or particular
+  user-upload success is inferred from fixture or compilation results.
 
 ## Still requires real-device/provider acceptance
 

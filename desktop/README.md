@@ -7,14 +7,26 @@ palette, English/Hindi resources, Roboto/Devanagari fonts, music shelves and
 mini/full player. PC widths use a navigation rail or sidebar; compact windows use
 bottom navigation. This is a real Qt application, not an APK, website or mockup.
 
-## Version 0.10.1
+## Version 0.10.2
 
-**[Download Dkord v0.10.1 — Android & PC](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.1).** The common release is public/latest, with eight installers across six native OS/CPU profiles and the original-key Android APK. Exact released source passed436 JVM +43 Android regressions,121 cases on each native host, real old-to-new installer fixtures and genuine frozen Windows32 capture gates. The actual original-key Android app code14→15 data/download/Studio upgrade also passed. [Publication, signing and unchanged-asset receipt](../docs/releases/v0.10.1-publication.md).
+**[Download Dkord v0.10.2 — Android & PC](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.2).** Public/latest common release:
+eight native installers across six OS/CPU profiles, original-key Android APK and
+**180 actual native PC screenshots**. Exact released source passed 458 JVM + 50
+Android device cases and 144 cases on every native host, native old/current/new
+install-over and all 6 × 30 frozen captures. Actual original-key Android versionCode 15 → 16
+retention and all eight signed PC update plans also passed.
+[Publication, signing, original hashes and unchanged-history receipt](../docs/releases/v0.10.2-publication.md).
 
-Historical v0.10.0 and Desktop Preview2 releases/tags/assets are preserved, not replaced.
+**[Screenshot gallery ZIP](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-PC-screenshots-v0.10.2.zip)**: extract,
+open `index.html`, select a platform and view/download any full-size PNG.
+Clearly labelled OFFLINE DEMO/generated tones/sample metadata, not live-provider
+or physical/heard-audio acceptance. [All 30 screens per platform](../docs/PC_SCREENSHOTS.md).
+Historical 0.10.0, Preview2 and 0.10.1 releases/tags/assets remain unchanged.
 
 ### Included
 
+- Separate **Open YouTube link** → deliberate Paste → Show video → exact upload
+  preview → explicit Play, independent of ordinary music-search/radio eligibility.
 - Phone-derived Home/chips/curated shelves, search scopes/suggestions/corrections
   and music continuations, collection headers/queues, dated New Releases with the
   same category and 24-hour/7-day/10-day windows.
@@ -49,14 +61,15 @@ and Studio sources are outside the executable directory. Corrupt/newer data is
 refused without a destructive reset.
 
 The old PC previews shipped with **no trusted update key**. They cannot learn a
-new trust root through their existing updater: the first 0.10.1 PC setup must be
-run once **over the old installation**. No reinstall/data deletion is required.
+new trust root through their existing updater: the first official 0.10.1+ PC setup
+must be run once **over the old installation**. Use the current matching profile;
+no uninstall, forced intermediate-version sequence or data deletion is required.
 
 0.10.1 pins the **existing v0.10.0 APK's public signing identity**, verified against
 its immutable APK SHA-256 and `apksigner` report. No replacement key is generated.
 `assets/update-trust-provenance.json` records the public-only verification receipt.
-The published0.10.1 manifest has been signed and verified by the actual client
-for all six targets/eight installers. Future common `vX.Y.Z` releases can carry a
+The published 0.10.1 and 0.10.2 manifests were signed and verified by the actual
+client for all six targets/eight installers. Future common `vX.Y.Z` releases can carry a
 format-2 desktop manifest signed by that same protected identity, with explicit desktop-protocol domain separation.
 The app verifies signature, exact OS/CPU/installer kind, version, bounded size,
 SHA-256 and native file format before a consent-based install. It never offers an
@@ -72,15 +85,15 @@ bypass OS security warnings or describe these packages as notarized.
 | Profile | Runtime | Package |
 |---|---|---|
 | Windows x64, Windows 10/11 | Python 3.11, Qt6/PyQt6, PyAV | `.exe` |
-| Windows x86, Windows 10 / WoW64 | Genuine 32-bit Python 3.11, Qt5/PyQt5, Node22 ia32; FFmpeg/ffprobe8.1.3 from pinned source | `.exe` |
-| macOS Intel / Apple Silicon, macOS13+ | Matching native Qt6/PyAV | Separate `.pkg` |
-| Linux x64 / arm64, glibc2.39+ | Matching native Qt6/PyAV | Separate `.deb` and `.AppImage` |
+| Windows x86, Windows 10 / WoW64 | Genuine 32-bit Python 3.11, Qt5/PyQt5, Node 22 ia32; FFmpeg/ffprobe 8.1.3 from pinned source | `.exe` |
+| macOS Intel / Apple Silicon, macOS 13+ | Matching native Qt6/PyAV | Separate `.pkg` |
+| Linux x64 / arm64, glibc 2.39+ | Matching native Qt6/PyAV | Separate `.deb` and `.AppImage` |
 
-Windows7/8 and unlisted CPUs are not claimed. The genuine Win32 profile does not
-bundle unavailable Qt6/PyAV Win32 wheels or the obsolete 2019 FFmpeg4.2.2 wheel.
+Windows 7/8 and unlisted CPUs are not claimed. The genuine Win32 profile does not
+bundle unavailable Qt6/PyAV Win32 wheels or the obsolete 2019 FFmpeg 4.2.2 wheel.
 Linux needs system GL/EGL, DBus, xkbcommon/XCB and an appropriate audio/display stack.
 
-## Next update — exact YouTube links (unreleased)
+## Open an exact YouTube link — included in 0.10.2
 
 **Search → Open YouTube link → Paste link → Show video → Play** opens the exact
 upload, not a title-search substitute. The same separate action is in the top bar
@@ -88,9 +101,9 @@ and Library, with phone-owned English/Hindi labels and ordinary queue/library,
 download-destination and Studio actions. Normal Songs search/radio and stored
 music are unchanged. Pasting or previewing does not start audio or save a query.
 
-This is native Qt source for the next update, **not included in the published
-0.10.1 packages above**. Playlist-only/invalid/unavailable links fail visibly;
-provider restrictions still apply. [Details and actual validation status](../docs/YOUTUBE_LINKS.md).
+This is the actual native Qt flow in the **0.10.2 installers above**; old 0.10.1
+assets are unchanged. Playlist-only/invalid/unavailable links fail visibly;
+provider restrictions still apply. [Details and exact-source proof](../docs/YOUTUBE_LINKS.md).
 
 ## Acceptance boundaries
 
@@ -118,17 +131,18 @@ python scripts/export_phone_contract.py --check
 python packaging/build.py --help
 ```
 
-Six-host CI installs the immutable Preview2 package, then installs the new
-package over it, without uninstalling. The new **installed frozen executable**
+Six-host CI installs immutable Preview2, retains that same seed through the
+actual public 0.10.1 package, then installs the new 0.10.2 package over it, without
+uninstalling, resetting or reseeding. The new **installed frozen executable**
 reads the unchanged normal user-data path and verifies seeded settings, queue,
 likes/history/playlists, both download copies and Studio clip/source bytes, and
 decodes the preserved generated audio. Linux exercises **both** `.deb` and
 portable `.AppImage` replacement. These are disposable hosted-OS fixtures, not
 physical-user or live-provider acceptance.
 
-The release-only Android gate uses the original signed code14 APK, seeds its
+The release-only Android gate uses the original signed code 15 APK, seeds its
 actual Room/settings/queue/private download/MediaStore/Studio data through the
-same signed instrumentation APK, performs `adb install -r` to code15, and verifies
+same signed instrumentation APK, performs `adb install -r` to code 16, and verifies
 that the package UID and all those rows/files survive. It never clears data,
 uninstalls, hides failures or retries a failing case.
 
@@ -137,7 +151,8 @@ The packaged application needs no separate Python, Node or GitHub CLI install.
 
 Six-host PR CI is read-only: no signing secrets, release/tag writes or fake search
 results. It tests real Qt widgets/codecs, packages native binaries and captures
-the actual frozen Win32 app with explicitly labelled generated audio. Source,
+all six actual frozen native builds with 30 production pages/dialogs/theme states
+each, using explicitly labelled generated audio/sample metadata. Source,
 bitness, frozen status and image hashes accompany the images. Only a separately
 authorized publication job promotes exact-source validated packages. Build outputs,
 installers and generated captures belong in artifacts, **never Git**.
