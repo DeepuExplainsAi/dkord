@@ -26,6 +26,7 @@ jobs:
           # Already-masked public CI output from this one post-keystore-removal step only.
           # No signing-step output, private signing material or unrelated job logs.
           text = '\n'.join(lines[-140:])[-24000:]
-          for index, start in enumerate(range(0, len(text), 8000), 1):
-              piece = text[start:start + 8000].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          # GitHub truncates each retained annotation message to 4096 characters.
+          for index, start in enumerate(range(0, len(text), 3500), 1):
+              piece = text[start:start + 3500].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
               print(f'::notice title=Prior Android install-over failure part {index}::' + piece)
