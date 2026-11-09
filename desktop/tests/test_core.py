@@ -8,10 +8,12 @@ import wave
 from pathlib import Path
 from unittest.mock import patch
 
-import av
+from dkord_desktop.platforms import WINDOWS_X86
+if not WINDOWS_X86:
+    import av
 from dkord_desktop.models import Track, milliseconds, owned_path, safe_name
 from dkord_desktop.store import Store
-from dkord_desktop.media import MediaLibrary, Cancelled, atomic_copy, probe, publish_device
+from dkord_desktop.media import MediaLibrary, Cancelled, atomic_copy, probe, probe_ffmpeg, publish_device
 from dkord_desktop.library_json import export_library, import_library
 from dkord_desktop.provider import provider_track
 
@@ -90,10 +92,17 @@ class CoreTest(unittest.TestCase):
             a,b=p['sources'];p['clips']=[{'id':'a','sourceId':a['id'],'startMs':1100,'endMs':1500},{'id':'b','sourceId':b['id'],'startMs':200,'endMs':1000},{'id':'c','sourceId':a['id'],'startMs':100,'endMs':400}]
         self.store.change_project(project,clips);track=self.media.export(project,threading.Event());file=self.media.local_file(track)
         self.assertLess(abs(probe(file)-1500),100)
-        samples=[];resample=av.AudioResampler(format='s16',layout='mono',rate=48000)
-        with av.open(str(file)) as audio:
-            for frame in audio.decode(audio=0):
-                for out in resample.resample(frame):samples.extend(struct.unpack('<'+'h'*out.samples,bytes(out.planes[0])[:out.samples*2]))
+        samples=[]
+        if WINDOWS_X86:
+            import subprocess
+            from dkord_desktop.codec import ffmpeg_exe
+            pcm=subprocess.check_output([ffmpeg_exe(),'-nostdin','-v','error','-i',str(file),'-ac','1','-ar','48000','-f','s16le','pipe:1'],creationflags=subprocess.CREATE_NO_WINDOW)
+            samples.extend(struct.unpack('<'+'h'*(len(pcm)//2),pcm))
+        else:
+            resample=av.AudioResampler(format='s16',layout='mono',rate=48000)
+            with av.open(str(file)) as audio:
+                for frame in audio.decode(audio=0):
+                    for out in resample.resample(frame):samples.extend(struct.unpack('<'+'h'*out.samples,bytes(out.planes[0])[:out.samples*2]))
         def peak(start,end):
             window=samples[round(start*48000):round(end*48000)]
             def energy(hz):
@@ -135,5 +144,26 @@ class CoreTest(unittest.TestCase):
         self.assertNotEqual(first,second);self.assertEqual(self.input.read_bytes(),first.read_bytes());self.assertEqual(first.read_bytes(),second.read_bytes())
         self.assertTrue(self.input.exists());self.assertEqual('संगवारी🎧'*150,track.title)
         with self.assertRaises(ValueError):safe_name(track,'../wav')
+
+    def test_real_compat_codec_decodes_unicode_local_audio(self):
+        file=self.root/'धुन 😀.wav';tone(file)
+        self.assertEqual(2000,probe_ffmpeg(file))
+        self.assertTrue(file.is_file())
+        if WINDOWS_X86:
+            exact=self.root/'precise-duration.wav'
+            with wave.open(str(exact),'wb') as out:
+                out.setparams((1,2,48000,0,'NONE','not compressed'));out.writeframes(b'\0\0'*60336)
+            self.assertEqual(1257,probe_ffmpeg(exact))
+            import aifc
+            big_endian=self.root/'precise-big-endian.aiff'
+            with aifc.open(str(big_endian),'wb') as out:
+                out.setparams((1,2,48000,0,b'NONE',b'not compressed'));out.writeframes(b'\0\0'*60336)
+            self.assertEqual(1257,probe_ffmpeg(big_endian))
+
+    def test_real_compat_codec_refuses_a_header_with_no_decodable_audio(self):
+        file=self.root/'empty.wav'
+        with wave.open(str(file),'wb') as out:
+            out.setparams((1,2,44100,0,'NONE','not compressed'));out.writeframes(b'')
+        with self.assertRaises(ValueError):probe_ffmpeg(file)
 
 if __name__=='__main__':unittest.main()

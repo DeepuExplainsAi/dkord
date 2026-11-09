@@ -1,0 +1,65 @@
+name: Diagnose actual frozen Linux X11 gallery launch
+on:
+  push:
+    branches: [arena/a6a6bbda-dkord]
+    paths: [.github/diagnostics/linux-gallery-v0102.json]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  diagnose:
+    if: github.repository == 'DeepuExplainsAi/dkord' && github.ref == 'refs/heads/arena/a6a6bbda-dkord'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install real X11 runtime libraries without mocking Qt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libegl1 libxkbcommon0 libdbus-1-3 libxcb-cursor0 libpulse0 libasound2t64 libx11-xcb1 fonts-noto-core xvfb xauth libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1
+      - uses: actions/download-artifact@v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: 42609764876
+          name: desktop-preview-linux-x64
+          path: native-input
+      - name: Require exact existing package source and install it on this disposable host
+        run: |
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          request=json.loads(Path('.github/diagnostics/linux-gallery-v0102.json').read_text())
+          assert request=={'source':'95b7b1f8ba3ddd82a4f3d50774ff528d69513860','run':42609764876,'purpose':'read-only frozen X11 loader diagnosis; no release'}
+          proof=json.loads(Path('native-input/preview-linux-x64.json').read_text())
+          assert proof['source']==request['source'] and proof['target']=='linux-x64' and proof['version']=='0.10.2'
+          entry=next(item for item in proof['artifacts'] if item['name'].endswith('.deb'))
+          data=(Path('native-input')/entry['name']).read_bytes()
+          assert len(data)==entry['bytes'] and hashlib.sha256(data).hexdigest()==entry['sha256']
+          PY
+          sudo dpkg -i native-input/*.deb
+      - name: Execute actual frozen app under X11 with verbose Qt plugin diagnostics
+        env:
+          QT_QPA_PLATFORM: xcb
+          QT_DEBUG_PLUGINS: 1
+          DKORD_SOURCE_SHA: 95b7b1f8ba3ddd82a4f3d50774ff528d69513860
+        run: |
+          set -o pipefail
+          xvfb-run -a -s '-screen 0 1600x1100x24' /opt/Dkord/Dkord --capture-gallery "$RUNNER_TEMP/actual-gallery" 2>&1 | tee "$RUNNER_TEMP/qt-plugin.log"
+      - name: Surface actual loader error and native dependency evidence without hiding failure
+        if: always()
+        run: |
+          ldd /opt/Dkord/_internal/PyQt6/Qt6/plugins/platforms/libqxcb.so > "$RUNNER_TEMP/xcb-ldd.log" || true
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          for name in ('qt-plugin.log','xcb-ldd.log'):
+              path=root/name
+              if not path.is_file():continue
+              lines=path.read_text(errors='replace').splitlines()
+              if name=='qt-plugin.log':lines=[line for line in lines if any(term in line.lower() for term in ('cannot load library','not found','undefined symbol','could not load','cannot open shared'))]
+              detail='\n'.join(lines)[-3500:].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+              print('::notice title=Actual frozen X11 '+name+'::'+detail)
+          PY

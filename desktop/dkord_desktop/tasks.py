@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 
-from PyQt6.QtCore import QObject, QRunnable, pyqtSignal
+from .qt import QObject, QRunnable, pyqtSignal
 
 from .media import Cancelled
 
@@ -25,6 +25,8 @@ class Task(QRunnable):
 
     def run(self):
         try:
+            if self.cancel.is_set():
+                return
             result = self.call(self.cancel, self.signals.progress.emit)
             if not self.cancel.is_set():
                 self.signals.result.emit(result)

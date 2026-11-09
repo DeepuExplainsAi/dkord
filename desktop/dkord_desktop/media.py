@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -11,8 +12,10 @@ import time
 from pathlib import Path
 from uuid import UUID, uuid4
 
-import av
-import imageio_ffmpeg
+from .platforms import WINDOWS_X86
+if not WINDOWS_X86:
+    import av
+from .codec import ffmpeg_exe, ffprobe_exe
 from yt_dlp import YoutubeDL
 
 from .models import Track, owned_path, safe_name, public_error
@@ -34,6 +37,8 @@ def check_cancel(event: threading.Event | None) -> None:
 def probe(file: Path) -> int:
     if not file.is_file() or file.stat().st_size <= 0 or file.stat().st_size > MAX_AUDIO_BYTES:
         raise ValueError("Audio must be readable and below 512 MiB")
+    if WINDOWS_X86:
+        return probe_ffmpeg(file)
     with av.open(str(file)) as audio:
         streams = list(audio.streams.audio)
         if not streams:
@@ -47,6 +52,36 @@ def probe(file: Path) -> int:
         if ms <= 0 or ms > 24 * 3600 * 1000:
             raise ValueError("Invalid audio duration")
         return ms
+
+
+def probe_ffmpeg(file: Path) -> int:
+    """Real Win32 FFmpeg decoding; PyAV has no Windows32 wheels. No extension-only probe."""
+    command = [ffmpeg_exe(), '-nostdin', '-hide_banner', '-loglevel', 'info',
+               '-protocol_whitelist', 'file,pipe', '-i', str(file), '-map', '0:a:0', '-t', '0.1',
+               '-ac', '1', '-ar', '8000', '-c:a', 'pcm_s16le', '-f', 's16le', 'pipe:1']
+    result = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            timeout=30, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+    details = result.stderr.decode('utf-8', errors='replace')
+    duration = re.search(r'(?m)^  Duration: (\d{2,}):(\d{2}):(\d{2}(?:\.\d+)?),', details)
+    if result.returncode or len(result.stdout) < 2 or (duration is None and not WINDOWS_X86):
+        raise ValueError('No readable, non-DRM audio stream with decodable frames and a known duration')
+    if WINDOWS_X86:
+        from decimal import Decimal
+        metadata=subprocess.check_output([ffprobe_exe(),'-v','error','-protocol_whitelist','file,pipe','-select_streams','a:0',
+                                          '-show_entries','stream=duration:format=duration','-of','json',str(file)],
+                                         timeout=30,creationflags=subprocess.CREATE_NO_WINDOW)
+        info=json.loads(metadata);streams=info.get('streams',[])
+        value=(streams[0].get('duration') if streams else None) or info.get('format',{}).get('duration')
+        if value is None:raise ValueError('Audio duration is not known')
+        seconds=Decimal(value)
+        if not seconds.is_finite():raise ValueError('Invalid audio duration')
+        ms=int(seconds*1000)  # ffprobe preserves sub-centisecond precision; human FFmpeg logs do not.
+    else:
+        hours, minutes, seconds = duration.groups()
+        ms = round((int(hours)*3600 + int(minutes)*60 + float(seconds))*1000)
+    if not 0 < ms <= 24*3600*1000:
+        raise ValueError('Invalid audio duration')
+    return ms
 
 
 def atomic_copy(source: Path, target: Path, event: threading.Event | None = None) -> None:
@@ -293,7 +328,7 @@ class MediaLibrary:
     def render(self, project: dict, target: Path, event: threading.Event, progress=lambda fraction: None) -> Path:
         self.validate_project(project)
         sources = {item["id"]: item for item in project["sources"]}
-        cmd = [imageio_ffmpeg.get_ffmpeg_exe(), "-nostdin", "-hide_banner", "-loglevel", "error", "-y"]
+        cmd = [ffmpeg_exe(), "-nostdin", "-hide_banner", "-loglevel", "error", "-y"]
         filters = []
         duration = sum(c["endMs"] - c["startMs"] for c in project["clips"])
         for i, clip in enumerate(project["clips"]):

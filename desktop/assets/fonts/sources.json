@@ -1,0 +1,27 @@
+{
+  "repository": "google/fonts",
+  "revision": "5bb28733cec313b63fbd415b574b5ae35c8aa8b8",
+  "license": "OFL-1.1",
+  "files": {
+    "Roboto[wdth,wght].ttf": {
+      "path": "ofl/roboto/Roboto[wdth,wght].ttf",
+      "blob": "5522a368d9072fd88c299916e61fcff369949061",
+      "bytes": 488584
+    },
+    "roboto-OFL.txt": {
+      "path": "ofl/roboto/OFL.txt",
+      "blob": "9c48e05a24fa2267e207ecf17560291b5621c197",
+      "bytes": 4394
+    },
+    "NotoSansDevanagari[wdth,wght].ttf": {
+      "path": "ofl/notosansdevanagari/NotoSansDevanagari[wdth,wght].ttf",
+      "blob": "163f04bddc5a96fc523e4080466cac5c588f6594",
+      "bytes": 641944
+    },
+    "notosansdevanagari-OFL.txt": {
+      "path": "ofl/notosansdevanagari/OFL.txt",
+      "blob": "cd2cc5c94b4151933eba6ee508e3975274d6fa07",
+      "bytes": 4386
+    }
+  }
+}

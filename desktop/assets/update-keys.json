@@ -1,1 +1,7 @@
-{}
+{
+  "dkord-apk-5e6e923094761325": {
+    "algorithm": "rsa-pkcs1-sha256",
+    "publicKey": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkrZHIDr1tvA0Fs2Xu9S69rsmbGEyXGr5Ps7bHIaBEme54O+kgHnmbbLRDNbYUl+DWgJ1wrrwTYgJpSRx1zZcceKZl+ZNrt3yxHqG9ECKI1cQvWa9aN2C6senZ9CUGc+06A6s6Z10EvFytGxpAq+QVjkxdzvTshtypq+P/tvGM0F2+apoCwz/BCSTkegAgni2MQ9rkZtnV+dE5NXN+naEFAyX8yTsopfQgygtg4DF8u76mNrGncFGYsi/WUSJMxZluqnUxrXRNU3AyzFr4iUsAzyVZ8/r8DwL+JW5ekhY6P69s1mpmIOp/AcbWwJdEY6VcxbERpd1QXYPWnempBK3XwIDAQAB",
+    "certificateSha256": "5e6e923094761325e1ba251ebd8058077934131ed89f293215ce5876da211a61"
+  }
+}

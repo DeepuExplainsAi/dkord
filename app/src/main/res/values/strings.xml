@@ -18,7 +18,7 @@
     <string name="channel_downloads">Downloads</string>
     <string name="downloading">Downloading music</string>
     <string name="about">About</string>
-    <string name="about_text">Your music. Your mix. Your space. Dkord by DeepuGupta is an open-source music player with a private offline library and real Mashup Studio. Playback and editing run on your device; optional Listen Together rooms use a public relay. GPL-3.0.</string>
+    <string name="about_text">Discover your favourite music, listen offline and create your own mixes. Music, made personal.\n\n© 2026 dKORD</string>
     <string name="account">Account</string>
     <string name="add_to_playlist">Add to playlist</string>
     <string name="add_to_queue">Add to queue</string>
@@ -104,9 +104,9 @@
     <string name="remove">Remove</string>
     <string name="rename">Rename</string>
     <string name="repeat">Repeat</string>
-    <string name="report_broken">Report broken playback</string>
-    <string name="report_broken_hint">Copies the log and opens a GitHub issue</string>
-    <string name="report_copied">Log copied. Paste it into the issue.</string>
+    <string name="report_broken">Copy playback diagnostics</string>
+    <string name="report_broken_hint">Copies a private diagnostic log. Nothing is uploaded.</string>
+    <string name="report_copied">Diagnostics copied. Share them only if you choose.</string>
     <string name="resume">Resume</string>
     <string name="resume_all">Resume all</string>
     <string name="retry">Retry</string>
@@ -133,7 +133,7 @@
     <string name="turn_off">Turn off</string>
     <string name="unlike">Remove like</string>
     <string name="update_extractor">Update extractor</string>
-    <string name="update_text">Bundled extractor %1$s, newest %2$s. The extractor ships inside the app, so update the app from the releases page.</string>
+    <string name="update_text">Playback improvements are included in app updates. Use Check for updates on this screen.</string>
     <string name="use_default">Use default</string>
     <string name="use_secondary">Tip: use a secondary Google account</string>
     <string name="waiting">Waiting</string>
@@ -374,4 +374,31 @@
     <string name="room_controls_rate_limit">The public relay is busy. Please wait before sharing more controls.</string>
     <string name="room_controls_local_audio">Local Studio audio stays on this device. Choose an online catalogue song to control the room.</string>
     <string name="room_controls_owner_offline">The creator is not reachable. Shared control is paused until the room reconnects.</string>
+    <string name="room_anywhere_title">Your listening room</string>
+    <string name="room_anywhere_hint">Play songs or playlists from anywhere in Dkord. Your room stays connected.</string>
+    <string name="room_choose_music">Choose songs or playlists</string>
+    <string name="loading">Loading…</string>
+    <string name="all">All</string>
+    <string name="artwork">Artwork</string>
+    <string name="now_playing">Now playing</string>
+    <string name="nothing_playing">Nothing playing</string>
+    <string name="play_all">Play all</string>
+    <string name="volume">Volume</string>
+    <string name="video_playback">Video playback</string>
+    <string name="video_disabled">Enable video playback in Settings to watch a video.</string>
+    <string name="check_update">Check for updates</string>
+    <string name="custom">Custom</string>
+
+    <!-- Explicit link opening is separate from music search and its saved queries. -->
+    <string name="youtube_link_open">Open YouTube link</string>
+    <string name="youtube_link_hint">Open the exact upload, even if it is missing from music search. Preview first, then play.</string>
+    <string name="youtube_link_label">YouTube video link</string>
+    <string name="youtube_link_formats">Video, youtu.be, Shorts, live and YouTube Music links</string>
+    <string name="youtube_link_paste">Paste link</string>
+    <string name="youtube_link_show">Show video</string>
+    <string name="youtube_link_loading">Opening linked video…</string>
+    <string name="youtube_link_preview">Linked video</string>
+    <string name="youtube_link_invalid">Paste a valid YouTube video link. Other websites, channel links and clip links are not supported.</string>
+    <string name="youtube_link_playlist_only">This link only opens a playlist. Copy a specific video link instead.</string>
+    <string name="youtube_link_clipboard_empty">No text link to paste. Copy a YouTube video link first.</string>
 </resources>

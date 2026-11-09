@@ -1,6 +1,5 @@
 package app.dkord.ui.screens
 
-import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -38,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.core.net.toUri
 import app.dkord.R
 import app.dkord.data.download.DownloadStorage
 import app.dkord.data.settings.AppLanguage
@@ -133,17 +131,15 @@ fun SettingsScreen(onBack: () -> Unit, onLogs: () -> Unit, onMessage: (String) -
                     else { dialog = "update" }
                 }
             }
-            Item(stringResource(R.string.report_broken), stringResource(R.string.report_broken_hint)) {
+            PlaybackDiagnosticsItem {
                 val body = ExtractorHealth.reportBody("Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), ${Build.MANUFACTURER} ${Build.MODEL}")
                 val clip = ctx.getSystemService(android.content.ClipboardManager::class.java)
                 clip.setPrimaryClip(android.content.ClipData.newPlainText("report", body))
                 onMessage(ctx.getString(R.string.report_copied))
-                ctx.startActivity(Intent(Intent.ACTION_VIEW, (ExtractorHealth.ISSUES_NEW + "?title=Playback+broken").toUri()))
             }
             Item(stringResource(R.string.debug_log), stringResource(R.string.debug_log_hint), onLogs)
 
-            SectionTitle(stringResource(R.string.about))
-            Item("Dkord", stringResource(R.string.about_text)) {}
+            AboutSection()
         }
     }
 
@@ -166,7 +162,7 @@ fun SettingsScreen(onBack: () -> Unit, onLogs: () -> Unit, onMessage: (String) -
             onDismissRequest = { dialog = "" },
             title = { Text(stringResource(R.string.update_extractor)) },
             text = { Text(stringResource(R.string.update_text, ExtractorHealth.BUNDLED_VERSION, latest.orEmpty())) },
-            confirmButton = { TextButton({ dialog = ""; ctx.startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/DeepuExplainsAi/dkord/releases".toUri())) }) { Text(stringResource(R.string.open_releases)) } },
+            confirmButton = { TextButton({ dialog = "" }) { Text(stringResource(R.string.close)) } },
             dismissButton = { TextButton({ dialog = "" }) { Text(stringResource(R.string.cancel)) } },
         )
     }

@@ -16,7 +16,8 @@ class NewReleaseRequestTest(unittest.TestCase):
         return validate(self.request if request is None else request,self.event if event is None else event,**(self.context|context))
     def test_exact_new_authorization_and_prepared_version_agree(self):
         self.assertEqual(TAG,self.check())
-        self.assertEqual(('0.10.0',14),app_version((ROOT/'app/build.gradle.kts').read_text()))
+        # Frozen consumed authorization stays code14; future versions must not replay it.
+        self.assertEqual(('0.10.0',14),app_version('versionCode = 14\nversionName = "0.10.0"'))
         self.assertEqual('arena/a0209191-dkord',BRANCH)
     def test_no_pr_dispatch_schedule_or_workflow_run_can_enter_the_push_route(self):
         for name in ('pull_request','pull_request_target','workflow_dispatch','workflow_run','schedule'):
@@ -66,7 +67,7 @@ class NewReleaseRequestTest(unittest.TestCase):
         workflow=(ROOT/'.github/workflows/release.yml').read_text()
         for required in ('branches: [arena/a0209191-dkord]','paths: [.github/release-requests/v0.10.0.json]','fetch-depth: 2',
                          'validate_release_request_v010.py','verify_apk_update.py','--target "$GITHUB_SHA"',
-                         'Require successful full Android validation of this exact release head','Require the exact-head five-host native preview build'):
+                         'Require successful full Android validation of this exact release head','Require the exact-head six-host native preview build'):
             self.assertIn(required,workflow)
         for forbidden in ('--clobber','gh release delete','gh release edit','gh run rerun','continue-on-error'):
             self.assertNotIn(forbidden,workflow)

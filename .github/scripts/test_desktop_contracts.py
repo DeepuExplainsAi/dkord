@@ -1,4 +1,4 @@
-"""Read-only desktop source/build contracts, not a substitute for 5-host native execution."""
+"""Read-only desktop source/build contracts, not a substitute for 6-host native execution."""
 import json
 import hashlib
 from pathlib import Path
@@ -13,28 +13,37 @@ def read(path):return (ROOT/path).read_text()
 class DesktopContractsTest(unittest.TestCase):
     def test_native_validation_covers_all_os_and_cpu_builds_without_publication_or_secrets(self):
         flow=read('.github/workflows/validate-desktop.yml')
-        for target in ('windows-x64','macos-x64','macos-arm64','linux-x64','linux-arm64'):self.assertIn('target: '+target,flow)
-        for required in ('contents: read','--self-test','packaging/build.py','no failures/errors/skips','assert len(cases) >= 30','include-hidden-files: true','packaging/ci_run.py','PYTHONUTF8: 1'):
+        for target in ('windows-x64','windows-x86','macos-x64','macos-arm64','linux-x64','linux-arm64'):self.assertIn('target: '+target,flow)
+        for required in ('contents: read','--self-test','packaging/build.py','no failures/errors/skips','assert len(cases) >= 36','include-hidden-files: true','packaging/ci_run.py','PYTHONUTF8: 1'):
             self.assertIn(required,flow)
         for forbidden in ('secrets.','contents: write','gh release','continue-on-error'):self.assertNotIn(forbidden,flow)
     def test_desktop_has_real_native_widgets_codec_renderer_and_no_mock_browser(self):
         gui=read('desktop/dkord_desktop/ui.py');media=read('desktop/dkord_desktop/media.py')
         for required in ('QMainWindow','QMediaPlayer','QAudioOutput','QTableWidget','QDockWidget'):self.assertIn(required,gui)
-        for required in ('av.open','imageio_ffmpeg.get_ffmpeg_exe','subprocess.Popen','-filter_complex','aresample=48000','-c:a'):
+        for required in ('av.open','ffmpeg_exe()','subprocess.Popen','-filter_complex','aresample=48000','-c:a'):
             self.assertIn(required,media)
         self.assertNotIn('QWebEngineView',gui)
+        self.assertIn('imageio_ffmpeg.get_ffmpeg_exe()',read('desktop/dkord_desktop/codec.py'))
         self.assertIn('test_actual_ffmpeg_merges_mixed_rate_clips_in_order',read('desktop/tests/test_core.py'))
     def test_updates_are_disjoint_from_android_pinned_signed_and_platform_matched(self):
         source=read('desktop/dkord_desktop/updates.py')
         for required in ('Ed25519PublicKey','key.verify','desktop-v','artifact["sha256"]','platform_key()','Package content is not the expected native installer type'):
             self.assertIn(required,source)
         self.assertNotIn('/releases/latest',source)
-        self.assertEqual({},json.loads(read('desktop/assets/update-keys.json')))
-        self.assertIn('not yet a finished Android-parity',read('desktop/README.md'))
+        keys=json.loads(read('desktop/assets/update-keys.json'))
+        receipt=json.loads(read('desktop/assets/update-trust-provenance.json'))
+        self.assertEqual(receipt['keys'],keys);self.assertIs(False,receipt['privateKeyExported'])
+        self.assertEqual('v0.10.0',receipt['verifiedAgainst']['tag'])
+        self.assertEqual('5e6e923094761325e1ba251ebd8058077934131ed89f293215ce5876da211a61',receipt['verifiedAgainst']['certificateSha256'])
+        self.assertIn('UPDATE_DOMAIN',source);self.assertIn('rsa-pkcs1-sha256',source)
+        for key in keys.values():
+            self.assertEqual(receipt['verifiedAgainst']['certificateSha256'],key['certificateSha256'])
+        self.assertIn('Physical install-over',read('desktop/README.md'))
     def test_stable_user_data_is_outside_installation_and_uninstall_has_no_data_delete(self):
         entry=read('desktop/dkord_desktop/__main__.py');installer=read('desktop/packaging/windows.iss')
         self.assertIn('user_data_path("Dkord","Dkord",roaming=False)',entry)
-        self.assertLess(entry.index('window.pool.waitForDone()'),entry.index('lock.unlock()'))
+        self.assertLess(entry.index('pool.waitForDone()'),entry.index('lock.unlock()'))
+        for pool in ('window.pool','window.download_pool','window.home_pool','window.artwork_cache.pool'):self.assertIn(pool,entry)
         self.assertLess(entry.index('lock.unlock()'),entry.index('window.restart_after_close()'))
         update=read('desktop/dkord_desktop/updates.py')
         self.assertIn('return relaunch',update)
@@ -62,6 +71,21 @@ class DesktopContractsTest(unittest.TestCase):
                 self.assertIn('native हिन्दी',result.stdout)
                 self.assertEqual(code!=0,'::error title=Desktop tests failed' in result.stdout)
                 self.assertTrue((Path(tmp)/'dkord-desktop-tests.log').is_file())
+    def test_native_fatal_application_frames_survive_long_plugin_tails_without_masking_the_exit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            script=("print('desktop/tests/test_link_ui.py::NativeLinkWidgetTest::test_example')\n"
+                    "print('Fatal Python error: Segmentation fault')\n"
+                    "print('Current thread 0x123')\n"
+                    "print('  File \"/workspace/desktop/dkord_desktop/link_view.py\", line 42 in actual_frame')\n"
+                    "for i in range(100): print('  File /venv/site-packages/plugin.py line '+str(i))\n"
+                    "raise SystemExit(7)")
+            result=subprocess.run([sys.executable,str(ROOT/'desktop/packaging/ci_run.py'),'tests',sys.executable,'-c',script],capture_output=True,text=True,encoding='utf-8',env={**os.environ,'RUNNER_TEMP':tmp,'PYTHONUTF8':'1'})
+            self.assertEqual(7,result.returncode)
+            annotation=next(line for line in result.stdout.splitlines() if line.startswith('::error title=Desktop tests crash application frames::'))
+            self.assertIn('actual_frame',annotation);self.assertIn('test_example',annotation)
+            self.assertIn('Desktop tests failed (exit 7)',result.stdout)
+            self.assertIn('actual_frame',(Path(tmp)/'dkord-desktop-tests.log').read_text(encoding='utf-8'))
+
     def test_native_builder_bundles_pinned_upstream_node_license_without_live_api_dependency(self):
         build=read('desktop/packaging/build.py')
         digest=re.search("NODE_LICENSE_SHA256='([a-f0-9]{64})'",build)[1]
@@ -75,4 +99,26 @@ class DesktopContractsTest(unittest.TestCase):
         self.assertIn("['dpkg-deb','--field',deb,'Depends']",build)
         self.assertIn("if 'libc6 (>= 2.39)' not in dependencies",build)
         self.assertIn("preview['minimum_glibc']='2.39'",build)
+    def test_windows32_is_a_real_separate_profile_not_a_renamed_x64_installer(self):
+        flow=read('.github/workflows/validate-desktop.yml');build=read('desktop/packaging/build.py')
+        for expected in ('architecture: x86','build_ffmpeg_x86.py','requirements-windows-x86.txt','--only-binary=:all:','--capture-ui','QT_QPA_PLATFORM: windows'):
+            self.assertIn(expected,flow)
+        self.assertIn('require_pe_architecture(exe',build)
+        self.assertIn("'--exclude-module','av','--exclude-module','imageio_ffmpeg'",build)
+        req=read('desktop/requirements-windows-x86.txt')
+        self.assertIn('PyQt5==5.15.11',req);self.assertNotIn('PyQt6==',req)
+        self.assertNotRegex(req,r'(?m)^(av|imageio-ffmpeg)==')
+        installer=read('desktop/packaging/windows.iss')
+        self.assertIn('AppId=app.dkord.desktop.x86',installer)
+        self.assertIn('DefaultDirName={localappdata}\\Programs\\Dkord-x86',installer)
+        self.assertIn('AppId=app.dkord.desktop\n',installer)
+        self.assertIn('OutputBaseFilename=Dkord-desktop-v{#Version}-{#Target}',installer)
+
+    def test_requested_screenshot_is_real_frozen_ui_and_isolated_not_ai_or_user_data(self):
+        capture=read('desktop/dkord_desktop/capture.py');proof=read('desktop/packaging/screenshot_proof.py')
+        for expected in ('window.grab()','NoNetwork','TemporaryDirectory','generated sine tones','frozen'):
+            self.assertIn(expected,capture)
+        self.assertIn("proof['python_bits']==32",proof)
+        self.assertIn("proof['frozen'] is True",proof)
+        self.assertIn("hashlib.sha256(data).hexdigest()==item['sha256']",proof)
 if __name__=='__main__':unittest.main()

@@ -1,0 +1,92 @@
+name: Verify and publish the existing Android and PC 0.10.1 draft
+on:
+  push:
+    branches: [arena/a6a6bbda-dkord]
+    paths: [.github/release-finalizations/v0.10.1.json]
+permissions:
+  contents: write
+  actions: read
+  checks: read
+concurrency:
+  group: dkord-v0.10.1
+  cancel-in-progress: false
+jobs:
+  finalize:
+    if: github.repository == 'DeepuExplainsAi/dkord' && github.ref == 'refs/heads/arena/a6a6bbda-dkord' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: v0.10.1
+      SOURCE: e0e925a674f106f6291731f5b143d3800a476cd3
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate the new metadata-only request and unchanged fully tested app source
+        run: python3 -B .github/scripts/finalize_v0101.py validate-request
+      - name: Run all publication safety regressions
+        run: python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
+      - name: Require the original exact-source tests, signing, Android install-over and unchanged draft IDs
+        run: python3 -B .github/scripts/finalize_v0101.py check-prerequisites
+      - name: Retrieve the original successful native artifacts and Windows32 captures, never rebuild or upload
+        run: |
+          gh run download 42585188990 --repo "$GITHUB_REPOSITORY" --pattern 'desktop-preview-*' --dir "$RUNNER_TEMP/native-inputs"
+          python3 -B .github/scripts/verify_desktop_release_artifacts.py --root "$RUNNER_TEMP/native-inputs" \
+            --output "$RUNNER_TEMP/release-assets" --sha "$SOURCE" --version 0.10.1
+          gh run download 42585188990 --repo "$GITHUB_REPOSITORY" --name desktop-windows-ui-x86 --dir "$RUNNER_TEMP/windows-captures"
+          python3 desktop/packaging/screenshot_proof.py "$RUNNER_TEMP/windows-captures" --source "$SOURCE" --verify-only
+          cp -- "$RUNNER_TEMP/windows-captures/windows-x86-player.png" "$RUNNER_TEMP/windows-captures/windows-x86-studio.png" \
+            "$RUNNER_TEMP/windows-captures/windows-x86-screenshot-proof.json" "$RUNNER_TEMP/release-assets/"
+      - name: Retrieve the original protected publication receipts and original uploaded APK bytes
+        run: |
+          gh run download 42585180858 --repo "$GITHUB_REPOSITORY" --name v0.10.1-publication-receipts --dir "$RUNNER_TEMP/original-receipts"
+          python3 - <<'PY'
+          import os, shutil
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP']); receipts=root/'verified-receipts'; receipts.mkdir()
+          for name in ('previous-release-integrity.json','android-install-over-proof.json','SHA256SUMS','Dkord-desktop-v0.10.1-manifest.json'):
+              found=list((root/'original-receipts').rglob(name))
+              assert len(found)==1 and found[0].is_file() and not found[0].is_symlink() and 0<found[0].stat().st_size<2*1024*1024, 'Missing/ambiguous original receipt: '+name
+              destination=(root/'release-assets') if name in ('SHA256SUMS','Dkord-desktop-v0.10.1-manifest.json') else receipts
+              assert not (destination/name).exists()
+              shutil.copyfile(found[0],destination/name)
+          PY
+          gh api "repos/$GITHUB_REPOSITORY/releases/assets/726780044" -H 'Accept: application/octet-stream' \
+            > "$RUNNER_TEMP/release-assets/Dkord-v0.10.1.apk"
+          echo "RELEASE_APK=$RUNNER_TEMP/release-assets/Dkord-v0.10.1.apk" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Verify all20 unchanged uploaded bytes, original CI hashes and original protected manifest signature
+        run: |
+          python -m pip install 'cryptography==46.0.3' 'requests==2.32.5'
+          python3 -B .github/scripts/finalize_v0101.py verify-staged --folder "$RUNNER_TEMP/release-assets" --receipts "$RUNNER_TEMP/verified-receipts"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Independently recheck the actual uploaded APK against the immutable original Android identity
+        run: |
+          mkdir -p "$RUNNER_TEMP/previous-apk"
+          gh release download v0.10.0 --repo "$GITHUB_REPOSITORY" --pattern Dkord-v0.10.0.apk --dir "$RUNNER_TEMP/previous-apk"
+          printf '%s  %s\n' d2a354903e3eda3707aab77721a391ee0eee3134010284e7ffd1a3e28f2deed9 \
+            "$RUNNER_TEMP/previous-apk/Dkord-v0.10.0.apk" | sha256sum -c -
+          python3 -B .github/scripts/verify_apk_update.py
+      - name: Publish only this exact verified existing draft, with no asset or historical release changes
+        run: |
+          python3 -B .github/scripts/finalize_v0101.py check-prerequisites
+          python3 -B .github/scripts/finalize_v0101.py verify-staged --folder "$RUNNER_TEMP/release-assets" --receipts "$RUNNER_TEMP/verified-receipts"
+          gh release edit v0.10.1 --repo "$GITHUB_REPOSITORY" --draft=false --latest
+          python3 -B .github/scripts/finalize_v0101.py verify-published --folder "$RUNNER_TEMP/release-assets" --receipts "$RUNNER_TEMP/verified-receipts"
+      - name: Preserve public finalization evidence, never private signing material or new binaries
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: v0.10.1-finalization-receipts
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/verified-receipts/
+            ${{ runner.temp }}/release-assets/SHA256SUMS
+            ${{ runner.temp }}/release-assets/Dkord-desktop-v0.10.1-manifest.json

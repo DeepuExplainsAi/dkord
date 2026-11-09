@@ -123,6 +123,7 @@ fun SearchScreen(
     modifier: Modifier = Modifier,
     onMessage: (String) -> Unit = {},
     onRelated: ((Track, String) -> Unit)? = null,
+    onOpenYouTubeLink: () -> Unit = {},
 ) {
     val repo: MusicRepository = koinInject()
     val saved: SearchHistoryRepository = koinInject()
@@ -198,6 +199,7 @@ fun SearchScreen(
                 Icon(Icons.Default.Search, stringResource(R.string.search_submit))
             }
         }
+        YouTubeLinkEntry(onOpenYouTubeLink, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp))
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(SearchFilter.entries, key = { it.name }) { value ->
                 FilterChip(filter == value, {

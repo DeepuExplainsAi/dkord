@@ -5,7 +5,7 @@ from pathlib import Path
 import struct
 import tempfile
 import unittest
-from verify_desktop_release_artifacts import TARGETS,KINDS,digest,verify_and_stage
+from verify_desktop_release_artifacts import TARGETS,KINDS,PARITY_CLASSES,digest,verify_and_stage
 
 class NativeReleaseProofTest(unittest.TestCase):
     def setUp(self):
@@ -26,18 +26,85 @@ class NativeReleaseProofTest(unittest.TestCase):
             file.write_bytes(data);entries.append({'name':file.name,'bytes':len(data),'sha256':digest(file)})
         manifest={'channel':'development-preview','version':self.version,'target':target,'source':self.sha,
                   'trusted_signed_release':False,'notarized':False,'artifacts':entries}
+        x86=target=='windows-x86'
+        manifest['runtime']={'python_bits':32 if x86 else 64,'qt_binding':'PyQt5' if x86 else 'PyQt6','audio_probe':'ffmpeg' if x86 else 'pyav'}
+        if target.startswith('windows-'):
+            arch='x86' if x86 else 'x64';manifest['runtime']['verified_pe_payloads']={'application':arch,'node':arch,'ffmpeg':arch}
+        if x86:manifest['runtime']['verified_pe_payloads']['ffprobe']='x86'
+        if x86:manifest['codec_source']={'version':'8.1.3','source_commit':'1041abdc962f4cc4f394aa8de9dc5236c0c3b9e7','source_archive_sha256':'a406fe831cbb605f5fe50e43eb566e502ae63ff3b3206bfa744e4b31b8bb73ac','architecture':'x86'}
         if target.startswith('linux-'):manifest['minimum_glibc']='2.39'
         self.save(target,manifest)
-        cases=''.join(f'<testcase classname="desktop.tests.{cls}" name="case{i}"/>' for cls in ('CoreTest','UpdateTest','NativeWidgetTest') for i in range(10))
-        (folder/'test-results.xml').write_text('<testsuites><testsuite tests="30" failures="0" errors="0" skipped="0">'+cases+'</testsuite></testsuites>')
+        cases=''.join(f'<testcase classname="desktop.tests.{cls}" name="case{i}"/>' for cls in ('CoreTest','UpdateTest','NativeWidgetTest') for i in range(12))
+        (folder/'test-results.xml').write_text('<testsuites><testsuite tests="36" failures="0" errors="0" skipped="0">'+cases+'</testsuite></testsuites>')
     def folder(self,target='windows-x64'):return self.root/('desktop-preview-'+target)
     def manifest(self,target='windows-x64'):return json.loads((self.folder(target)/f'preview-{target}.json').read_text())
     def save(self,target,data):
         (self.root/('desktop-preview-'+target)/f'preview-{target}.json').write_text(json.dumps(data))
     def verify(self):return verify_and_stage(self.root,self.output,self.sha,self.version)
-    def test_all_five_targets_stage_seven_packages_and_five_honest_preview_manifests(self):
-        files=self.verify();self.assertEqual(12,len(files));self.assertEqual(7,sum(p.suffix in ('.exe','.pkg','.deb','.AppImage') for p in files))
-        self.assertEqual(5,sum(p.suffix=='.json' for p in files))
+    def current_fixture(self,version='0.10.1'):
+        # Synthetic validation envelope only, NOT real installer evidence. Real
+        # installers run on all six native hosts before release promotion.
+        self.version=version
+        for target in TARGETS:
+            data=self.manifest(target);data['version']=self.version
+            for entry in data['artifacts']:
+                old=entry['name'];entry['name']=old.replace('v0.10.0-',f'v{self.version}-')
+                (self.folder(target)/old).rename(self.folder(target)/entry['name'])
+            checks={name:True for name in ('library','playlists','likes','history','settings','queue','privateDownload','deviceDownload','studioSources','studioClips','audioDecoded')}
+            data['installOver']=dict(format=1,baselineTag='desktop-v0.10.0-preview.2',baselineSource='0d97e6413d999cdfbb562397cc230f1798f02606',toVersion=self.version,
+                                     target=target,source=self.sha,noUninstall=True,standardUserData=True,frozenClient=True,
+                                     packages=[dict(kind=kind,baselineName=f'Dkord-desktop-v0.10.0-{target}.{kind}',baselineSha256='1'*64,checks=checks) for kind in KINDS[target]])
+            if self.version=='0.10.2':
+                data['installOver']['viaCurrent']=dict(format=1,baselineTag='v0.10.1',baselineSource='e0e925a674f106f6291731f5b143d3800a476cd3',version='0.10.1',
+                    noUninstall=True,noDataReset=True,frozenClient=True,
+                    packages=[dict(kind=kind,baselineName=f'Dkord-desktop-v0.10.1-{target}.{kind}',baselineSha256='2'*64,checks=checks) for kind in KINDS[target]])
+            self.save(target,data)
+            required=list(PARITY_CLASSES)+(['YouTubeLinkTest','NativeLinkWidgetTest','NativeGalleryWidgetTest'] if self.version=='0.10.2' else [])
+            total=144 if self.version=='0.10.2' else 121
+            names=required+['CoreTest']*(total-len(required))
+            cases=''.join(f'<testcase classname="desktop.tests.{name}" name="synthetic{i}"/>' for i,name in enumerate(names))
+            (self.folder(target)/'test-results.xml').write_text(f'<testsuites><testsuite tests="{total}" failures="0" errors="0" skipped="0">'+cases+'</testsuite></testsuites>')
+    def test_exact_link_update_requires_all144_cases_original_seed_and_current_public_install_over(self):
+        self.current_fixture('0.10.2');self.assertEqual(14,len(self.verify()))
+    def test_exact_link_update_cannot_omit_current_baseline_or_reset_data(self):
+        self.current_fixture('0.10.2');original=self.manifest();via=original['installOver']['viaCurrent']
+        for value in ({},via|{'noDataReset':False},via|{'baselineTag':'untrusted'},via|{'packages':[]}):
+            broken=json.loads(json.dumps(original));broken['installOver']['viaCurrent']=value;self.save('windows-x64',broken)
+            with self.subTest(value=value),self.assertRaises(ValueError):self.verify()
+    def test_exact_link_update_must_keep_original_install_over_and_new_feature_case_classes(self):
+        self.current_fixture('0.10.2');original=self.manifest();broken=json.loads(json.dumps(original))
+        broken['installOver']['noUninstall']=False;self.save('windows-x64',broken)
+        with self.assertRaises(ValueError):self.verify()
+        self.save('windows-x64',original);path=self.folder()/'test-results.xml';xml=path.read_text()
+        for cls in ('YouTubeLinkTest','NativeLinkWidgetTest','NativeGalleryWidgetTest'):
+            path.write_text(xml.replace(cls,'MissingRequiredClass'))
+            with self.subTest(cls=cls),self.assertRaises(ValueError):self.verify()
+    def test_current_release_requires_actual_new_minimum_classes_and_all_data_categories(self):
+        self.current_fixture();files=self.verify();self.assertEqual(14,len(files))
+    def test_old_36_case_execution_cannot_be_promoted_as_the_new_release(self):
+        previous=(self.folder()/'test-results.xml').read_text();self.current_fixture()
+        (self.folder()/'test-results.xml').write_text(previous)
+        with self.assertRaises(ValueError):self.verify()
+    def test_new_cases_without_signature_or_installer_regression_class_are_rejected(self):
+        self.current_fixture();path=self.folder()/'test-results.xml';original=path.read_text()
+        for name in ('ManifestSignerTest','UpgradeFixtureTest','NativeWidgetTest'):
+            path.write_text(original.replace(name,'NotRequiredClass'))
+            with self.subTest(name=name),self.assertRaises(ValueError):self.verify()
+    def test_new_release_cannot_omit_install_over_or_claim_a_missing_persisted_category(self):
+        self.current_fixture();original=self.manifest()
+        for value in ({},original['installOver']|{'noUninstall':False},original['installOver']|{'source':'1'*40}):
+            self.save('windows-x64',original|{'installOver':value})
+            with self.assertRaises(ValueError):self.verify()
+        broken=json.loads(json.dumps(original));broken['installOver']['packages'][0]['checks']['privateDownload']=False
+        self.save('windows-x64',broken)
+        with self.assertRaises(ValueError):self.verify()
+    def test_linux_must_really_update_both_deb_and_appimage(self):
+        self.current_fixture();data=self.manifest('linux-arm64');data['installOver']['packages']=data['installOver']['packages'][:1]
+        self.save('linux-arm64',data)
+        with self.assertRaises(ValueError):self.verify()
+    def test_all_six_targets_stage_eight_packages_and_six_honest_preview_manifests(self):
+        files=self.verify();self.assertEqual(14,len(files));self.assertEqual(8,sum(p.suffix in ('.exe','.pkg','.deb','.AppImage') for p in files))
+        self.assertEqual(6,sum(p.suffix=='.json' for p in files))
     def test_an_old_source_version_target_or_signing_claim_is_rejected(self):
         original=self.manifest()
         for key,value in (('source',hashlib.sha1(b'old').hexdigest()),('version','0.9.1'),('target','linux-x64'),('channel','production'),('trusted_signed_release',True),('notarized',True)):
@@ -74,7 +141,7 @@ class NativeReleaseProofTest(unittest.TestCase):
             file.write_text(content)
             with self.assertRaises(ValueError):self.verify()
     def test_inconsistent_native_junit_totals_are_rejected(self):
-        file=self.folder()/'test-results.xml';file.write_text(file.read_text().replace('tests="30"','tests="31"'))
+        file=self.folder()/'test-results.xml';file.write_text(file.read_text().replace('tests="36"','tests="37"'))
         with self.assertRaises(ValueError):self.verify()
     def test_preview_symlinks_and_unexpected_extra_files_are_rejected(self):
         file=self.folder()/'unexpected.txt';file.write_text('not an approved asset')

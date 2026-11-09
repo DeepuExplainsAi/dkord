@@ -8,8 +8,9 @@ import shutil
 import struct
 import xml.etree.ElementTree as ET
 
-TARGETS = ('windows-x64', 'macos-x64', 'macos-arm64', 'linux-x64', 'linux-arm64')
-KINDS = {'windows-x64': ('exe',), 'macos-x64': ('pkg',), 'macos-arm64': ('pkg',),
+TARGETS = ('windows-x64', 'windows-x86', 'macos-x64', 'macos-arm64', 'linux-x64', 'linux-arm64')
+PARITY_CLASSES = ('CoreTest','UpdateTest','NativeWidgetTest','RoomProtocolTest','LyricsTest','PhoneContractTest','NewReleasesTest','DiagnosticsTest','ModernUpdateIdentityTest','PublicUpdateIdentityTest','CatalogueTest','ManifestSignerTest','UpgradeFixtureTest')
+KINDS = {'windows-x64': ('exe',), 'windows-x86': ('exe',), 'macos-x64': ('pkg',), 'macos-arm64': ('pkg',),
          'linux-x64': ('deb', 'AppImage'), 'linux-arm64': ('deb', 'AppImage')}
 
 
@@ -30,12 +31,12 @@ def digest(path):
     return value.hexdigest()
 
 
-def verify_tests(path):
+def verify_tests(path, minimum=36, classes=('CoreTest', 'UpdateTest', 'NativeWidgetTest')):
     root = ET.parse(path).getroot()
     cases = root.findall('.//testcase')
-    if len(cases) < 30:
+    if len(cases) < minimum:
         raise ValueError('Missing executed native cases')
-    for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest'):
+    for cls in classes:
         if not any(cls in c.get('classname', '') for c in cases):
             raise ValueError('Missing native test class ' + cls)
     if any(root.findall('.//' + marker) for marker in ('failure', 'error', 'skipped')):
@@ -91,12 +92,64 @@ def verify_and_stage(root, output, sha, version):
         if (data.get('channel') != 'development-preview' or data.get('version') != version or data.get('target') != target
                 or data.get('source') != sha or data.get('trusted_signed_release') is not False or data.get('notarized') is not False):
             raise ValueError('Wrong source/version/target or misleading signing claim')
+        if tuple(map(int,version.split('.'))) >= (0,10,1):
+            evidence=data.get('installOver',{})
+            if (evidence.get('format')!=1 or evidence.get('baselineTag')!='desktop-v0.10.0-preview.2'
+                    or evidence.get('baselineSource')!='0d97e6413d999cdfbb562397cc230f1798f02606'
+                    or evidence.get('toVersion')!=version or evidence.get('target')!=target or evidence.get('source')!=sha
+                    or any(evidence.get(key) is not True for key in ('noUninstall','standardUserData','frozenClient'))):
+                raise ValueError('Missing actual old-to-new installer and frozen-client data preservation proof')
+            packages=evidence.get('packages',[])
+            kinds=KINDS[target]
+            if len(packages)!=len(kinds) or {entry.get('kind') for entry in packages}!=set(kinds):
+                raise ValueError('Every installed package kind must be exercised, including both Linux kinds')
+            for entry in packages:
+                if entry.get('baselineName')!=f'Dkord-desktop-v0.10.0-{target}.{entry["kind"]}' or not re.fullmatch('[a-f0-9]{64}',entry.get('baselineSha256','')):
+                    raise ValueError('Wrong immutable baseline installer')
+                if any(entry.get('checks',{}).get(key) is not True for key in ('library','playlists','likes','history','settings','queue','privateDownload','deviceDownload','studioSources','studioClips','audioDecoded')):
+                    raise ValueError('Incomplete actual frozen-client persistence/byte/native audio verification')
+        if tuple(map(int,version.split('.'))) >= (0,10,2):
+            via=data.get('installOver',{}).get('viaCurrent',{})
+            if (not isinstance(via,dict) or via.get('format')!=1 or via.get('baselineTag')!='v0.10.1'
+                    or via.get('baselineSource')!='e0e925a674f106f6291731f5b143d3800a476cd3' or via.get('version')!='0.10.1'
+                    or any(via.get(key) is not True for key in ('noUninstall','noDataReset','frozenClient'))):
+                raise ValueError('Current public0.10.1 ->new install-over with no data reset is required')
+            entries=via.get('packages',[])
+            if len(entries)!=len(KINDS[target]) or {entry.get('kind') for entry in entries}!=set(KINDS[target]):
+                raise ValueError('Current public install-over must exercise every installed package kind')
+            for entry in entries:
+                if (entry.get('baselineName')!=f'Dkord-desktop-v0.10.1-{target}.{entry["kind"]}'
+                        or not re.fullmatch('[a-f0-9]{64}',entry.get('baselineSha256',''))
+                        or any(entry.get('checks',{}).get(key) is not True for key in ('library','playlists','likes','history','settings','queue','privateDownload','deviceDownload','studioSources','studioClips','audioDecoded'))):
+                    raise ValueError('Incomplete current public frozen-client data/audio preservation proof')
+        runtime=data.get('runtime',{})
+        x86=target=='windows-x86'
+        if (runtime.get('python_bits')!=(32 if x86 else 64) or runtime.get('qt_binding')!=('PyQt5' if x86 else 'PyQt6')
+                or runtime.get('audio_probe')!=('ffmpeg' if x86 else 'pyav')):
+            raise ValueError('Wrong installed-process bitness/Qt/codec profile')
+        if target.startswith('windows-'):
+            arch='x86' if x86 else 'x64'
+            expected={'application':arch,'node':arch,'ffmpeg':arch}
+            if x86:expected['ffprobe']='x86'
+            if runtime.get('verified_pe_payloads')!=expected:
+                raise ValueError('Missing real application/Node/FFmpeg PE payload proof')
+        if x86:
+            source=data.get('codec_source',{})
+            if (source.get('version')!='8.1.3' or source.get('source_commit')!='1041abdc962f4cc4f394aa8de9dc5236c0c3b9e7'
+                    or source.get('source_archive_sha256')!='a406fe831cbb605f5fe50e43eb566e502ae63ff3b3206bfa744e4b31b8bb73ac'
+                    or source.get('architecture')!='x86'):
+                raise ValueError('Win32 requires a current digest-pinned native codec, not the obsolete wheel')
         if target.startswith('linux-') and data.get('minimum_glibc') != '2.39':
             raise ValueError('Linux preview must declare the conservative glibc2.39 build baseline')
         proof = folder / 'test-results.xml'
         if proof.is_symlink() or not proof.is_file() or proof.stat().st_size > 4 * 1024 * 1024:
             raise ValueError('Missing/bounded native JUnit proof')
-        verify_tests(proof)
+        if tuple(map(int,version.split('.'))) >= (0,10,2):
+            verify_tests(proof,144,PARITY_CLASSES + ('YouTubeLinkTest','NativeLinkWidgetTest','NativeGalleryWidgetTest'))
+        elif tuple(map(int,version.split('.'))) >= (0,10,1):
+            verify_tests(proof,121,PARITY_CLASSES)
+        else:
+            verify_tests(proof)
         expected = {f'Dkord-desktop-v{version}-{target}.{kind}': kind for kind in KINDS[target]}
         entries = data.get('artifacts')
         if not isinstance(entries, list) or len(entries) != len(expected):
@@ -134,7 +187,8 @@ def main():
     parser.add_argument('--version', required=True)
     args = parser.parse_args()
     paths = verify_and_stage(args.root, args.output, args.sha, args.version)
-    print(f'::notice title=Native preview release proof::{len(paths)} native preview files verified for {args.sha}: all5 targets, hashes, formats and actual30-case/all3-class proof. These are NOT trusted signed/notarized releases.')
+    minimum=144 if tuple(map(int,args.version.split('.'))) >= (0,10,2) else 121 if tuple(map(int,args.version.split('.'))) >= (0,10,1) else 36
+    print(f'::notice title=Native build release proof::{len(paths)} native files verified for {args.sha}: all6 targets, hashes, formats and actual minimum {minimum}-case proof. Build-stage artifacts require separate owner manifest attestation; no OS signing/notarization is claimed.')
 
 if __name__ == '__main__':
     main()

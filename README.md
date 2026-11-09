@@ -3,26 +3,71 @@
   <h1>Dkord</h1>
   <p><strong>Your music. Your mix. Your space.</strong></p>
   <p>Open-source music player · private offline audio · real Mashup Studio</p>
-  <p><a href="https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.0">Android stable</a> · <a href="desktop/README.md">Native desktop preview</a> · <a href="#features">Features</a> · <a href="#build-and-regression-checks">Build & tests</a></p>
+  <p><a href="https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.2">Download Android &amp; PC</a> · <a href="desktop/README.md">Dkord for PC</a> · <a href="#features">Features</a> · <a href="#build-and-regression-checks">Build & tests</a></p>
   <p>By <strong>DeepuGupta</strong> · GPL-3.0 · no paid custom backend</p>
 </div>
 
 **Dkord is a music-first YouTube / YouTube Music client and audio editor.** Discover a particular song/version, keep a local listening library, or turn selected audio into a real playable mix. Android playback, extraction and editing run on the device; optional Listen Together rooms use a public relay. Not affiliated with Google or YouTube.
 
-## What is available now?
+## Android + PC v0.10.2 — available now
 
-| Platform / track | Availability | What to expect |
+**[Download the latest release](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.2).** New separate **Open YouTube link**:
+**Paste link → Show video → Play** selects the exact accessible upload, without
+replacing it with a title-search result or starting audio during preview.
+The phone-derived native PC interface, online Mashup Studio, explicit private/
+device downloads, global Listen Together and local-only diagnostics are retained.
+About stays concise: **© 2026 dKORD**.
+
+Install **over your existing app**, without uninstalling or clearing data. Android
+uses its original signing identity and increasing **versionCode 16**. PC keeps
+its installed OS/CPU profile and stable user-data location. Old empty-key PC
+previews need one manual install-over; official 0.10.1+ clients can verify later
+compatible updates in the app. Windows Authenticode / Apple Developer ID and
+notarization are not configured—manifest verification is not OS publisher signing.
+
+### Downloads
+
+| Platform | Installer | Supported profile |
 |---|---|---|
-| **Android stable** | **[v0.10.0 / code14](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.0)** | Original-key APK; direct online Studio, explicit private/device downloads, selected/everyone co-host controls, additive migration and existing playback/library/in-app updates. |
-| **Source integration** | **[PR8 remains draft](https://github.com/DeepuExplainsAi/dkord/pull/8)** | v0.10.0 is published from the validated assigned branch. Publication does not merge PR8/main; [exact release receipt](docs/releases/v0.10.0-publication.md). |
-| **Windows / macOS / Linux** | **[v0.10.0 downloadable previews](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.0), not trusted signed releases** | Real native Qt client, real media/file backend and FFmpeg Studio; platform/CPU packaging and update-verification tests. **Full Android parity, trusted native signing/notarization and a production desktop update channel are not complete.** |
+| **Android** | **[Dkord-v0.10.2.apk](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-v0.10.2.apk)** | Original-key `app.dkord`, versionCode 16 |
+| **Windows 32-bit** | **[x86 setup](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-windows-x86.exe)** | Windows 10 / WoW64; genuine 32-bit runtime |
+| **Windows 64-bit** | **[x64 setup](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-windows-x64.exe)** | Windows 10/11 x64 |
+| **macOS** | [Intel](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-macos-x64.pkg) · [Apple Silicon](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-macos-arm64.pkg) | macOS 13+, installed CPU profile |
+| **Linux x64** | [deb](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-linux-x64.deb) · [AppImage](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-linux-x64.AppImage) | glibc 2.39+ |
+| **Linux arm64** | [deb](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-linux-arm64.deb) · [AppImage](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-desktop-v0.10.2-linux-arm64.AppImage) | glibc 2.39+ |
+
+Eight native installers, original-key APK, build receipts, signed PC update
+manifest, extensive screenshots and complete checksums: **22 assets** on one
+release. **All four earlier releases/53 original assets remain unchanged.**
+[Exact-source tests, install-over, signing and all asset hashes](docs/releases/v0.10.2-publication.md).
+
+### 180 actual PC screenshots — every native OS/CPU build
+
+**[Download the full screenshot gallery ZIP](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-PC-screenshots-v0.10.2.zip)**,
+extract and open `index.html`. Select a platform and click any image for the
+untouched full-resolution PNG: **30 screens × 6 native builds**—Windows x64 and
+real x86/32-bit, macOS Intel/Apple Silicon, Linux x64/arm64.
+
+Home, Search, new exact-link states, Library/playlists, Downloads and both
+destinations, Studio/editor/online picker, Listen Together, full player/queue/
+lyrics/sleep, Settings/About, Hindi, themes and compact responsive layout.
+These are **actual frozen native Qt captures**, not AI artwork, a phone image or
+a browser app mockup. **OFFLINE DEMO:** generated local tones and labelled sample
+metadata, not invented live YouTube results. Source/runtime/bitness/image hashes
+are included. [Screen list and honest acceptance boundaries](docs/PC_SCREENSHOTS.md).
+
+Genuine Windows 32 uses CPU-matched Python/Node, Qt 5.15.2 and source-built
+FFmpeg/ffprobe 8.1.3; it is not renamed x64. Physical 32-bit OS/heard-audio acceptance
+is still separate. [Preview2](https://github.com/DeepuExplainsAi/dkord/releases/tag/desktop-v0.10.0-preview.2)
+and [v0.10.1's original captures/receipt](docs/releases/v0.10.1-publication.md)
+remain immutable history.
 
 ### Listen. Keep. Create.
 - **Find your version.** Songs-first search, Hindi/Choliwood and Unicode input, explicit broad YouTube scopes, independent uploads kept separate—not a fixed demo catalogue.
 - **You choose what plays.** The chosen song plays first; an explicit Play all is different from selecting one result. Queue, history, radio, lyrics, playlists and sleep controls stay yours.
 - **Make a real mix.** Select precise clip ranges and arrange sources into one encoded AAC/M4A file—not a playlist renamed as audio. Original files stay unchanged.
-- **Keep offline storage intentional** *(Androidv0.10.0)*: **Download in Dkord** for managed private offline audio, or **Download to device** for an additional accessible copy. Private audio still consumes disk space. Existing public files are not moved/deleted merely by upgrading.
-- **Edit online songs directly** *(Androidv0.10.0)*: choose a normal song in Studio or its menu; Dkord prepares a private project copy without making you manually download it first. Audio bytes still need to be fetched; there is no claim of zero-storage editing.
+- **Keep offline storage intentional** *(Android + PC v0.10.1)*: **Download in Dkord** for managed private offline audio, or **Download to device** for an additional accessible copy. Private audio still consumes disk space. Existing public files are not moved/deleted merely by upgrading.
+- **Edit online songs directly** *(Android + PC v0.10.1)*: choose a normal song in Studio or its menu; Dkord prepares a private project copy without making you manually download it first. Audio bytes still need to be fetched; there is no claim of zero-storage editing.
 
 There is **no automatic phone-to-PC/cloud audio sync**. Each installation keeps its own local files; updates are designed to retain that device’s library. Playlist/likes JSON transfers metadata, not audio bytes. Desktop managed storage is a per-user data directory, not an Android-style sandbox against other applications running as that user.
 
@@ -30,7 +75,7 @@ There is **no automatic phone-to-PC/cloud audio sync**. Each installation keeps 
 Listen Again resume/searchable history · real on-device clip/merge Mashup Studio · music-first search with optional broad YouTube scopes · Home with moods, charts and collapsed-by-default New Releases · background audio with notification, lock-screen and Bluetooth controls · music-only related-radio autoplay · queue, shuffle, repeat, speed and sleep timer · synced lyrics (LRCLIB) · tagged M4A downloads with pause/resume · local playlists with JSON import/export · song sharing · Listen Together rooms · compact in-app updates · dark / light / AMOLED / Material You themes.
 
 ## Install and updates
-Latest official **[v0.10.0 / code14](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.0)**: **[download Dkord-v0.10.0.apk](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.0/Dkord-v0.10.0.apk)**. Separate native exe/pkg/deb/AppImage assets on that page are **experimental desktop previews**, not full Android parity or trusted signed desktop updates. Future updates are available from [the latest stable release](https://github.com/DeepuExplainsAi/dkord/releases/latest). Official updates use the same package/signing identity: install over the existing app, **without uninstalling**, to retain playlists, likes, downloads and settings. Uninstalling generally removes local app data.
+Latest official **[v0.10.2 / code 16](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.2)**: **[download the Android APK](https://github.com/DeepuExplainsAi/dkord/releases/download/v0.10.2/Dkord-v0.10.2.apk)** or choose the matching native PC installer above. Install over the existing app, **without uninstalling or clearing data**, to retain the local library, downloads, settings and Studio sources. Keep the installed Windows 32/64 profile rather than mixing Qt runtimes. Android app versionCode 15 → 16 and all-six-target Preview2→0.10.1→0.10.2 PC install-over fixtures passed on isolated hosted systems; this is not a physical-device/OEM acceptance claim. Old PC previews require the one-time manual install-over described above. [PC scope and update verification](desktop/README.md).
 
 Home shows a small **Update / Later** notice, not a blocking dialog. Later defers that version for 24 hours; a different newer version can still appear. Foreground checks are throttled to 30 minutes. Settings also provides a manual check and live downloaded / total / remaining MB. APKs are downloaded only after consent, and `/releases/latest` is resolved again before the download, so skipped releases do not require intermediate installations. An old ready APK does not block newer-release checks.
 
@@ -51,6 +96,19 @@ The Search screen shows **Recent searches** below the filter chips when the fiel
 
 Search has a separate 48dp submit button alongside the input (and keyboard Search), a compact non-wrapping placeholder, and the existing clear action. Player secondary actions wrap as whole buttons so Add to playlist / Play video are not squeezed into vertical letters on narrower screens.
 
+### Open an exact YouTube link — Android + PC v0.10.2
+
+A separate **Open YouTube link** action in Search, the top bar and Library accepts
+an individual YouTube / youtu.be / Shorts / live / YouTube Music video link.
+**Paste link → Show video → Play** previews that exact upload by ID, even when
+Songs search does not find it. The usual menu retains queue, playlists, both
+Downloads choices and online Studio. Pasting/previewing does not start audio or
+save a search; normal music search/radio are unchanged. Playlist-only, invalid,
+private/unavailable and network failures show an error, not a substitute song.
+
+Included in the **v0.10.2 Android and native PC downloads**. Older installers and
+assets are not changed. [Behavior, exact-source proof and acceptance limits](docs/YOUTUBE_LINKS.md).
+
 ### Search / Home playback and related autoplay
 Tap a Search result or an ordinary Home song card to start **that exact song first**, not every search result or the whole mixed Home shelf. Home has a separate accessible **Play all** action when the full shelf is desired. Explicit album/playlist/category/New Releases playback keeps its chosen queue/order.
 
@@ -66,7 +124,7 @@ The app interface defaults to **English even when the phone uses another languag
 English and Hindi are the translations actually included. To add a supported language, provide a complete `res/values-xx/strings.xml`, register its `AppLanguage`/Settings labels and `res/xml/locales_config.xml` entry, and extend the translation contract tests. Do not expose untranslated language options.
 
 ## Listen Together
-1. The host starts a song, opens **Listen Together** from the full-player menu, and taps **Create room**.
+1. The host starts a supported song or playlist, opens the separate **Listen Together** hub from Library or the global player, and taps **Create room**.
 2. Use **Copy code** or **Share** to send the ten-character code to everyone listening.
 3. Each friend opens Listen Together, enters/pastes the same code, and taps **Join room**, then **Sync & play**.
 4. Turn on **Follow host** to follow later song/playback changes. The host uses **Open player** to control the music. Multiple friends can use the same room code.
@@ -79,14 +137,16 @@ The current transport is HTTPS to the **public ntfy.sh relay**, with a twelve-ho
 Room messages are **not end-to-end encrypted**, and anyone who knows the code can read or publish to its topic. Older0.9.1 has no authenticated host identity or participant-presence protocol. Androidv0.10.0 adds signed creator-bound state and a bounded recently-active updated-client roster, not a verified-account identity or total live-listener count (see the co-host section). Do not share a code publicly. Public-relay availability and free-service rate limits can affect room delivery. Live two-device/device compatibility has not been verified by the source/static checks below.
 
 ### Androidv0.10.0: selected co-hosts or everyone
-The room creator can grant playback controls to **one, two or more selected members**, or **Everyone (including new members)**. Default stays host-only; untick a member to revoke, or choose **Only me** to take all controls back. Co-hosts use ordinary in-app play/pause/song/seek controls; only the original creator administers permissions. Grants do **not** force audio to start or enable Follow. Updated members use signed, room-bound proposals; old rooms/listeners retain one-way Sync/Follow compatibility. The creator must remain reachable; public-relay metadata is not end-to-end encrypted. Full behavior, compatibility/security boundaries and acceptance scope: **[Room controls](docs/ROOM_CONTROLS.md)**. This ships in the published Androidv0.10.0 APK. Desktop rooms and physical multi-phone/live-provider acceptance remain open; emulator/actor tests are not physical-phone passes.
+The room creator can grant playback controls to **one, two or more selected members**, or **Everyone (including new members)**. Default stays host-only; untick a member to revoke, or choose **Only me** to take all controls back. Co-hosts use ordinary in-app play/pause/song/seek controls; only the original creator administers permissions. Grants do **not** force audio to start or enable Follow. Updated members use signed, room-bound proposals; old rooms/listeners retain one-way Sync/Follow compatibility. The creator must remain reachable; public-relay metadata is not end-to-end encrypted. Full behavior, compatibility/security boundaries and acceptance scope: **[Room controls](docs/ROOM_CONTROLS.md)**. This remains included in v0.10.1 on Android and in the native PC room hub, with shared Android/native canonical-signature vectors. Physical multi-phone/PC/live-provider acceptance remains open; emulator/actor tests are not physical-device passes.
 
 ## New Releases
 The Home section stays collapsed until opened. Categories: All / Hollywood / Bollywood / **Choliwood** / Punjabi / Tamil / Telugu. Windows: last 24 hours / 7 days / 10 days. Discovery expands music albums and uses music-song searches; publication/upload metadata determines recency, **not a guarantee of the original commercial release date**. Unknown dates are not guessed; date/network failures have retryable states instead of pretending the catalogue is empty. Tapping a song retains the full shelf as the queue and existing related autoplay.
 
 ## Build and regression checks
 
-**Published v0.10.0 proof:**432 JVM +38 Android35 emulator cases,30 actual native cases on each of5 OS/CPU hosts, original-key APK compatibility and all14 public assets/digests verified. [Exact source, CI and publication receipt](docs/releases/v0.10.0-publication.md). Physical-phone/live-provider and production desktop trust/parity remain separate unchecked acceptance work.
+**Published v0.10.1 proof:**436 JVM +43 Android35 emulator regressions;121 native cases across13 classes on **each of six OS/CPU hosts**, with no failures/errors/skips. Real code14→15 original-key Android persistence and Preview2→0.10.1 native install-over checks passed. All20 original uploaded assets/hashes, original-identity PC manifest verification and preservation of historical releases were checked before and after publication. [Exact source, CI and finalization receipt](docs/releases/v0.10.1-publication.md). Physical devices, heard audio, live providers, OS media keys and live room sessions retain their separate acceptance checklist.
+
+Historical [v0.10.0 proof](docs/releases/v0.10.0-publication.md) remains an unchanged earlier receipt, not evidence for the current source.
 
 Stack: Kotlin, Jetpack Compose (Material 3), AppCompat application locales, NewPipeExtractor, Media3, Room, DataStore, WorkManager, Coil and Koin. Exact versions are in `gradle/libs.versions.toml`. Android builds require JDK 21 and SDK platform 37.
 
@@ -95,17 +155,26 @@ python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
 ./gradlew testDebugUnitTest assembleDebug --stacktrace
 ```
 
-**Validate pull request** automatically runs for PRs targeting main, including draft PR updates. It uses a read-only token, no signing secrets, and runs the Python checks, full Android unit suite and APK compile. A separate Android35 emulator job requires all ten native regression classes: Search keyboard viewport, Studio audio export, Studio editor, export publication, Listen Again, related-playback routing, online source/storage migration, destination chooser, the online picker’s own-window IME, and room co-host UI/Android-crypto/actor cases. It uses an installed real keyboard with wake/unlock/hardware-keyboard policy setup. A minimal **androidTest-only idle HOME** prevents the image’s Google launcher/widgets from owning an ANR overlay between cases; the default HOME is verified before instrumentation and never changes the production app. Error dialogs are not hidden, failed tests are not retried, and real IME visibility, original keyboard deadlines, viewport geometry and navigation/font assertions remain mandatory. Failure-only diagnostics identify WindowManager focus ownership and keyguard state; there are no automatic test retries or fake insets. Actual JUnit XML counts and checked PR/merge SHAs are reported; no missing-class/empty/all-skipped report can establish a successful validation. Only test reports are uploaded—no release/tag or installer APK is published. This is the validation path when the agent cannot dispatch a manual workflow (integration HTTP403). It may still require owner approval if GitHub flags a contributor run.
+**Validate pull request** automatically runs for PRs targeting main, including draft PR updates. It uses a read-only token, no signing secrets, and runs the Python checks, full Android unit suite and APK compile. A separate Android35 emulator job retains the existing regression classes and adds the explicit YouTube-link page: Search keyboard viewport, Studio audio export, Studio editor, export publication, Listen Again, related-playback routing, online source/storage migration, destination chooser, the online picker’s own-window IME, and room co-host UI/Android-crypto/actor cases. It uses an installed real keyboard with wake/unlock/hardware-keyboard policy setup. A minimal **androidTest-only idle HOME** prevents the image’s Google launcher/widgets from owning an ANR overlay between cases; the default HOME is verified before instrumentation and never changes the production app. Error dialogs are not hidden, failed tests are not retried, and real IME visibility, original keyboard deadlines, viewport geometry and navigation/font assertions remain mandatory. Failure-only diagnostics identify WindowManager focus ownership and keyguard state; there are no automatic test retries or fake insets. Actual JUnit XML counts and checked PR/merge SHAs are reported; no missing-class/empty/all-skipped report can establish a successful validation. Only test reports are uploaded—no release/tag or installer APK is published. This is the validation path when the agent cannot dispatch a manual workflow (integration HTTP403). It may still require owner approval if GitHub flags a contributor run.
+
+**v0.10.2 publication is completed; its fresh request is consumed.** Exact-source
+458 JVM/50 API35 regressions,144 cases on each native target,180 genuine frozen
+captures, original-key Android versionCode 15 → 16 retention and all eight signed native update
+plans passed before public/latest publication. All22 uploaded hashes and all 53
+historical asset records were reverified. Never replay the request, replace its
+assets/tag or infer PR9 merge permission. [Current publication audit](docs/releases/v0.10.2-publication.md).
+
+**v0.10.1 publication is completed and its requests are consumed.** The narrowly scoped new release request and existing-draft finalization require the original signing identity, exact parent/child Android/native/capture/installer proof, original CI checksums, all 20 original asset IDs and unchanged historical releases. A GitHub unpublished-draft REST lookup404 was corrected using the authenticated release list; the same tested files were finalized without rebuilding, resigning or replacing any asset. Never replay either request or overwrite this tag. [Publication audit](docs/releases/v0.10.1-publication.md).
 
 **Build debug APK** remains manual-only. **Release APK** keeps its manual entrypoint and mandatory signing/update gates. For the now-completed, consumed **v0.10.0/code14** publication only, it additionally accepts a trusted push changing `.github/release-requests/v0.10.0.json` on `arena/a0209191-dkord`. Its pre-signing guard requires the exact tag/repository/ref and a non-forced/non-deleted, direct metadata-only child of the recorded validated source head. The v0.10.0 authorization is now consumed too; preserve every request as audit history and never replay publication. Historical v0.9.1 and older requests cannot enter this route. Publication additionally requires successful full PR Android validation at the exact release commit, including all10 mandatory native classes, plus successful same-head five-host CI for any attached explicitly experimental desktop previews. Each native package/provenance hash/format and actual30-case/all3-class JUnit proof is checked before upload; missing/failed validation refuses publication without retrying tests. Ordinary PR/code/docs pushes do not publish. The agent's dispatch403 permission is not changed; this is a version-scoped owner-authorized release event, not signing from a PR.
 - **Build debug APK** runs the Python regressions, full Android unit suite and debug build, then uploads `dkord-debug-apk`. Without the existing signing secrets, a developer debug APK cannot update an official install.
-- **Release APK** takes a tag matching `versionName` (current published release: `v0.10.0`, versionCode `14`; never reuse its tag/code), runs the Python and full Android unit suites/build, requires the existing stable key (`DKORD_KEYSTORE_B64`, `DKORD_KEYSTORE_PASS`, alias `dkord`), and checks the actual old/new APK signatures, package and increasing versionCode. Only then does it create the tag/release page and attach the APK. No previous release is overwritten or removed. Start a **fresh run on the prepared branch**, not a re-run of old jobs. The version-scoped trusted-push request used this same full pipeline; it never skips tests, signing or actual APK compatibility verification. v0.10.0, v0.9.1, v0.9.0 and v0.8.2 are already published: retain their requests as consumed audit metadata, never replay them to replace an APK. A future release requires a new higher version/code/tag and fresh authorization.
+- **Release APK** takes a tag matching `versionName` (its historical published release: `v0.10.0`, versionCode `14`; never reuse its tag/code), runs the Python and full Android unit suites/build, requires the existing stable key (`DKORD_KEYSTORE_B64`, `DKORD_KEYSTORE_PASS`, alias `dkord`), and checks the actual old/new APK signatures, package and increasing versionCode. Only then does it create the tag/release page and attach the APK. No previous release is overwritten or removed. Start a **fresh run on the prepared branch**, not a re-run of old jobs. The version-scoped trusted-push request used this same full pipeline; it never skips tests, signing or actual APK compatibility verification. v0.10.0, v0.9.1, v0.9.0 and v0.8.2 are already published: retain their requests as consumed audit metadata, never replay them to replace an APK. A future release requires a new higher version/code/tag and fresh authorization.
 - All three workflows preserve Android unit-test reports as an artifact, including failed runs where reports exist. Resource/source/workflow checks are not a substitute for Android compilation, UI/device tests or a real multi-phone room session. Current validation/execution status is recorded in `HANDOFF.md`; pending tests are not claimed as passing.
 
 ## How playback works (and why it can break)
 Streams are resolved on the phone through a chain: NewPipeExtractor, then the YouTube InnerTube ANDROID_VR and IOS clients, then both again with fresh visitor data. Only audio-only streams (m4a/opus) are used. URLs are cached until they expire and re-resolved automatically on HTTP 403.
 
-YouTube changes often, so extraction can break. **Settings → Troubleshooting → Update extractor** checks the bundled extractor's upstream version; updating the extractor requires an app update. **Report broken playback** copies a redacted log and opens a GitHub issue; **Debug log** shows recent events. Bot checks, age/kids restrictions, private/region-locked/unavailable tracks and network errors have explicit messages. Guest mode does not bypass account/age restrictions.
+YouTube changes often, so extraction can break. **Settings → Troubleshooting → Update extractor** checks the bundled extractor's upstream version; updating the extractor requires an app update. **Copy playback diagnostics** copies a redacted local report without uploading it or navigating to a repository/issue; **Debug log** shows recent events. Bot checks, age/kids restrictions, private/region-locked/unavailable tracks and network errors have explicit messages. Guest mode does not bypass account/age restrictions.
 
 ## Downloads
 **Stable0.9.1:** a single song downloads as tagged M4A from its three-dot menu → Download. A playlist/album's top-bar export saves a **JSON file** (name + tracks), not all of its audio; import it again from Library. Normal music downloads use WorkManager and support pause/resume across app restarts independently of the in-app APK updater.
@@ -116,7 +185,7 @@ Every UI download action (player, song menu or bulk selection) opens **Download 
 **Online Studio** searches real Songs with its own query/pagination/cancellation ownership. Selected accessible audio is staged privately, probed, then committed as a durable editable source; it does not create a Downloads row or public Music file. Existing phone/download imports, millisecond ranges, clip ordering, preview, snapshot export and sharing remain. Cancelling preparation cleans partial app-owned staging, not existing sources or the project.
 
 ### Native desktop development
-See **[Desktop README](desktop/README.md)** for the actual implementation, OS requirements, build commands and acceptance gaps. **[Native preview validation](.github/workflows/validate-desktop.yml)** builds Windows x64, macOS x64/arm64 and Linux x64/arm64 packages with a matching bundled JS runtime and actual native widget/codec tests. Preview artifacts are not trusted signed/notarized releases. The updater has a separate signed desktop channel and refuses APKs, wrong OS/CPU, malformed packages and downgrades; production keys are intentionally unconfigured until an authorized, verified native release.
+See **[Desktop README](desktop/README.md)** for the actual implementation, OS requirements, build commands and acceptance gaps. **[Native validation](.github/workflows/validate-desktop.yml)** builds genuine Windows x86/x64, macOS x64/arm64 and Linux x64/arm64 packages with matching runtimes, actual native widget/codec/installer tests and 30 frozen screenshots per target. Read-only CI artifacts are unsigned build receipts, not public signing/notarization claims. The official release-only manifest uses the original pinned APK identity; the actual client refuses APKs, wrong OS/CPU/kind, malformed packages and downgrades. OS publisher signing remains separate/unconfigured.
 
 Discoverability terms describe the project—not measured search-volume claims: **open-source music player, YouTube Music client, offline music library, audio editor, mashup maker, Kotlin/Jetpack Compose, native Windows/macOS/Linux music app, Hindi and Choliwood music search**.
 

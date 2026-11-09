@@ -19,6 +19,10 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material.icons.filled.Login
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -75,6 +79,8 @@ fun LibraryScreen(
     onMessage: (String) -> Unit,
     modifier: Modifier = Modifier,
     onOpenStudio: () -> Unit = {},
+    onOpenTogether: () -> Unit = {},
+    onOpenYouTubeLink: () -> Unit = {},
 ) {
     val actions: Actions = koinInject()
     val library = actions.library
@@ -110,8 +116,12 @@ fun LibraryScreen(
     }
 
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+        item("listen_together") {
+            ListenTogetherLibrarySection(onOpenTogether)
+        }
         item("quick") {
             Column {
+                NavRow(Icons.Default.Link, stringResource(R.string.youtube_link_open), onOpenYouTubeLink)
                 NavRow(Icons.Default.ContentCut, stringResource(R.string.studio_title), onOpenStudio)
                 NavRow(Icons.Default.Favorite, stringResource(R.string.liked_songs), onOpenLiked)
                 NavRow(Icons.Default.History, stringResource(R.string.recently_played), onOpenRecent)
@@ -147,4 +157,20 @@ private fun NavRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label:
         leadingContent = { Icon(icon, null, tint = MaterialTheme.colorScheme.primary) },
         headlineContent = { Text(label) },
     )
+}
+
+/** One app-lifetime room, not a song/playlist-specific menu or a new controller. */
+@Composable
+internal fun ListenTogetherLibrarySection(onOpenTogether: () -> Unit) {
+    Column {
+        SectionTitle(stringResource(R.string.listen_together))
+        ListItem(
+            modifier = Modifier.testTag("library-listen-together").clickable(onClick = onOpenTogether),
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            leadingContent = { Icon(Icons.Default.Groups, null, tint = MaterialTheme.colorScheme.primary) },
+            headlineContent = { Text(stringResource(R.string.room_anywhere_title)) },
+            supportingContent = { Text(stringResource(R.string.room_anywhere_hint)) },
+            trailingContent = { Icon(Icons.AutoMirrored.Filled.ArrowForward, null) },
+        )
+    }
 }

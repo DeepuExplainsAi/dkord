@@ -48,7 +48,7 @@ class PrValidationSafetyTest(unittest.TestCase):
 
 
 class AndroidReportSummaryTest(unittest.TestCase):
-    def report(self, outcome='success', reports=()):
+    def report(self, outcome='success', reports=(),required=''):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             xml = root / 'app/build/test-results/testDebugUnitTest'
@@ -57,7 +57,7 @@ class AndroidReportSummaryTest(unittest.TestCase):
                 (xml / f'TEST-Fixture{index}.xml').write_text(report, encoding='utf-8')
             summary = root / 'summary.md'
             result = subprocess.run([sys.executable, '-B', '-c', REPORTER], cwd=root,
-                                    env={'ANDROID_BUILD_OUTCOME': outcome,
+                                    env={'ANDROID_BUILD_OUTCOME': outcome,'REQUIRED_ANDROID_CLASSES':required,
                                          'GITHUB_STEP_SUMMARY': str(summary),
                                          'PR_HEAD_SHA': 'fixture-pr-head',
                                          'GITHUB_SHA': 'fixture-merge-commit'},
@@ -100,6 +100,13 @@ class AndroidReportSummaryTest(unittest.TestCase):
     def test_all_skipped_tests_cannot_establish_android_validation(self):
         result, _ = self.report(reports=('<testsuite tests="4" failures="0" errors="0" skipped="4"/>',))
         self.assertNotEqual(0, result.returncode)
+
+    def test_real_app_required_cross_language_class_cannot_be_missing(self):
+        xml='<testsuite tests="2" failures="0" errors="0" skipped="0"><testcase classname="app.dkord.DesktopRoomInteropTest" name="state"/><testcase classname="app.dkord.DesktopRoomInteropTest" name="control"/></testsuite>'
+        result,summary=self.report(reports=(xml,),required='app.dkord.DesktopRoomInteropTest')
+        self.assertEqual(0,result.returncode,result.stderr);self.assertIn('2 passed',summary)
+        result,summary=self.report(reports=(xml,),required='app.dkord.MissingClass')
+        self.assertNotEqual(0,result.returncode);self.assertIn('Missing required Android classes',result.stderr)
 
     def test_malformed_reports_are_not_counted_as_success(self):
         result, _ = self.report(reports=('<testsuite',))

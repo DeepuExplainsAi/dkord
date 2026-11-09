@@ -1,0 +1,92 @@
+name: Publish requested Windows x86 desktop preview
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/a6a6bbda-dkord]
+    paths: [.github/release-requests/desktop-v0.10.0-preview.2.json]
+permissions:
+  contents: write
+  actions: read
+  checks: read
+concurrency:
+  group: desktop-v0.10.0-preview.2
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'DeepuExplainsAi/dkord' && github.ref == 'refs/heads/arena/a6a6bbda-dkord'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: desktop-v0.10.0-preview.2
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Validate the fresh metadata-only Windows32 preview request
+        if: github.event_name == 'push'
+        run: python3 -B .github/scripts/validate_desktop_preview_request.py
+      - name: Require the exact preview version and full safety regressions
+        run: |
+          test "$TAG" = desktop-v0.10.0-preview.2
+          grep -F '__version__ = "0.10.0"' desktop/dkord_desktop/__init__.py
+          python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
+      - name: Require successful Android regressions and six-host native validation at this exact head
+        run: |
+          for workflow in validate-pr.yml validate-desktop.yml; do
+            run_id=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs" \
+              -f head_sha="$GITHUB_SHA" -f event=pull_request -f per_page=1 --jq '.workflow_runs[0].id // empty')
+            if [[ ! "$run_id" =~ ^[1-9][0-9]*$ ]]; then
+              echo "::error::No matching-head $workflow run; refusing old or untested preview packages."
+              exit 1
+            fi
+            gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status --interval 30
+            if [ "$workflow" = validate-desktop.yml ]; then
+              echo "NATIVE_RUN_ID=$run_id" >> "$GITHUB_ENV"
+            else
+              echo "ANDROID_RUN_ID=$run_id" >> "$GITHUB_ENV"
+            fi
+          done
+      - name: Verify all real native packages and the actual frozen Windows32 screenshots
+        run: |
+          gh run download "$NATIVE_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'desktop-preview-*' --dir "$RUNNER_TEMP/native-input"
+          python3 -B .github/scripts/verify_desktop_release_artifacts.py --root "$RUNNER_TEMP/native-input" \
+            --output "$RUNNER_TEMP/desktop-release" --sha "$GITHUB_SHA" --version 0.10.0
+          gh run download "$NATIVE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name desktop-windows-ui-x86 --dir "$RUNNER_TEMP/windows-ui"
+          python3 -B desktop/packaging/screenshot_proof.py "$RUNNER_TEMP/windows-ui" --source "$GITHUB_SHA" --verify-only
+          cp "$RUNNER_TEMP/windows-ui/"*.png "$RUNNER_TEMP/windows-ui/windows-x86-screenshot-proof.json" "$RUNNER_TEMP/desktop-release/"
+      - name: Preserve the Android latest feed and all prior tags/assets; prepare preview receipts
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Preview already exists; never replay or overwrite publication."
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG"; then
+            echo "::error::Tag already exists; do not reuse or move an existing tag."
+            exit 1
+          fi
+          export RELEASE_ASSETS="$RUNNER_TEMP/desktop-release"
+          python3 - <<'PY'
+          import hashlib, os
+          from pathlib import Path
+          root=Path(os.environ['RELEASE_ASSETS']);files=sorted(root.iterdir())
+          assert len(files)==17, 'Expected8 native packages,6 manifests,2 PNGs and screenshot proof'
+          rows=[]
+          for file in files:
+              value=hashlib.sha256()
+              with file.open('rb') as source:
+                  for block in iter(lambda:source.read(1024*1024),b''):value.update(block)
+              rows.append(value.hexdigest()+'  '+file.name)
+          (root/'SHA256SUMS').write_text('\n'.join(rows)+'\n',encoding='utf-8')
+          PY
+          cp docs/releases/desktop-v0.10.0-preview.2.md "$RUNNER_TEMP/preview-notes.md"
+          printf '\nExact source: `%s`. [Six-host native/screenshot proof](https://github.com/%s/actions/runs/%s) · [Android preservation proof](https://github.com/%s/actions/runs/%s).\n' \
+            "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$NATIVE_RUN_ID" "$GITHUB_REPOSITORY" "$ANDROID_RUN_ID" >> "$RUNNER_TEMP/preview-notes.md"
+      - name: Publish only the new clearly marked desktop prerelease; never replace the Android latest
+        run: |
+          assets=("$RUNNER_TEMP/desktop-release/"*)
+          test "${#assets[@]}" -eq 18
+          gh release create "$TAG" "${assets[@]}" --repo "$GITHUB_REPOSITORY" \
+            --prerelease --latest=false --target "$GITHUB_SHA" \
+            --title 'Dkord Desktop0.10.0 Preview2 — Windows32 x86' --notes-file "$RUNNER_TEMP/preview-notes.md"

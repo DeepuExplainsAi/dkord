@@ -4,7 +4,6 @@ import base64
 import hashlib
 import json
 import os
-import platform
 import re
 import subprocess
 import sys
@@ -15,13 +14,16 @@ from urllib.parse import urlsplit
 
 import requests
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from cryptography.hazmat.primitives.asymmetric import rsa, ec, padding
+from cryptography.hazmat.primitives import hashes, serialization
 
 from . import __version__
-from .media import check_cancel
+from .platforms import platform_key, TARGETS
 
 REPO = "DeepuExplainsAi/dkord"
 API = f"https://api.github.com/repos/{REPO}"
 MAX_MANIFEST = 128 * 1024
+UPDATE_DOMAIN = b"DKORD-DESKTOP-UPDATE-V2\x00"
 MAX_PACKAGE = 1024 * 1024 * 1024
 VERSION = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)\Z")
 
@@ -31,14 +33,6 @@ def version(value: str) -> tuple[int, int, int]:
     if not match:
         raise ValueError("Only stable three-component desktop versions are accepted")
     return tuple(map(int, match.groups()))
-
-
-def platform_key(system: str | None = None, machine: str | None = None) -> str:
-    os_name = {"Windows": "windows", "Darwin": "macos", "Linux": "linux"}.get(system or platform.system())
-    arch = {"AMD64": "x64", "x86_64": "x64", "arm64": "arm64", "aarch64": "arm64"}.get(machine or platform.machine())
-    if not os_name or not arch:
-        raise ValueError("No supported desktop OS/CPU build for this installation")
-    return f"{os_name}-{arch}"
 
 
 def trusted_url(url: str, tag: str, name: str) -> bool:
@@ -73,25 +67,50 @@ class Update:
     manifest: bytes
 
 
-def verify_manifest(raw: bytes, trusted_keys: dict[str, str], installed: str = __version__, target: str | None = None, image: bool | None = None) -> Update | None:
+def verify_manifest(raw: bytes, trusted_keys: dict[str, str | dict], installed: str = __version__, target: str | None = None, image: bool | None = None) -> Update | None:
     if len(raw) > MAX_MANIFEST:
         raise ValueError("Desktop update manifest is too large")
     envelope = json.loads(raw, object_pairs_hook=no_duplicates)
     if set(envelope) != {"payload", "keyId", "signature"} or envelope["keyId"] not in trusted_keys:
         raise ValueError("Not signed by an installed Dkord desktop update key")
     payload = envelope["payload"]
-    key = Ed25519PublicKey.from_public_bytes(base64.b64decode(trusted_keys[envelope["keyId"]], validate=True))
-    key.verify(base64.b64decode(envelope["signature"], validate=True), canonical(payload))
-    if payload.get("format") != 1 or payload.get("channel") != "desktop":
+    root = trusted_keys[envelope["keyId"]]
+    signature = base64.b64decode(envelope["signature"], validate=True)
+    if isinstance(root, str):
+        # Preserve verification of legacy owner-controlled Ed25519 channels. They
+        # remain disjoint from Android's latest tag and cannot opt into format 2.
+        if payload.get("format") != 1:
+            raise ValueError("Legacy update key cannot authorize a different format")
+        key = Ed25519PublicKey.from_public_bytes(base64.b64decode(root, validate=True))
+        key.verify(signature, canonical(payload))
+        prefix = "desktop-v"
+    elif isinstance(root, dict):
+        if (set(root) != {"algorithm", "publicKey", "certificateSha256"} or payload.get("format") != 2
+                or not isinstance(root["certificateSha256"], str) or not re.fullmatch(r"[a-f0-9]{64}", root["certificateSha256"])):
+            raise ValueError("Invalid installed update identity")
+        key = serialization.load_der_public_key(base64.b64decode(root["publicKey"], validate=True))
+        message = UPDATE_DOMAIN + canonical(payload)  # never an APK/room/other signing protocol
+        if root["algorithm"] == "rsa-pkcs1-sha256" and isinstance(key, rsa.RSAPublicKey) and key.key_size >= 2048:
+            key.verify(signature, message, padding.PKCS1v15(), hashes.SHA256())
+        elif root["algorithm"] == "ecdsa-p256-sha256" and isinstance(key, ec.EllipticCurvePublicKey) and isinstance(key.curve, ec.SECP256R1):
+            key.verify(signature, message, ec.ECDSA(hashes.SHA256()))
+        else:
+            raise ValueError("Unsupported pinned update key algorithm")
+        prefix = "v"
+    else:
+        raise ValueError("Invalid installed update root")
+    if payload.get("channel") != "desktop":
         raise ValueError("Not a supported desktop update channel")
     current = payload["version"]
     version(current)
     if version(current) <= version(installed):
         return None
-    tag = "desktop-v" + current
+    tag = prefix + current
     if payload.get("tag") != tag:
         raise ValueError("Update version/tag mismatch")
     target = target or platform_key()
+    if target not in TARGETS:
+        return None
     artifact = payload.get("assets", {}).get(target)
     if artifact is None:
         return None  # never substitute another OS or architecture
@@ -104,7 +123,7 @@ def verify_manifest(raw: bytes, trusted_keys: dict[str, str], installed: str = _
     kind = artifact["kind"]
     extension = {"windows": ("exe", ".exe"), "macos": ("pkg", ".pkg"), "linux": ("appimage", ".AppImage") if image else ("deb", ".deb")}[target.split("-")[0]]
     name = artifact["name"]
-    if kind != extension[0] or not name.endswith(extension[1]) or not re.fullmatch(r"Dkord-desktop-v[0-9.]+-(windows|macos|linux)-(x64|arm64)\.(exe|pkg|deb|AppImage)", name):
+    if kind != extension[0] or not name.endswith(extension[1]) or not re.fullmatch(r"Dkord-desktop-v[0-9.]+-(windows|macos|linux)-(x64|arm64|x86)\.(exe|pkg|deb|AppImage)", name):
         raise ValueError("Wrong platform installer type/name")
     expected = f"Dkord-desktop-v{current}-{target}{extension[1]}"
     if name != expected or not trusted_url(artifact["url"], tag, name):
@@ -119,15 +138,16 @@ def verify_manifest(raw: bytes, trusted_keys: dict[str, str], installed: str = _
 class Updater:
     """Consent-based platform/architecture-correct desktop channel, disjoint from the APK latest feed.
 
-    Preview builds ship with no production key and explicitly refuse untrusted installation. An official
-    desktop release requires an owner-controlled Ed25519 key plus native signing/notarization as applicable.
+    Format 2 pins the previously published APK signing identity and domain-separates
+    its desktop manifest signatures. Never accepts an APK as a desktop installer.
+    This is application update verification, not OS Authenticode/notarization.
     """
-    def __init__(self, cache: Path, keys: dict[str, str] | None = None):
+    def __init__(self, cache: Path, keys: dict[str, str | dict] | None = None):
         self.cache = cache
         self.keys = keys if keys is not None else self.production_keys()
 
     @staticmethod
-    def production_keys() -> dict[str, str]:
+    def production_keys() -> dict[str, str | dict]:
         root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
         return json.loads((root / "assets" / "update-keys.json").read_text())
 
@@ -142,14 +162,15 @@ class Updater:
                 releases = response.json()
                 for release in releases:
                     tag = release.get("tag_name", "")
-                    if release.get("draft") or release.get("prerelease") or not tag.startswith("desktop-v"):
+                    if release.get("draft") or release.get("prerelease"):
                         continue
+                    candidate = tag[9:] if tag.startswith("desktop-v") else tag[1:] if tag.startswith("v") else ""
                     try:
-                        if version(tag[9:]) <= version(__version__):
+                        if version(candidate) <= version(__version__):
                             continue
-                    except ValueError:
+                    except (TypeError, ValueError):
                         continue
-                    name = f"Dkord-desktop-v{tag[9:]}-manifest.json"
+                    name = f"Dkord-desktop-v{candidate}-manifest.json"
                     asset = next((a for a in release.get("assets", []) if a.get("name") == name), None)
                     if not asset or not trusted_url(asset["browser_download_url"], tag, name) or asset.get("size", MAX_MANIFEST + 1) > MAX_MANIFEST:
                         continue
@@ -161,7 +182,7 @@ class Updater:
                             if len(raw) > MAX_MANIFEST:
                                 raise ValueError("Desktop update manifest is too large")
                     update = verify_manifest(bytes(raw), self.keys)
-                    if update:
+                    if update and update.tag == tag:
                         return update
                 if len(releases) < 100:
                     break
@@ -193,6 +214,7 @@ class Updater:
             raise ValueError("Update plan no longer matches a newer trusted manifest")
 
     def download(self, update: Update, event, progress=lambda done, total: None) -> Path:
+        from .media import check_cancel  # release signature verification needs no media runtime
         self.verify_plan(update)
         if update.platform != platform_key():
             raise ValueError("This update is not for the running application's OS/CPU")

@@ -16,7 +16,7 @@ concurrency:
 jobs:
   android:
     name: Android tests and APK compile
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
@@ -43,6 +43,7 @@ jobs:
         env:
           ANDROID_BUILD_OUTCOME: ${{ steps.android_build.outcome }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REQUIRED_ANDROID_CLASSES: app.dkord.DesktopRoomInteropTest app.dkord.YouTubeLinkParserTest app.dkord.YouTubeLinkSourceTest app.dkord.YouTubeLinkControllerTest
         run: |
           python3 - <<'PY'
           import os
@@ -64,6 +65,7 @@ jobs:
                       message = f"{case.attrib.get('classname', suite.attrib.get('name', ''))}.{case.attrib.get('name', '')}: {' '.join(detail)[:600]}"
                       message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
                       print('::error title=Android JUnit failure::' + message)
+          classes={case.attrib.get('classname','') for report in reports for case in ET.parse(report).getroot().findall('testcase')}
           passed = totals['tests'] - totals['failures'] - totals['errors'] - totals['skipped']
           if reports:
               message = (f"{totals['tests']} JUnit test cases: {passed} passed, "
@@ -78,6 +80,9 @@ jobs:
               summary.write(f"Checked merge commit: `{os.environ['GITHUB_SHA']}`\n\n")
               summary.write('Validation only. No release/tag or installable APK artifact is published. '
                             'Official updates still require the manual Release APK signing/install-over gates.\n')
+          missing=set(os.environ.get('REQUIRED_ANDROID_CLASSES','').split())-classes
+          if os.environ.get('ANDROID_BUILD_OUTCOME') == 'success' and missing:
+              raise SystemExit('Missing required Android classes: '+', '.join(sorted(missing)))
           if os.environ.get('ANDROID_BUILD_OUTCOME') == 'success' and (
                   not reports or passed <= 0 or totals['failures'] or totals['errors']):
               raise SystemExit('A successful Android build must have real passing JUnit reports and no failed tests.')
@@ -92,9 +97,58 @@ jobs:
             app/build/reports/tests/testDebugUnitTest/
           if-no-files-found: ignore
 
+  native-link-lifecycle:
+    name: Fast native link lifecycle and existing regressions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: desktop
+      QT_QPA_PLATFORM: offscreen
+      QT_MEDIA_BACKEND: ffmpeg
+      PYTHONUTF8: 1
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.22.3'
+      - name: Install actual Qt system libraries and locked native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libegl1 libxkbcommon0 libdbus-1-3 libxcb-cursor0 libpulse0 libasound2t64 libx11-xcb1 fonts-noto-core
+          python -m pip install -r desktop/requirements-build.txt -c desktop/constraints.lock
+      - name: Execute full native regressions before slow cross-platform packaging
+        run: |
+          python desktop/scripts/export_phone_contract.py --check
+          python desktop/packaging/ci_run.py tests python -m pytest desktop/tests -v --junitxml=desktop/.artifacts/fast-native-tests.xml
+          python desktop/packaging/ci_run.py entry python -m dkord_desktop --self-test
+      - name: Require real old and new cases without failures or skips
+        if: always()
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse('desktop/.artifacts/fast-native-tests.xml').getroot()
+          cases = root.findall('.//testcase')
+          assert len(cases) >= 144, f'Missing native regressions: {len(cases)}'
+          for cls in ('NativeWidgetTest', 'NativeLinkWidgetTest', 'YouTubeLinkTest', 'NewReleasesTest', 'NativeGalleryWidgetTest'):
+              assert any(cls in case.get('classname', '') for case in cases), f'Missing {cls}'
+          assert not any(root.findall('.//' + marker) for marker in ('failure', 'error', 'skipped'))
+          print(f'::notice title=Fast native regressions::{len(cases)} actual cases; zero failures/errors/skips.')
+          PY
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: pr-fast-native-test-reports
+          path: desktop/.artifacts/fast-native-tests.xml
+          if-no-files-found: error
+
   keyboard-layout:
     name: Android keyboard and real audio tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
@@ -105,6 +159,10 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v6
+      - name: Build device test APKs before starting the memory-heavy emulator
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug assembleDebugAndroidTest --no-parallel --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8' --stacktrace 2>&1 | tee "$RUNNER_TEMP/dkord-device-build.log"
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -120,9 +178,10 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
+            export GRADLE_OPTS='-Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8"'
             bash .github/scripts/prepare_emulator_ime.sh
             bash .github/scripts/prepare_emulator_home.sh
-            bash -o pipefail -c './gradlew connectedDebugAndroidTest --stacktrace 2>&1 | tee -a "$RUNNER_TEMP/dkord-device-build.log"'
+            bash -o pipefail -c './gradlew connectedDebugAndroidTest --stacktrace --no-parallel --max-workers=2 2>&1 | tee -a "$RUNNER_TEMP/dkord-device-build.log"'
       - name: Surface Android device-build diagnostics
         if: always()
         run: python3 -B .github/scripts/annotate_android_build.py "$RUNNER_TEMP/dkord-device-build.log"
@@ -131,6 +190,7 @@ jobs:
         run: >-
           python3 -B .github/scripts/summarize_device_tests.py
           --required-class app.dkord.SearchKeyboardViewportTest
+          --required-class app.dkord.YouTubeLinkScreenTest
           --required-class app.dkord.StudioAudioExportTest
           --required-class app.dkord.StudioClipEditorTest
           --required-class app.dkord.StudioExportPublicationTest
@@ -140,6 +200,8 @@ jobs:
           --required-class app.dkord.DownloadDestinationTest
           --required-class app.dkord.StudioSongPickerTest
           --required-class app.dkord.RoomCoHostTest
+          --required-class app.dkord.AppPresentationTest
+          --required-class app.dkord.InstallOverPersistenceTest
       - name: Upload Android device-test reports
         if: always()
         uses: actions/upload-artifact@v7

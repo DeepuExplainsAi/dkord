@@ -1,0 +1,144 @@
+"""Execute actual old -> new native installers on disposable hosted CI only.
+
+No uninstall/reset. Seeded real Store state and generated audio are read/decoded
+by the NEW installed frozen app, at the unchanged normal per-user location.
+Linux verifies BOTH deb install-over and portable AppImage replacement. This is
+virtual-host fixture acceptance, not a claim about a physical user's computer.
+"""
+from __future__ import annotations
+import hashlib
+from contextlib import contextmanager
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from platformdirs import user_data_path
+from dkord_desktop import __version__
+from dkord_desktop.platforms import platform_key
+from dkord_desktop.upgrade_fixture import seed
+
+BASELINE='desktop-v0.10.0-preview.2'
+REPO='DeepuExplainsAi/dkord'
+BASELINE_SOURCE='0d97e6413d999cdfbb562397cc230f1798f02606'
+LATEST_BASELINE='v0.10.1'
+LATEST_SOURCE='e0e925a674f106f6291731f5b143d3800a476cd3'
+
+
+def call(command,**kwargs):return subprocess.run([str(arg) for arg in command],check=True,timeout=240,**kwargs)
+
+
+def api(path):return json.loads(subprocess.check_output(['gh','api','repos/'+REPO+'/'+path],text=True))
+
+
+def file_digest(path):
+    value=hashlib.sha256()
+    with path.open('rb') as file:
+        for block in iter(lambda:file.read(1024*1024),b''):value.update(block)
+    return value.hexdigest()
+
+
+def install(path,target):
+    if target.startswith('windows-'):
+        call([path,'/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/CURRENTUSER'])
+        folder=Path(os.environ['LOCALAPPDATA'])/'Programs'/('Dkord-x86' if target=='windows-x86' else 'Dkord')
+        return folder/'Dkord.exe'
+    if target.startswith('macos-'):
+        call(['sudo','installer','-pkg',path,'-target','/'])
+        return Path('/Applications/Dkord.app/Contents/MacOS/Dkord')
+    call(['sudo','dpkg','-i',path]);return Path('/opt/Dkord/Dkord')
+
+
+def verify_installed(executable,folder,target,*,image=False,expected_version=None,prefix=''):
+    report=folder/(prefix+('appimage-installed-read.json' if image else 'installed-read.json'))
+    command=[executable]+(['--appimage-extract-and-run'] if image else [])+['--verify-upgrade-fixture',report]
+    call(command)
+    data=json.loads(report.read_text())
+    if data.get('version')!=(expected_version or __version__) or data.get('target')!=target or data.get('frozen') is not True or data.get('pythonBits')!=(32 if target=='windows-x86' else 64):
+        raise ValueError('The actual installed app has wrong version/profile/bitness or is not frozen')
+    checks=data.get('checks',{})
+    required=('library','playlists','likes','history','settings','queue','privateDownload','deviceDownload','studioSources','studioClips','audioDecoded')
+    if any(checks.get(key) is not True for key in required):raise ValueError('Installed app did not retain every fixture category/byte')
+    return data
+
+
+@contextmanager
+def baseline_session(target):
+    # Install the baseline BEFORE freezing the new .app. Otherwise Apple's old
+    # relocatable pkg may discover/overwrite the build-tree app via Spotlight.
+    if os.environ.get('GITHUB_ACTIONS')!='true' or os.environ.get('GITHUB_REPOSITORY')!=REPO or target!=platform_key():
+        raise ValueError('Real installer execution is restricted to the exact native disposable CI profile')
+    release=api('releases/tags/'+BASELINE)
+    ref=api('git/ref/tags/'+BASELINE)['object']
+    if release['id']!=438483769 or release['tag_name']!=BASELINE or release['draft'] or ref['type']!='commit' or ref['sha']!=BASELINE_SOURCE:
+        raise ValueError('Historical baseline identity changed; never substitute an arbitrary old installer')
+    assets={item['name']:item for item in release['assets']}
+    kinds=('deb','AppImage') if target.startswith('linux-') else ('exe',) if target.startswith('windows-') else ('pkg',)
+    root=user_data_path('Dkord','Dkord',roaming=False)
+    with tempfile.TemporaryDirectory(prefix='dkord-real-install-over-',dir=os.environ['RUNNER_TEMP']) as temporary:
+        folder=Path(temporary);old_folder=folder/'baseline';old_folder.mkdir();baselines={};old_executables={}
+        for kind in kinds:
+            name=f'Dkord-desktop-v0.10.0-{target}.{kind}';item=assets[name]
+            if not isinstance(item.get('digest'),str) or not item['digest'].startswith('sha256:') or item['size']<=0:
+                raise ValueError('Original baseline requires its GitHub byte digest')
+            call(['gh','release','download',BASELINE,'--repo',REPO,'--pattern',name,'--dir',old_folder])
+            old=old_folder/name
+            if old.stat().st_size!=item['size'] or 'sha256:'+file_digest(old)!=item['digest']:
+                raise ValueError('Original installer bytes differ from immutable release asset')
+            if kind=='AppImage':
+                executable=folder/'Dkord.AppImage';shutil.copyfile(old,executable);executable.chmod(0o755)
+                call([executable,'--appimage-extract-and-run','--self-test'])
+            else:
+                executable=install(old,target);call([executable,'--self-test'])
+            baselines[kind]=item;old_executables[kind]=executable
+        seed(root,folder/'accessible-device')
+        via=None
+        if tuple(map(int,__version__.split('.'))) >= (0,10,2):
+            # Keep the original Preview2 seed, then install the CURRENT public
+            # version over it before freezing/building the new app. Do not reset
+            # or reseed data between Preview2 ->0.10.1 ->the new version. In
+            # particular, Apple's old relocatable pkg must run before freeze.
+            latest=api('releases/tags/'+LATEST_BASELINE)
+            ref=api('git/ref/tags/'+LATEST_BASELINE)['object']
+            if (latest['id']!=438891732 or latest['tag_name']!=LATEST_BASELINE or latest['draft']
+                    or ref['type']!='commit' or ref['sha']!=LATEST_SOURCE):
+                raise ValueError('Current original public baseline identity changed')
+            current={item['name']:item for item in latest['assets']}
+            latest_folder=folder/'current-baseline';latest_folder.mkdir();checked=[]
+            for kind in kinds:
+                name=f'Dkord-desktop-v0.10.1-{target}.{kind}';item=current[name]
+                if not isinstance(item.get('digest'),str) or not item['digest'].startswith('sha256:') or item['size']<=0:
+                    raise ValueError('Current public installer requires its original byte digest')
+                call(['gh','release','download',LATEST_BASELINE,'--repo',REPO,'--pattern',name,'--dir',latest_folder])
+                path=latest_folder/name
+                if path.stat().st_size!=item['size'] or 'sha256:'+file_digest(path)!=item['digest']:
+                    raise ValueError('Current public installer bytes changed')
+                if kind=='AppImage':
+                    executable=old_executables[kind];shutil.copyfile(path,executable);executable.chmod(0o755)
+                else:
+                    executable=install(path,target)
+                    if executable!=old_executables[kind]:raise ValueError('Current install-over moved the existing app path')
+                data=verify_installed(executable,folder,target,image=kind=='AppImage',expected_version='0.10.1',prefix='current-')
+                checked.append(dict(kind=kind,baselineName=name,baselineSha256=item['digest'][7:],checks=data['checks']))
+            via=dict(format=1,baselineTag=LATEST_BASELINE,baselineSource=LATEST_SOURCE,version='0.10.1',
+                     noUninstall=True,noDataReset=True,frozenClient=True,packages=checked)
+        def upgrade(packages):
+            checked=[]
+            for kind in kinds:
+                new=next(path for path in packages if path.suffix=='.'+kind)
+                if kind=='AppImage':
+                    executable=old_executables[kind];shutil.copyfile(new,executable);executable.chmod(0o755)
+                    data=verify_installed(executable,folder,target,image=True)
+                else:
+                    executable=install(new,target)
+                    if executable!=old_executables[kind]:raise ValueError('Install-over moved the existing executable path')
+                    data=verify_installed(executable,folder,target)
+                item=baselines[kind]
+                checked.append(dict(kind=kind,baselineName=item['name'],baselineSha256=item['digest'][7:],checks=data['checks']))
+            return dict(format=1,baselineTag=BASELINE,baselineSource=BASELINE_SOURCE,toVersion=__version__,target=target,
+                        source=os.environ['DKORD_SOURCE_SHA'],noUninstall=True,standardUserData=True,frozenClient=True,packages=checked,viaCurrent=via)
+        yield upgrade

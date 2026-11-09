@@ -40,6 +40,7 @@ val appModule = module {
     single { StreamModule(get()) } bind StreamResolver::class
     single { InnerTubeClient(get<AuthStore>()) }
     single { MusicRepository(get()) }
+    single<app.dkord.data.links.YouTubeLinkSource> { app.dkord.data.links.NewPipeYouTubeLinkSource() }
     single { app.dkord.data.studio.StudioRepository(androidContext()) }
     single { app.dkord.data.download.DownloadSelectionStorage(androidContext()) }
     single { app.dkord.data.download.TrackDownloader(get<StreamResolver>(), app.dkord.data.net.Http.client, get<StreamModule>()::invalidate) }

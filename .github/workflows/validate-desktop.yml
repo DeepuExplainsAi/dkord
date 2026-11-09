@@ -5,15 +5,25 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'desktop/**'
+      - 'app/src/main/res/**/strings.xml'
+      - 'app/src/main/java/app/dkord/ui/theme/Theme.kt'
+      - 'app/src/main/java/app/dkord/ui/screens/Home.kt'
+      - 'app/src/main/java/app/dkord/ui/App.kt'
+      - 'app/src/main/java/app/dkord/ui/screens/YouTubeLink.kt'
+      - 'app/src/main/java/app/dkord/ui/links/**'
+      - 'app/src/main/java/app/dkord/data/links/**'
+      - 'app/src/test/resources/youtube-links.json'
       - '.gitattributes'
       - 'LICENSE'
       - '.github/workflows/validate-desktop.yml'
       - '.github/scripts/test_desktop_contracts.py'
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: pr-desktop-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  # Finish an already-running native/x86 build; retain only the latest pending head.
+  cancel-in-progress: false
 jobs:
   desktop:
     name: Native ${{ matrix.target }} preview
@@ -23,14 +33,22 @@ jobs:
         include:
           - os: windows-latest
             target: windows-x64
+            architecture: x64
+          - os: windows-latest
+            target: windows-x86
+            architecture: x86
           - os: macos-15-intel
             target: macos-x64
+            architecture: x64
           - os: macos-latest
             target: macos-arm64
+            architecture: arm64
           - os: ubuntu-24.04
             target: linux-x64
+            architecture: x64
           - os: ubuntu-24.04-arm
             target: linux-arm64
+            architecture: arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     env:
@@ -47,18 +65,46 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-          architecture: ${{ contains(matrix.target, 'arm64') && 'arm64' || 'x64' }}
+          architecture: ${{ matrix.architecture }}
       - uses: actions/setup-node@v6
         with:
           node-version: '22.22.3'
-          architecture: ${{ contains(matrix.target, 'arm64') && 'arm64' || 'x64' }}
+          architecture: ${{ matrix.architecture }}
       - name: Install native Linux desktop/audio libraries
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1 libegl1 libxkbcommon0 libdbus-1-3 libxcb-cursor0 libpulse0 libasound2t64 libx11-xcb1 fonts-noto-core
+          sudo apt-get install -y libgl1 libegl1 libxkbcommon0 libdbus-1-3 libxcb-cursor0 libxcb-shape0 libpulse0 libasound2t64 libx11-xcb1 fonts-noto-core xvfb xauth libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1
+      - name: Initialize the real 32-bit MSVC compiler
+        if: matrix.target == 'windows-x86'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86
+      - name: Provide MSYS2 make for the current x86 codec source build
+        if: matrix.target == 'windows-x86'
+        uses: msys2/setup-msys2@v2
+        with:
+          # Reuse the official runner's existing shell instead of fetching an
+          # unrelated fresh MSYS2 installer (which can fail with upstream 504s).
+          release: false
+          msystem: MSYS
+          update: false
+          path-type: inherit
+          install: make diffutils
+      - name: Build a current genuine Win32 FFmpeg rather than bundling the obsolete 2019 wheel
+        if: matrix.target == 'windows-x86'
+        shell: msys2 {0}
+        run: python desktop/packaging/ci_run.py codec python desktop/packaging/build_ffmpeg_x86.py
       - name: Install locked native runtime and packaging dependencies
-        run: python -m pip install -r desktop/requirements-build.txt -c desktop/constraints.lock
+        shell: bash
+        run: |
+          if [ "${{ matrix.target }}" = "windows-x86" ]; then
+            python -m pip install --only-binary=:all: -r desktop/requirements-windows-x86.txt -c desktop/constraints-windows-x86.lock
+          else
+            python -m pip install -r desktop/requirements-build.txt -c desktop/constraints.lock
+          fi
+      - name: Refuse drift from phone-owned design and navigation
+        run: python desktop/scripts/export_phone_contract.py --check
       - name: Execute real codec, data, updater and native Qt widget tests
         run: python desktop/packaging/ci_run.py tests python -m pytest desktop/tests -v --junitxml=desktop/.artifacts/test-results.xml
       - name: Check all required native tests actually ran without skips
@@ -70,9 +116,12 @@ jobs:
           import xml.etree.ElementTree as ET
           root = ET.parse('desktop/.artifacts/test-results.xml').getroot()
           cases = root.findall('.//testcase')
-          for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest'):
+          for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest', 'RoomProtocolTest', 'LyricsTest', 'PhoneContractTest', 'NewReleasesTest', 'DiagnosticsTest', 'ModernUpdateIdentityTest', 'PublicUpdateIdentityTest', 'CatalogueTest', 'ManifestSignerTest', 'UpgradeFixtureTest', 'YouTubeLinkTest', 'NativeLinkWidgetTest', 'NativeGalleryWidgetTest'):
               assert any(cls in c.attrib.get('classname', '') for c in cases), f'Missing {cls}'
-          assert len(cases) >= 30, f'Only {len(cases)} desktop cases'
+          assert len(cases) >= 36, f'Only {len(cases)} desktop cases'
+          assert len(cases) >= 121, f'New phone/desktop parity regressions missing: {len(cases)} cases'
+          assert len(cases) >= 142, f'Exact YouTube-link/lifecycle regressions missing: {len(cases)} cases'
+          assert len(cases) >= 144, f'Full native gallery regressions missing: {len(cases)} cases'
           for case in cases:
               for marker in ('failure','error','skipped'):
                   error=case.find(marker)
@@ -81,11 +130,13 @@ jobs:
                       text=f"{case.get('classname')}.{case.get('name')}: {detail}".replace('%','%25').replace('\r','%0D').replace('\n','%0A')
                       print('::error title=Native desktop testcase::'+text)
           assert not root.findall('.//failure') and not root.findall('.//error') and not root.findall('.//skipped')
-          print(f'::notice title=Native desktop tests::{len(cases)} cases passed; all3 classes; no failures/errors/skips.')
+          print(f'::notice title=Native desktop tests::{len(cases)} cases passed; all required classes; no failures/errors/skips.')
           PY
       - name: Native app entry-point smoke
         run: python desktop/packaging/ci_run.py entry python -m dkord_desktop --self-test
       - name: Build and execute the real native package
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: python desktop/packaging/ci_run.py package python desktop/packaging/build.py --target ${{ matrix.target }}
       - name: Upload development packages, hashes and test proof (not a signed public release)
         if: always()
@@ -102,3 +153,112 @@ jobs:
             desktop/.artifacts/Dkord-desktop-*.AppImage
             desktop/.artifacts/preview-*.json
             desktop/.artifacts/test-results.xml
+      - name: Capture actual frozen Windows32 UI with generated offline audio, no user data/network
+        if: matrix.target == 'windows-x86'
+        env:
+          QT_QPA_PLATFORM: windows
+        run: python desktop/packaging/ci_run.py screenshot desktop/.artifacts/bundle/Dkord/Dkord.exe --capture-ui desktop/.artifacts/screenshots
+      - name: Expose real screenshot transport batch 1 of6 (eight notices, under GitHub step cap)
+        if: matrix.target == 'windows-x86'
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots --source "${{ env.DKORD_SOURCE_SHA }}" --batch 0
+      - name: Expose real screenshot transport batch 2 of6 (eight notices, under GitHub step cap)
+        if: matrix.target == 'windows-x86'
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots --source "${{ env.DKORD_SOURCE_SHA }}" --batch 1
+      - name: Expose real screenshot transport batch 3 of6 (eight notices, under GitHub step cap)
+        if: matrix.target == 'windows-x86'
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots --source "${{ env.DKORD_SOURCE_SHA }}" --batch 2
+      - name: Expose real screenshot transport batch 4 of6 (eight notices, under GitHub step cap)
+        if: matrix.target == 'windows-x86'
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots --source "${{ env.DKORD_SOURCE_SHA }}" --batch 3
+      - name: Expose real screenshot transport batch 5 of6 (eight notices, under GitHub step cap)
+        if: matrix.target == 'windows-x86'
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots --source "${{ env.DKORD_SOURCE_SHA }}" --batch 4
+      - name: Expose real screenshot transport batch 6 of6 (eight notices, under GitHub step cap)
+        if: matrix.target == 'windows-x86'
+        run: python desktop/packaging/screenshot_proof.py desktop/.artifacts/screenshots --source "${{ env.DKORD_SOURCE_SHA }}" --batch 5
+      - name: Upload actual Windows app screenshots
+        if: matrix.target == 'windows-x86' && always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-windows-ui-x86
+          retention-days: 7
+          if-no-files-found: error
+          path: desktop/.artifacts/screenshots/
+      - name: Capture thirty actual frozen native pages and dialogs on this OS and CPU
+        run: python desktop/packaging/ci_run.py gallery python desktop/packaging/capture_gallery.py --output desktop/.artifacts/gallery/${{ matrix.target }} --source "${{ env.DKORD_SOURCE_SHA }}" --target ${{ matrix.target }}
+      - name: Upload original native gallery PNGs and source runtime hash proof
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-gallery-${{ matrix.target }}
+          retention-days: 7
+          if-no-files-found: error
+          path: desktop/.artifacts/gallery/${{ matrix.target }}/
+
+  gallery-bundle:
+    name: Verify and assemble180 genuine native screenshots
+    needs: desktop
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      gallery_matrix: ${{ steps.gallery_transport.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: desktop-gallery-*
+          path: gallery-inputs
+      - name: Verify all six real runtimes and original PNG bytes before bundling
+        run: python3 desktop/packaging/gallery_proof.py --root gallery-inputs --output gallery-bundle --source "${{ github.event.pull_request.head.sha }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-complete-gallery
+          retention-days: 7
+          path: gallery-bundle/
+          if-no-files-found: error
+      - name: Prepare bounded transport of only verified public demo screenshots
+        id: gallery_transport
+        run: python3 -B .github/scripts/gallery_transport.py plan --archive gallery-bundle/Dkord-PC-screenshots-v0.10.2.zip --output gallery-transport --source "${{ github.event.pull_request.head.sha }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: v0.10.2-public-gallery-transport
+          retention-days: 7
+          path: gallery-transport/
+          if-no-files-found: error
+
+  screenshot-delivery:
+    name: Deliver actual PC screenshot chunk ${{ matrix.part }}
+    needs: gallery-bundle
+    if: needs.gallery-bundle.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix: ${{ fromJSON(needs.gallery-bundle.outputs.gallery_matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: v0.10.2-public-gallery-transport
+          path: gallery-transport
+      - name: Expose hash-bound original screenshot bytes batch 1 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 0
+      - name: Expose hash-bound original screenshot bytes batch 2 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 1
+      - name: Expose hash-bound original screenshot bytes batch 3 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 2
+      - name: Expose hash-bound original screenshot bytes batch 4 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 3
+      - name: Expose hash-bound original screenshot bytes batch 5 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 4
+      - name: Expose hash-bound original screenshot bytes batch 6 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 5

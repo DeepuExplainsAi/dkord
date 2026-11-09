@@ -1,0 +1,52 @@
+{
+  "format": 1,
+  "testOnly": true,
+  "generator": "Desktop room_protocol; random ephemeral TEST private identities discarded, PUBLIC vectors only",
+  "code": "HHRGTP3Q88",
+  "memberId": "39de68b72ef7bb4dcaf10bdcc854b4f1",
+  "state": {
+    "videoId": "abcdefghijk",
+    "title": "Song \"संगवारी\" 🎵",
+    "artist": "कलाकार",
+    "thumbnail": null,
+    "positionMs": 12345,
+    "playing": true,
+    "timestamp": 1794052800000,
+    "queue": [
+      {
+        "videoId": "lmnopqrstuv",
+        "title": "Next \\ song",
+        "artist": "Another artist",
+        "thumbnail": null
+      }
+    ],
+    "version": 1,
+    "authority": {
+      "room": "HHRGTP3Q88",
+      "publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEiTNWgDikqEh5da4PtwNZlTljEts0bHmdgjQCyL5GThbbFRfhgLH385no-TDuXLTM47t9ll8ZT0n7RhNWoscXbg",
+      "session": "2900476b9f8607c4fa5426cb636000e3",
+      "sequence": 1,
+      "signature": "MEQCIDrzBO2llV9F3pSWURt-Ct_JYdvTuM4UMYa5Y2ULUTm_AiA3Lbj3zDi_5ue3WnVqBnP0ryByFowQbKXcmS8njIAwzw"
+    }
+  },
+  "policy": {
+    "room": "HHRGTP3Q88",
+    "kind": "POLICY",
+    "publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEiTNWgDikqEh5da4PtwNZlTljEts0bHmdgjQCyL5GThbbFRfhgLH385no-TDuXLTM47t9ll8ZT0n7RhNWoscXbg",
+    "timestamp": 1794052800000,
+    "sequence": 2,
+    "session": "2900476b9f8607c4fa5426cb636000e3",
+    "name": "PC संगवारी 🎵",
+    "mode": "SELECTED",
+    "revision": 2,
+    "selected": [
+      "9c52d5d4d6502759316545e05123c5f7",
+      "1815a68ec65b8063e10e185fc6652a03"
+    ],
+    "snapshot": null,
+    "signature": "MEQCIB6GsPc4Qv4_Iua3dMdWJz-mlv02whmsSVR6KkccxDMTAiBPJmyjoe_9pD0-d9a5knIdpRKZdBMlCnU7DBZkoGEuDg",
+    "version": 1
+  },
+  "stateSigningBase64": "ZGtvcmQtcm9vbS1zdGF0ZS12MQp7ImFydGlzdCI6IuCkleCksuCkvuCkleCkvuCksCIsImF1dGhvcml0eSI6eyJwdWJsaWNLZXkiOiJNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUVpVE5XZ0Rpa3FFaDVkYTRQdHdOWmxUbGpFdHMwYkhtZGdqUUN5TDVHVGhiYkZSZmhnTEgzODVuby1URHVYTFRNNDd0OWxsOFpUMG43UmhOV29zY1hiZyIsInJvb20iOiJISFJHVFAzUTg4Iiwic2VxdWVuY2UiOjEsInNlc3Npb24iOiIyOTAwNDc2YjlmODYwN2M0ZmE1NDI2Y2I2MzYwMDBlMyIsInNpZ25hdHVyZSI6IiJ9LCJwbGF5aW5nIjp0cnVlLCJwb3NpdGlvbk1zIjoxMjM0NSwicXVldWUiOlt7ImFydGlzdCI6IkFub3RoZXIgYXJ0aXN0IiwidGh1bWJuYWlsIjpudWxsLCJ0aXRsZSI6Ik5leHQgXFwgc29uZyIsInZpZGVvSWQiOiJsbW5vcHFyc3R1diJ9XSwidGh1bWJuYWlsIjpudWxsLCJ0aW1lc3RhbXAiOjE3OTQwNTI4MDAwMDAsInRpdGxlIjoiU29uZyBcIuCkuOCkguCkl+CkteCkvuCksOClgFwiIPCfjrUiLCJ2ZXJzaW9uIjoxLCJ2aWRlb0lkIjoiYWJjZGVmZ2hpamsifQ==",
+  "policySigningBase64": "ZGtvcmQtcm9vbS1jb250cm9scy12MQp7ImtpbmQiOiJQT0xJQ1kiLCJtb2RlIjoiU0VMRUNURUQiLCJuYW1lIjoiUEMg4KS44KSC4KSX4KS14KS+4KSw4KWAIPCfjrUiLCJwdWJsaWNLZXkiOiJNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUVpVE5XZ0Rpa3FFaDVkYTRQdHdOWmxUbGpFdHMwYkhtZGdqUUN5TDVHVGhiYkZSZmhnTEgzODVuby1URHVYTFRNNDd0OWxsOFpUMG43UmhOV29zY1hiZyIsInJldmlzaW9uIjoyLCJyb29tIjoiSEhSR1RQM1E4OCIsInNlbGVjdGVkIjpbIjljNTJkNWQ0ZDY1MDI3NTkzMTY1NDVlMDUxMjNjNWY3IiwiMTgxNWE2OGVjNjViODA2M2UxMGUxODVmYzY2NTJhMDMiXSwic2VxdWVuY2UiOjIsInNlc3Npb24iOiIyOTAwNDc2YjlmODYwN2M0ZmE1NDI2Y2I2MzYwMDBlMyIsInNpZ25hdHVyZSI6IiIsInNuYXBzaG90IjpudWxsLCJ0aW1lc3RhbXAiOjE3OTQwNTI4MDAwMDAsInZlcnNpb24iOjF9"
+}

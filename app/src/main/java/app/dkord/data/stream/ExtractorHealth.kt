@@ -9,12 +9,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 
-/** Backs the "Update extractor / report broken" setting. */
+/** Playback health checks and local-only, redacted diagnostics. Never launches a browser. */
 object ExtractorHealth {
     const val BUNDLED_VERSION = "v0.26.5"
     const val RELEASES_API = "https://api.github.com/repos/TeamNewPipe/NewPipeExtractor/releases/latest"
-    const val RELEASES_PAGE = "https://github.com/TeamNewPipe/NewPipeExtractor/releases"
-    const val ISSUES_NEW = "https://github.com/DeepuExplainsAi/best-best/issues/new"
 
     /** Latest upstream tag, or null when offline. Dkord ships the extractor inside the APK, so "update" means a new app build. */
     suspend fun latestUpstream(): String? = withContext(Dispatchers.IO) {
@@ -24,6 +22,8 @@ object ExtractorHealth {
         }.onFailure { DebugLog.w("health", "update check failed: ${it.message}") }.getOrNull()
     }
 
+    private val address = Regex("https?://[^\\s<>]+", RegexOption.IGNORE_CASE)
+
     fun reportBody(deviceInfo: String): String =
-        "**App**: Dkord\n**Extractor (bundled)**: $BUNDLED_VERSION\n**Device**: $deviceInfo\n\n**Log (no secrets)**\n```\n${DebugLog.dump().takeLast(6000)}\n```"
+        "dKORD playback diagnostics\nPlayback engine: $BUNDLED_VERSION\nDevice: $deviceInfo\n\n${address.replace(DebugLog.dump(), "[network address]").takeLast(6000)}"
 }
