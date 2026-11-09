@@ -79,6 +79,10 @@ jobs:
         if: matrix.target == 'windows-x86'
         uses: msys2/setup-msys2@v2
         with:
+          # Reuse the official runner's existing shell instead of fetching an
+          # unrelated fresh MSYS2 installer (which can fail with upstream 504s).
+          release: false
+          msystem: MSYS
           update: false
           path-type: inherit
           install: make diffutils

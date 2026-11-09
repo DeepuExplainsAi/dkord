@@ -41,6 +41,14 @@ class DesktopX86Test(unittest.TestCase):
         for required in ('--toolchain=msvc','--arch=x86','--disable-network','--enable-protocol=file,pipe','--enable-bsf=av1_metadata','pcm_s16be','require_pe_architecture(binary,\'x86\')','COPYING.GPLv3'):
             self.assertIn(required,text)
         self.assertNotIn('ffmpeg-win32-v4.2.2.exe',text)
+    def test_win32_build_reuses_official_runner_msys_shell_without_a_mutable_installer_fetch(self):
+        workflow=(ROOT/'.github/workflows/validate-desktop.yml').read_text()
+        setup=workflow.split('- name: Provide MSYS2 make for the current x86 codec source build',1)[1].split('- name: Build a current genuine Win32 FFmpeg',1)[0]
+        for required in ("if: matrix.target == 'windows-x86'",'uses: msys2/setup-msys2@v2','release: false','msystem: MSYS','update: false','path-type: inherit','install: make diffutils'):
+            self.assertIn(required,setup)
+        self.assertNotIn('continue-on-error',setup)
+        self.assertIn('shell: msys2 {0}',workflow)
+        self.assertIn('python desktop/packaging/ci_run.py codec python desktop/packaging/build_ffmpeg_x86.py',workflow)
     def test_x86_shortcuts_and_install_payload_do_not_overwrite_existing_x64(self):
         text=(ROOT/'desktop/packaging/windows.iss').read_text()
         for expected in ('AppId=app.dkord.desktop.x86','AppId=app.dkord.desktop\n','Dkord-x86','ShortcutName "Dkord (32-bit)"','ShortcutName "Dkord"','ArchitecturesAllowed=x86compatible'):
