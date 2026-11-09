@@ -92,9 +92,7 @@ def verify_and_stage(root, output, sha, version):
         if (data.get('channel') != 'development-preview' or data.get('version') != version or data.get('target') != target
                 or data.get('source') != sha or data.get('trusted_signed_release') is not False or data.get('notarized') is not False):
             raise ValueError('Wrong source/version/target or misleading signing claim')
-        if tuple(map(int,version.split('.'))) >= (0,10,2):
-            verify_tests(proof,144,PARITY_CLASSES + ('YouTubeLinkTest','NativeLinkWidgetTest','NativeGalleryWidgetTest'))
-        elif tuple(map(int,version.split('.'))) >= (0,10,1):
+        if tuple(map(int,version.split('.'))) >= (0,10,1):
             evidence=data.get('installOver',{})
             if (evidence.get('format')!=1 or evidence.get('baselineTag')!='desktop-v0.10.0-preview.2'
                     or evidence.get('baselineSource')!='0d97e6413d999cdfbb562397cc230f1798f02606'
@@ -110,6 +108,20 @@ def verify_and_stage(root, output, sha, version):
                     raise ValueError('Wrong immutable baseline installer')
                 if any(entry.get('checks',{}).get(key) is not True for key in ('library','playlists','likes','history','settings','queue','privateDownload','deviceDownload','studioSources','studioClips','audioDecoded')):
                     raise ValueError('Incomplete actual frozen-client persistence/byte/native audio verification')
+        if tuple(map(int,version.split('.'))) >= (0,10,2):
+            via=data.get('installOver',{}).get('viaCurrent',{})
+            if (not isinstance(via,dict) or via.get('format')!=1 or via.get('baselineTag')!='v0.10.1'
+                    or via.get('baselineSource')!='e0e925a674f106f6291731f5b143d3800a476cd3' or via.get('version')!='0.10.1'
+                    or any(via.get(key) is not True for key in ('noUninstall','noDataReset','frozenClient'))):
+                raise ValueError('Current public0.10.1 ->new install-over with no data reset is required')
+            entries=via.get('packages',[])
+            if len(entries)!=len(KINDS[target]) or {entry.get('kind') for entry in entries}!=set(KINDS[target]):
+                raise ValueError('Current public install-over must exercise every installed package kind')
+            for entry in entries:
+                if (entry.get('baselineName')!=f'Dkord-desktop-v0.10.1-{target}.{entry["kind"]}'
+                        or not re.fullmatch('[a-f0-9]{64}',entry.get('baselineSha256',''))
+                        or any(entry.get('checks',{}).get(key) is not True for key in ('library','playlists','likes','history','settings','queue','privateDownload','deviceDownload','studioSources','studioClips','audioDecoded'))):
+                    raise ValueError('Incomplete current public frozen-client data/audio preservation proof')
         runtime=data.get('runtime',{})
         x86=target=='windows-x86'
         if (runtime.get('python_bits')!=(32 if x86 else 64) or runtime.get('qt_binding')!=('PyQt5' if x86 else 'PyQt6')

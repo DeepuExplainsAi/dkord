@@ -71,6 +71,22 @@ class NativeGalleryGuardTest(unittest.TestCase):
         with self.assertRaises(FileExistsError): self.bundle()
         self.assertEqual(original, archive.read_bytes())
 
+    def test_original_archive_and_public_json_reverify_every_png_runtime_and_viewer(self):
+        archive=self.bundle();manifest=self.output/f'Dkord-PC-screenshots-v{gallery.__version__}.json'
+        self.assertEqual(180,gallery.verify_archive(archive,self.source,manifest_path=manifest)['screenCount'])
+        manifest.write_text('{}')
+        with self.assertRaises(ValueError):gallery.verify_archive(archive,self.source,manifest_path=manifest)
+
+    def test_archive_does_not_accept_injected_viewer_or_duplicate_or_traversal_members(self):
+        archive=self.bundle();bad=self.root/'bad.zip'
+        with zipfile.ZipFile(archive) as original:
+            for change in ('viewer','traversal'):
+                with zipfile.ZipFile(bad,'w') as out:
+                    for name in original.namelist():
+                        out.writestr(name,b'INJECTED VIEWER' if name=='index.html' and change=='viewer' else original.read(name))
+                    if change=='traversal':out.writestr('../outside.txt',b'UNAPPROVED')
+                with self.subTest(change=change),self.assertRaises(ValueError):gallery.verify_archive(bad,self.source)
+
     def test_wrong_source_bitness_binding_frozen_or_fixture_claims_cannot_pass(self):
         for key, value in (('source','8'*40), ('python_bits',64), ('qt_binding','PyQt6'), ('qt_version','6.10.2'),
                            ('frozen',False), ('liveProviderTested',True), ('heardAudioTested',True), ('userDataAccessed',True), ('data','live successful results')):
@@ -116,9 +132,10 @@ class NativeGalleryGuardTest(unittest.TestCase):
 
     def test_signed_release_requires_fresh_gallery_baseline_and_no_historical_route_reuse(self):
         workflow = (ROOT / '.github/workflows/release-v0102.yml').read_text()
-        for requirement in ('v0.10.2.json', 'CODE', 'gallery_proof.py', 'v0.10.1', '--target-code 16', 'desktop-gallery-*', 'test "${#assets[@]}" -eq 22'):
-            if requirement == 'CODE': continue
+        for requirement in ('v0.10.2.json', 'gallery_proof.py', 'v0.10.1', '--target-code 16', 'desktop-complete-gallery', 'test "${#assets[@]}" -eq 22'):
             self.assertIn(requirement, workflow)
+        native=(ROOT/'.github/workflows/validate-desktop.yml').read_text()
+        self.assertIn('desktop-gallery-*',native);self.assertIn('gallery_transport.py plan',native)
         self.assertLess(workflow.index('gallery_proof.py'), workflow.index('gh release create'))
         self.assertLess(workflow.index('verify_android_install_over.py'), workflow.index('gh release create'))
         self.assertNotIn('continue-on-error', workflow)

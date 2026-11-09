@@ -41,23 +41,44 @@ class NativeReleaseProofTest(unittest.TestCase):
     def save(self,target,data):
         (self.root/('desktop-preview-'+target)/f'preview-{target}.json').write_text(json.dumps(data))
     def verify(self):return verify_and_stage(self.root,self.output,self.sha,self.version)
-    def current_fixture(self):
+    def current_fixture(self,version='0.10.1'):
         # Synthetic validation envelope only, NOT real installer evidence. Real
         # installers run on all six native hosts before release promotion.
-        self.version='0.10.1'
+        self.version=version
         for target in TARGETS:
             data=self.manifest(target);data['version']=self.version
             for entry in data['artifacts']:
-                old=entry['name'];entry['name']=old.replace('v0.10.0-','v0.10.1-')
+                old=entry['name'];entry['name']=old.replace('v0.10.0-',f'v{self.version}-')
                 (self.folder(target)/old).rename(self.folder(target)/entry['name'])
             checks={name:True for name in ('library','playlists','likes','history','settings','queue','privateDownload','deviceDownload','studioSources','studioClips','audioDecoded')}
             data['installOver']=dict(format=1,baselineTag='desktop-v0.10.0-preview.2',baselineSource='0d97e6413d999cdfbb562397cc230f1798f02606',toVersion=self.version,
                                      target=target,source=self.sha,noUninstall=True,standardUserData=True,frozenClient=True,
                                      packages=[dict(kind=kind,baselineName=f'Dkord-desktop-v0.10.0-{target}.{kind}',baselineSha256='1'*64,checks=checks) for kind in KINDS[target]])
+            if self.version=='0.10.2':
+                data['installOver']['viaCurrent']=dict(format=1,baselineTag='v0.10.1',baselineSource='e0e925a674f106f6291731f5b143d3800a476cd3',version='0.10.1',
+                    noUninstall=True,noDataReset=True,frozenClient=True,
+                    packages=[dict(kind=kind,baselineName=f'Dkord-desktop-v0.10.1-{target}.{kind}',baselineSha256='2'*64,checks=checks) for kind in KINDS[target]])
             self.save(target,data)
-            names=list(PARITY_CLASSES)+['CoreTest']*(121-len(PARITY_CLASSES))
+            required=list(PARITY_CLASSES)+(['YouTubeLinkTest','NativeLinkWidgetTest','NativeGalleryWidgetTest'] if self.version=='0.10.2' else [])
+            total=144 if self.version=='0.10.2' else 121
+            names=required+['CoreTest']*(total-len(required))
             cases=''.join(f'<testcase classname="desktop.tests.{name}" name="synthetic{i}"/>' for i,name in enumerate(names))
-            (self.folder(target)/'test-results.xml').write_text('<testsuites><testsuite tests="121" failures="0" errors="0" skipped="0">'+cases+'</testsuite></testsuites>')
+            (self.folder(target)/'test-results.xml').write_text(f'<testsuites><testsuite tests="{total}" failures="0" errors="0" skipped="0">'+cases+'</testsuite></testsuites>')
+    def test_exact_link_update_requires_all144_cases_original_seed_and_current_public_install_over(self):
+        self.current_fixture('0.10.2');self.assertEqual(14,len(self.verify()))
+    def test_exact_link_update_cannot_omit_current_baseline_or_reset_data(self):
+        self.current_fixture('0.10.2');original=self.manifest();via=original['installOver']['viaCurrent']
+        for value in ({},via|{'noDataReset':False},via|{'baselineTag':'untrusted'},via|{'packages':[]}):
+            broken=json.loads(json.dumps(original));broken['installOver']['viaCurrent']=value;self.save('windows-x64',broken)
+            with self.subTest(value=value),self.assertRaises(ValueError):self.verify()
+    def test_exact_link_update_must_keep_original_install_over_and_new_feature_case_classes(self):
+        self.current_fixture('0.10.2');original=self.manifest();broken=json.loads(json.dumps(original))
+        broken['installOver']['noUninstall']=False;self.save('windows-x64',broken)
+        with self.assertRaises(ValueError):self.verify()
+        self.save('windows-x64',original);path=self.folder()/'test-results.xml';xml=path.read_text()
+        for cls in ('YouTubeLinkTest','NativeLinkWidgetTest','NativeGalleryWidgetTest'):
+            path.write_text(xml.replace(cls,'MissingRequiredClass'))
+            with self.subTest(cls=cls),self.assertRaises(ValueError):self.verify()
     def test_current_release_requires_actual_new_minimum_classes_and_all_data_categories(self):
         self.current_fixture();files=self.verify();self.assertEqual(14,len(files))
     def test_old_36_case_execution_cannot_be_promoted_as_the_new_release(self):

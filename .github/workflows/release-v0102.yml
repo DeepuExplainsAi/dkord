@@ -18,8 +18,6 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       TAG: v0.10.2
-    outputs:
-      gallery_matrix: ${{ steps.gallery_transport.outputs.matrix }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -64,8 +62,9 @@ jobs:
             "$RUNNER_TEMP/windows-captures/windows-x86-screenshot-proof.json" "$RUNNER_TEMP/release-assets/"
       - name: Verify all180 actual native screenshots and stage the complete offline gallery
         run: |
-          gh run download "$NATIVE_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'desktop-gallery-*' --dir "$RUNNER_TEMP/gallery-inputs"
-          python3 desktop/packaging/gallery_proof.py --root "$RUNNER_TEMP/gallery-inputs" --output "$RUNNER_TEMP/release-assets" --source "$GITHUB_SHA" --version 0.10.2
+          gh run download "$NATIVE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name desktop-complete-gallery --dir "$RUNNER_TEMP/gallery-bundle"
+          python3 desktop/packaging/gallery_proof.py --archive "$RUNNER_TEMP/gallery-bundle/Dkord-PC-screenshots-v0.10.2.zip" --manifest "$RUNNER_TEMP/gallery-bundle/Dkord-PC-screenshots-v0.10.2.json" --source "$GITHUB_SHA" --version 0.10.2
+          cp -- "$RUNNER_TEMP/gallery-bundle/"* "$RUNNER_TEMP/release-assets/"
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -176,45 +175,3 @@ jobs:
             ${{ runner.temp }}/release-assets/SHA256SUMS
             ${{ runner.temp }}/release-assets/Dkord-desktop-v0.10.2-manifest.json
             app/build/test-results/testDebugUnitTest/
-      - name: Prepare bounded transport of only the verified public screenshot archive
-        id: gallery_transport
-        run: python3 -B .github/scripts/gallery_transport.py plan --archive "$RUNNER_TEMP/release-assets/Dkord-PC-screenshots-v0.10.2.zip" --output "$RUNNER_TEMP/gallery-transport" --source "$GITHUB_SHA"
-      - name: Upload public screenshot chunks for read-only workspace delivery
-        uses: actions/upload-artifact@v7
-        with:
-          name: v0.10.2-public-gallery-transport
-          retention-days: 7
-          path: ${{ runner.temp }}/gallery-transport/
-          if-no-files-found: error
-
-  screenshot-delivery:
-    name: Deliver actual PC screenshot chunk ${{ matrix.part }}
-    needs: publish
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      max-parallel: 10
-      matrix: ${{ fromJSON(needs.publish.outputs.gallery_matrix) }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@v8
-        with:
-          name: v0.10.2-public-gallery-transport
-          path: gallery-transport
-      - name: Expose hash-bound original screenshot bytes batch 1 of6
-        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 0
-      - name: Expose hash-bound original screenshot bytes batch 2 of6
-        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 1
-      - name: Expose hash-bound original screenshot bytes batch 3 of6
-        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 2
-      - name: Expose hash-bound original screenshot bytes batch 4 of6
-        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 3
-      - name: Expose hash-bound original screenshot bytes batch 5 of6
-        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 4
-      - name: Expose hash-bound original screenshot bytes batch 6 of6
-        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 5

@@ -142,6 +142,9 @@ def capture_gallery(app, output: Path):
                 try:
                     if not isinstance(dialog, QDialog):
                         raise ValueError('Expected the real production modal dialog')
+                    # Use a readable real dialog size, including intrinsically
+                    # narrow sleep/chooser forms. This resizes widgets, not pixels.
+                    dialog.resize(max(480, dialog.width()), max(320, dialog.height()))
                     if setup:
                         setup(dialog)
                     shot(name, title, dialog)

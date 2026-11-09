@@ -1,8 +1,9 @@
 # Extensive native PC screenshots — v0.10.2 preparation
 
 The requested gallery captures **30 production pages/dialogs/theme states on each
-of six genuine frozen OS/CPU builds**, for180 original PNGs. This preparation
-has not yet earned fresh CI/release proof; do not infer a pass from the intended
+of six genuine frozen OS/CPU builds**, for180 original PNGs. The initial run exercised the30 screens but failed a new gallery-dimension
+check; QA dialogs are now resized as actual widgets to readable dimensions. The
+corrected preparation has not yet earned fresh CI/release proof; do not infer a pass from the intended
 count or reuse old v0.10.1 pictures as proof of the new link page.
 
 Targets: Windows x64 and genuine x86/32-bit; macOS Intel and Apple Silicon;

@@ -19,6 +19,7 @@ on:
       - '.github/scripts/test_desktop_contracts.py'
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: pr-desktop-${{ github.event.pull_request.number }}
   # Finish an already-running native/x86 build; retain only the latest pending head.
@@ -193,3 +194,71 @@ jobs:
           retention-days: 7
           if-no-files-found: error
           path: desktop/.artifacts/gallery/${{ matrix.target }}/
+
+  gallery-bundle:
+    name: Verify and assemble180 genuine native screenshots
+    needs: desktop
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      gallery_matrix: ${{ steps.gallery_transport.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: desktop-gallery-*
+          path: gallery-inputs
+      - name: Verify all six real runtimes and original PNG bytes before bundling
+        run: python3 desktop/packaging/gallery_proof.py --root gallery-inputs --output gallery-bundle --source "${{ github.event.pull_request.head.sha }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-complete-gallery
+          retention-days: 7
+          path: gallery-bundle/
+          if-no-files-found: error
+      - name: Prepare bounded transport of only verified public demo screenshots
+        id: gallery_transport
+        run: python3 -B .github/scripts/gallery_transport.py plan --archive gallery-bundle/Dkord-PC-screenshots-v0.10.2.zip --output gallery-transport --source "${{ github.event.pull_request.head.sha }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: v0.10.2-public-gallery-transport
+          retention-days: 7
+          path: gallery-transport/
+          if-no-files-found: error
+
+  screenshot-delivery:
+    name: Deliver actual PC screenshot chunk ${{ matrix.part }}
+    needs: gallery-bundle
+    if: needs.gallery-bundle.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix: ${{ fromJSON(needs.gallery-bundle.outputs.gallery_matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: v0.10.2-public-gallery-transport
+          path: gallery-transport
+      - name: Expose hash-bound original screenshot bytes batch 1 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 0
+      - name: Expose hash-bound original screenshot bytes batch 2 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 1
+      - name: Expose hash-bound original screenshot bytes batch 3 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 2
+      - name: Expose hash-bound original screenshot bytes batch 4 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 3
+      - name: Expose hash-bound original screenshot bytes batch 5 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 4
+      - name: Expose hash-bound original screenshot bytes batch 6 of6
+        run: python3 -B .github/scripts/gallery_transport.py emit --folder gallery-transport --part "${{ matrix.part }}" --batch 5
