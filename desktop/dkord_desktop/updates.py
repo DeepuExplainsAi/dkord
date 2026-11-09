@@ -18,7 +18,6 @@ from cryptography.hazmat.primitives.asymmetric import rsa, ec, padding
 from cryptography.hazmat.primitives import hashes, serialization
 
 from . import __version__
-from .media import check_cancel
 from .platforms import platform_key, TARGETS
 
 REPO = "DeepuExplainsAi/dkord"
@@ -215,6 +214,7 @@ class Updater:
             raise ValueError("Update plan no longer matches a newer trusted manifest")
 
     def download(self, update: Update, event, progress=lambda done, total: None) -> Path:
+        from .media import check_cancel  # release signature verification needs no media runtime
         self.verify_plan(update)
         if update.platform != platform_key():
             raise ValueError("This update is not for the running application's OS/CPU")

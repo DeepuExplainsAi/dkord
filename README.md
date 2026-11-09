@@ -9,6 +9,16 @@
 
 **Dkord is a music-first YouTube / YouTube Music client and audio editor.** Discover a particular song/version, keep a local listening library, or turn selected audio into a real playable mix. Android playback, extraction and editing run on the device; optional Listen Together rooms use a public relay. Not affiliated with Google or YouTube.
 
+## Next update: Android + PC 0.10.1
+
+A fresh common release is being validated on the assigned branch: the responsive
+phone-derived PC interface, discoverable global Listen Together, local-only
+playback diagnostics and concise **© 2026 dKORD** About. It preserves the existing
+APK signing identity and user-data locations. Publication is gated on Android and
+all six native profiles, genuine frozen Windows32 captures, actual old-to-new
+installer fixtures, and an original-identity signed PC update manifest. Existing
+releases below are preserved. [PC scope, install-over and acceptance limits](desktop/README.md).
+
 ## What is available now?
 
 | Platform / track | Availability | What to expect |

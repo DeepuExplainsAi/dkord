@@ -5,7 +5,7 @@ from pathlib import Path
 import struct
 import tempfile
 import unittest
-from verify_desktop_release_artifacts import TARGETS,KINDS,digest,verify_and_stage
+from verify_desktop_release_artifacts import TARGETS,KINDS,PARITY_CLASSES,digest,verify_and_stage
 
 class NativeReleaseProofTest(unittest.TestCase):
     def setUp(self):
@@ -41,6 +41,46 @@ class NativeReleaseProofTest(unittest.TestCase):
     def save(self,target,data):
         (self.root/('desktop-preview-'+target)/f'preview-{target}.json').write_text(json.dumps(data))
     def verify(self):return verify_and_stage(self.root,self.output,self.sha,self.version)
+    def current_fixture(self):
+        # Synthetic validation envelope only, NOT real installer evidence. Real
+        # installers run on all six native hosts before release promotion.
+        self.version='0.10.1'
+        for target in TARGETS:
+            data=self.manifest(target);data['version']=self.version
+            for entry in data['artifacts']:
+                old=entry['name'];entry['name']=old.replace('v0.10.0-','v0.10.1-')
+                (self.folder(target)/old).rename(self.folder(target)/entry['name'])
+            checks={name:True for name in ('library','playlists','likes','history','settings','queue','privateDownload','deviceDownload','studioSources','studioClips','audioDecoded')}
+            data['installOver']=dict(format=1,baselineTag='desktop-v0.10.0-preview.2',baselineSource='0d97e6413d999cdfbb562397cc230f1798f02606',toVersion=self.version,
+                                     target=target,source=self.sha,noUninstall=True,standardUserData=True,frozenClient=True,
+                                     packages=[dict(kind=kind,baselineName=f'Dkord-desktop-v0.10.0-{target}.{kind}',baselineSha256='1'*64,checks=checks) for kind in KINDS[target]])
+            self.save(target,data)
+            names=list(PARITY_CLASSES)+['CoreTest']*(120-len(PARITY_CLASSES))
+            cases=''.join(f'<testcase classname="desktop.tests.{name}" name="synthetic{i}"/>' for i,name in enumerate(names))
+            (self.folder(target)/'test-results.xml').write_text('<testsuites><testsuite tests="120" failures="0" errors="0" skipped="0">'+cases+'</testsuite></testsuites>')
+    def test_current_release_requires_actual_new_minimum_classes_and_all_data_categories(self):
+        self.current_fixture();files=self.verify();self.assertEqual(14,len(files))
+    def test_old_36_case_execution_cannot_be_promoted_as_the_new_release(self):
+        previous=(self.folder()/'test-results.xml').read_text();self.current_fixture()
+        (self.folder()/'test-results.xml').write_text(previous)
+        with self.assertRaises(ValueError):self.verify()
+    def test_new_cases_without_signature_or_installer_regression_class_are_rejected(self):
+        self.current_fixture();path=self.folder()/'test-results.xml';original=path.read_text()
+        for name in ('ManifestSignerTest','UpgradeFixtureTest','NativeWidgetTest'):
+            path.write_text(original.replace(name,'NotRequiredClass'))
+            with self.subTest(name=name),self.assertRaises(ValueError):self.verify()
+    def test_new_release_cannot_omit_install_over_or_claim_a_missing_persisted_category(self):
+        self.current_fixture();original=self.manifest()
+        for value in ({},original['installOver']|{'noUninstall':False},original['installOver']|{'source':'1'*40}):
+            self.save('windows-x64',original|{'installOver':value})
+            with self.assertRaises(ValueError):self.verify()
+        broken=json.loads(json.dumps(original));broken['installOver']['packages'][0]['checks']['privateDownload']=False
+        self.save('windows-x64',broken)
+        with self.assertRaises(ValueError):self.verify()
+    def test_linux_must_really_update_both_deb_and_appimage(self):
+        self.current_fixture();data=self.manifest('linux-arm64');data['installOver']['packages']=data['installOver']['packages'][:1]
+        self.save('linux-arm64',data)
+        with self.assertRaises(ValueError):self.verify()
     def test_all_six_targets_stage_eight_packages_and_six_honest_preview_manifests(self):
         files=self.verify();self.assertEqual(14,len(files));self.assertEqual(8,sum(p.suffix in ('.exe','.pkg','.deb','.AppImage') for p in files))
         self.assertEqual(6,sum(p.suffix=='.json' for p in files))

@@ -27,6 +27,7 @@ def main():
     parser.add_argument("--data-dir",type=Path,help="Developer/test user-data directory; normal installations use the stable per-user path")
     parser.add_argument("--self-test",action="store_true",help="Run actual native codec/renderer/widget smoke checks without any external provider")
     parser.add_argument("--capture-ui",type=Path,help="Capture the actual window using isolated generated audio, never normal user data")
+    parser.add_argument("--verify-upgrade-fixture",type=Path,help="Verify an existing isolated installer QA seed without resetting data; refuse normal libraries")
     args=parser.parse_args()
     from .qt import QLockFile, QApplication, QMessageBox, Qt, BINDING
     from platformdirs import user_data_path
@@ -42,6 +43,9 @@ def main():
         from .selftest import run
         return run(app)
     root=args.data_dir or user_data_path("Dkord","Dkord",roaming=False)
+    if args.verify_upgrade_fixture:
+        from .upgrade_fixture import run_probe
+        return run_probe(root,args.verify_upgrade_fixture)
     root.mkdir(parents=True,exist_ok=True)
     lock=QLockFile(str(root/"application.lock"));lock.setStaleLockTime(0)
     if not lock.tryLock(0):

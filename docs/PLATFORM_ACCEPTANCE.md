@@ -1,3 +1,27 @@
+# Current 0.10.1 acceptance gates
+
+The checks below retain historical receipts/physical checklists. For the new
+release, executable gates now require **120 cases across13 native classes**, all
+six genuine OS/CPU profiles and no skips/failures, Android unit +43 emulator
+regressions (including the two JVM room interop vectors), current frozen Win32
+screenshots and real install-over fixture execution. Counts must come from actual
+JUnit reports, not this document. Signing is the original published Android
+identity; its format2 domain-separated manifest is independent of OS
+Authenticode/Developer ID/notarization, which remain unconfigured.
+
+Every native host must install the immutable Preview2 package, then install the
+new package **over** it and have its installed frozen executable verify/restore
+standard-path seeded library/settings/queue/download/Studio bytes. Both Linux
+package kinds are tested. The release-only Android emulator seeds the actual
+original-key code14 app, installs code15 with `-r`, and reads the real Room,
+preferences, queue, private+MediaStore audio and Studio sources through the new
+app with the same package UID. These virtual-host fixtures do not tick any
+physical-device, heard-audio or live-provider box below. The initial old empty-root
+PC preview still needs a one-time manual install-over; subsequent common releases
+can be attested to the pinned original identity. No replacement key/data reset.
+
+---
+
 # New storage, online Studio and desktop acceptance — not an executed phone/install report
 
 Android0.10.0/code14 is [published](https://github.com/DeepuExplainsAi/dkord/releases/tag/v0.10.0); [exact publication/CI/hash receipt](releases/v0.10.0-publication.md). Windows/macOS/Linux installers there are explicitly development previews. Previous0.9.1 and older assets remain untouched (no overwrite/tag reset). Do **not** uninstall, reset, clear data or replace the original signing key to test an upgrade. Native desktop preview is not a finished/trusted Android-parity release. Record actual device/OS/version/results separately; fixture/native CI and packaging proof are not install-over, OEM, live-provider or signing/notarization acceptance.

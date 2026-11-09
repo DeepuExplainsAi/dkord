@@ -9,7 +9,7 @@ import struct
 import xml.etree.ElementTree as ET
 
 TARGETS = ('windows-x64', 'windows-x86', 'macos-x64', 'macos-arm64', 'linux-x64', 'linux-arm64')
-PARITY_CLASSES = ('CoreTest','UpdateTest','NativeWidgetTest','RoomProtocolTest','LyricsTest','PhoneContractTest','NewReleasesTest','DiagnosticsTest','ModernUpdateIdentityTest','PublicUpdateIdentityTest','CatalogueTest')
+PARITY_CLASSES = ('CoreTest','UpdateTest','NativeWidgetTest','RoomProtocolTest','LyricsTest','PhoneContractTest','NewReleasesTest','DiagnosticsTest','ModernUpdateIdentityTest','PublicUpdateIdentityTest','CatalogueTest','ManifestSignerTest','UpgradeFixtureTest')
 KINDS = {'windows-x64': ('exe',), 'windows-x86': ('exe',), 'macos-x64': ('pkg',), 'macos-arm64': ('pkg',),
          'linux-x64': ('deb', 'AppImage'), 'linux-arm64': ('deb', 'AppImage')}
 
@@ -92,6 +92,22 @@ def verify_and_stage(root, output, sha, version):
         if (data.get('channel') != 'development-preview' or data.get('version') != version or data.get('target') != target
                 or data.get('source') != sha or data.get('trusted_signed_release') is not False or data.get('notarized') is not False):
             raise ValueError('Wrong source/version/target or misleading signing claim')
+        if tuple(map(int,version.split('.'))) >= (0,10,1):
+            evidence=data.get('installOver',{})
+            if (evidence.get('format')!=1 or evidence.get('baselineTag')!='desktop-v0.10.0-preview.2'
+                    or evidence.get('baselineSource')!='0d97e6413d999cdfbb562397cc230f1798f02606'
+                    or evidence.get('toVersion')!=version or evidence.get('target')!=target or evidence.get('source')!=sha
+                    or any(evidence.get(key) is not True for key in ('noUninstall','standardUserData','frozenClient'))):
+                raise ValueError('Missing actual old-to-new installer and frozen-client data preservation proof')
+            packages=evidence.get('packages',[])
+            kinds=KINDS[target]
+            if len(packages)!=len(kinds) or {entry.get('kind') for entry in packages}!=set(kinds):
+                raise ValueError('Every installed package kind must be exercised, including both Linux kinds')
+            for entry in packages:
+                if entry.get('baselineName')!=f'Dkord-desktop-v0.10.0-{target}.{entry["kind"]}' or not re.fullmatch('[a-f0-9]{64}',entry.get('baselineSha256','')):
+                    raise ValueError('Wrong immutable baseline installer')
+                if any(entry.get('checks',{}).get(key) is not True for key in ('library','playlists','likes','history','settings','queue','privateDownload','deviceDownload','studioSources','studioClips','audioDecoded')):
+                    raise ValueError('Incomplete actual frozen-client persistence/byte/native audio verification')
         runtime=data.get('runtime',{})
         x86=target=='windows-x86'
         if (runtime.get('python_bits')!=(32 if x86 else 64) or runtime.get('qt_binding')!=('PyQt5' if x86 else 'PyQt6')
@@ -115,7 +131,7 @@ def verify_and_stage(root, output, sha, version):
         if proof.is_symlink() or not proof.is_file() or proof.stat().st_size > 4 * 1024 * 1024:
             raise ValueError('Missing/bounded native JUnit proof')
         if tuple(map(int,version.split('.'))) >= (0,10,1):
-            verify_tests(proof,113,PARITY_CLASSES)
+            verify_tests(proof,120,PARITY_CLASSES)
         else:
             verify_tests(proof)
         expected = {f'Dkord-desktop-v{version}-{target}.{kind}': kind for kind in KINDS[target]}
@@ -155,7 +171,8 @@ def main():
     parser.add_argument('--version', required=True)
     args = parser.parse_args()
     paths = verify_and_stage(args.root, args.output, args.sha, args.version)
-    print(f'::notice title=Native preview release proof::{len(paths)} native preview files verified for {args.sha}: all6 targets, hashes, formats and actual36-case/all3-class proof. These are NOT trusted signed/notarized releases.')
+    minimum=120 if tuple(map(int,args.version.split('.'))) >= (0,10,1) else 36
+    print(f'::notice title=Native build release proof::{len(paths)} native files verified for {args.sha}: all6 targets, hashes, formats and actual minimum {minimum}-case proof. Build-stage artifacts require separate owner manifest attestation; no OS signing/notarization is claimed.')
 
 if __name__ == '__main__':
     main()

@@ -1,6 +1,4 @@
-"""Phone-owned presentation contract, consumed by both Qt6 and real Win32 Qt5.QLabel {{ background: transparent; }}
-QPushButton[iconOnly="true"] {{ padding: 0; min-width: 0; }}
-"""
+"""Phone-owned presentation contract, consumed by both Qt6 and real Win32 Qt5."""
 from __future__ import annotations
 from functools import lru_cache
 import json
@@ -84,4 +82,6 @@ QDockWidget::title {{ background:{p['surfaceContainer']}; padding:10px; font-wei
 QMenu {{ border:1px solid {p['outline']}; padding:6px; }} QMenu::item {{ padding:10px 18px; }} QMenu::item:selected {{ background:{p['surfaceVariant']}; }}
 QToolTip {{ background:{p['surfaceContainerHighest']}; color:{p['onSurface']}; border:1px solid {p['outline']}; }}
 QStatusBar {{ color:{p['onSurfaceVariant']}; font-size:12px; }}
+QLabel {{ background: transparent; }}
+QPushButton[iconOnly="true"] {{ padding: 0; min-width: 0; }}
 '''

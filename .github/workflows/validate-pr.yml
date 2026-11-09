@@ -16,7 +16,7 @@ concurrency:
 jobs:
   android:
     name: Android tests and APK compile
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
@@ -99,7 +99,7 @@ jobs:
 
   keyboard-layout:
     name: Android keyboard and real audio tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
@@ -110,6 +110,8 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v6
+      - name: Build device test APKs before starting the memory-heavy emulator
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --no-parallel --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8' --stacktrace
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -125,9 +127,10 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
+            export GRADLE_OPTS='-Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8"'
             bash .github/scripts/prepare_emulator_ime.sh
             bash .github/scripts/prepare_emulator_home.sh
-            bash -o pipefail -c './gradlew connectedDebugAndroidTest --stacktrace 2>&1 | tee -a "$RUNNER_TEMP/dkord-device-build.log"'
+            bash -o pipefail -c './gradlew connectedDebugAndroidTest --stacktrace --no-parallel --max-workers=2 2>&1 | tee -a "$RUNNER_TEMP/dkord-device-build.log"'
       - name: Surface Android device-build diagnostics
         if: always()
         run: python3 -B .github/scripts/annotate_android_build.py "$RUNNER_TEMP/dkord-device-build.log"
@@ -146,6 +149,7 @@ jobs:
           --required-class app.dkord.StudioSongPickerTest
           --required-class app.dkord.RoomCoHostTest
           --required-class app.dkord.AppPresentationTest
+          --required-class app.dkord.InstallOverPersistenceTest
       - name: Upload Android device-test reports
         if: always()
         uses: actions/upload-artifact@v7

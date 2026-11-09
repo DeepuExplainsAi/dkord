@@ -206,7 +206,8 @@ class NativeWidgetTest(unittest.TestCase):
         self.window.select_release('CHOLIWOOD',True);self.wait(lambda:self.window.release_tracks is not None)
         self.window.select_release('LAST_24_HOURS');self.wait(lambda:self.window.release_tracks is not None)
         self.assertEqual(('LAST_24_HOURS','CHOLIWOOD',False),repository.calls[-1])
-        buttons=self.window.findChildren(QPushButton,'release-choliwood');self.assertTrue(any(b.isVisible() and b.isChecked() for b in buttons))
+        # A queued result rebuilds QWidget children; let the actual new panel finish showing.
+        self.wait(lambda:any(b.isVisible() and b.isChecked() for b in self.window.findChildren(QPushButton,'release-choliwood')))
         self.assertEqual('Home',self.window.page);self.assertEqual([],self.provider.calls)
         self.window.new_releases_page();self.assertFalse(self.window.release_expanded)
 

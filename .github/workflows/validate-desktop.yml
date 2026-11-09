@@ -107,10 +107,10 @@ jobs:
           import xml.etree.ElementTree as ET
           root = ET.parse('desktop/.artifacts/test-results.xml').getroot()
           cases = root.findall('.//testcase')
-          for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest', 'RoomProtocolTest', 'LyricsTest', 'PhoneContractTest', 'NewReleasesTest', 'DiagnosticsTest', 'ModernUpdateIdentityTest', 'PublicUpdateIdentityTest', 'CatalogueTest'):
+          for cls in ('CoreTest', 'UpdateTest', 'NativeWidgetTest', 'RoomProtocolTest', 'LyricsTest', 'PhoneContractTest', 'NewReleasesTest', 'DiagnosticsTest', 'ModernUpdateIdentityTest', 'PublicUpdateIdentityTest', 'CatalogueTest', 'ManifestSignerTest', 'UpgradeFixtureTest'):
               assert any(cls in c.attrib.get('classname', '') for c in cases), f'Missing {cls}'
           assert len(cases) >= 36, f'Only {len(cases)} desktop cases'
-          assert len(cases) >= 113, f'New phone/desktop parity regressions missing: {len(cases)} cases'
+          assert len(cases) >= 120, f'New phone/desktop parity regressions missing: {len(cases)} cases'
           for case in cases:
               for marker in ('failure','error','skipped'):
                   error=case.find(marker)
@@ -124,6 +124,8 @@ jobs:
       - name: Native app entry-point smoke
         run: python desktop/packaging/ci_run.py entry python -m dkord_desktop --self-test
       - name: Build and execute the real native package
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: python desktop/packaging/ci_run.py package python desktop/packaging/build.py --target ${{ matrix.target }}
       - name: Upload development packages, hashes and test proof (not a signed public release)
         if: always()

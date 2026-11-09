@@ -11,7 +11,7 @@ bottom navigation. This is a real Qt application, not an APK, website or mockup.
 
 This version is being prepared for the requested **Android + PC release**. Release
 publication requires passing exact-source Android tests, six native OS/CPU builds,
-actual frozen Windows32 captures and the original Android signing identity. The
+actual frozen Windows32 captures, real old-to-new installer fixture checks and the original Android signing identity. The
 release page is [Dkord releases](https://github.com/DeepuExplainsAi/dkord/releases).
 Historical v0.10.0 and Desktop Preview2 assets are preserved, not replaced.
 
@@ -106,6 +106,20 @@ python -m dkord_desktop --self-test
 python scripts/export_phone_contract.py --check
 python packaging/build.py --help
 ```
+
+Six-host CI installs the immutable Preview2 package, then installs the new
+package over it, without uninstalling. The new **installed frozen executable**
+reads the unchanged normal user-data path and verifies seeded settings, queue,
+likes/history/playlists, both download copies and Studio clip/source bytes, and
+decodes the preserved generated audio. Linux exercises **both** `.deb` and
+portable `.AppImage` replacement. These are disposable hosted-OS fixtures, not
+physical-user or live-provider acceptance.
+
+The release-only Android gate uses the original signed code14 APK, seeds its
+actual Room/settings/queue/private download/MediaStore/Studio data through the
+same signed instrumentation APK, performs `adb install -r` to code15, and verifies
+that the package UID and all those rows/files survive. It never clears data,
+uninstalls, hides failures or retries a failing case.
 
 Six-host PR CI is read-only: no signing secrets, release/tag writes or fake search
 results. It tests real Qt widgets/codecs, packages native binaries and captures

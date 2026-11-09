@@ -160,6 +160,8 @@ def main():
         require_pe_architecture(Path(ffmpeg_exe()),'x86' if WINDOWS_X86 else 'x64')
     preview={'channel':'development-preview','version':__version__,'target':args.target,'source':os.environ.get('DKORD_SOURCE_SHA','local'),
              'trusted_signed_release':False,'notarized':False,'artifacts':artifacts}
+    from install_over import verify_install_over
+    preview['installOver']=verify_install_over(args.target,[OUT/item['name'] for item in artifacts]) if os.environ.get('GITHUB_ACTIONS')=='true' else None
     preview['runtime']={'python_bits':struct.calcsize('P')*8,'qt_binding':BINDING,'qt_version':QtCore.QT_VERSION_STR,
                         'audio_probe':'ffmpeg' if WINDOWS_X86 else 'pyav'}
     if os.name=='nt':preview['runtime']['verified_pe_payloads']={'application':'x86' if WINDOWS_X86 else 'x64','node':'x86' if WINDOWS_X86 else 'x64','ffmpeg':'x86' if WINDOWS_X86 else 'x64'}
