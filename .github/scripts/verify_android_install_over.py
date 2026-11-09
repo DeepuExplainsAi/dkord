@@ -17,23 +17,45 @@ CLASS='app.dkord.InstallOverPersistenceTest'
 RUNNER='app.dkord.test/androidx.test.runner.AndroidJUnitRunner'
 
 
+def diagnostic(title,text):
+    # These commands run only in the disposable fixture after keystore removal.
+    # Keep the failing evidence visible via Checks without retrying/resetting data;
+    # each retained annotation is capped by GitHub at 4096 characters.
+    text=text[-14000:]
+    for index,start in enumerate(range(0,len(text),3500),1):
+        piece=text[start:start+3500].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+        print(f'::error title={title} part {index}::'+piece)
+
+
 def command(*args):
-    result=subprocess.run(['adb',*map(str,args)],check=True,text=True,capture_output=True,timeout=180)
+    try:
+        result=subprocess.run(['adb',*map(str,args)],check=True,text=True,capture_output=True,timeout=180)
+    except subprocess.CalledProcessError as error:
+        diagnostic('Android install-over adb failure',(error.stdout or '')+'\n'+(error.stderr or ''))
+        raise
     return result.stdout
 
 
 def package():
     value=command('shell','dumpsys','package','app.dkord')
     code=re.search(r'\bversionCode=(\d+)\b',value)
-    uid=re.search(r'\buserId=(\d+)\b',value)
-    if not code or not uid:raise ValueError('Installed app package/version/UID unavailable')
-    return int(code[1]),int(uid[1])
+    # dumpsys's userId/appId display label is not a stable UID interface. Ask the
+    # actual package manager for the installed owner-user UID, with exact package
+    # matching: the separately installed app.dkord.test must never satisfy this.
+    listing=command('shell','cmd','package','list','packages','-U','--user','0','app.dkord')
+    uids=re.findall(r'^package:app\.dkord\s+uid:([1-9]\d*)\s*$',listing,re.MULTILINE)
+    if not code or len(uids)!=1:
+        fields=[line for line in value.splitlines() if any(key in line for key in ('versionCode=','userId=','appId=','Package [','User 0:'))]
+        diagnostic('Android install-over package metadata','\n'.join(fields)+'\n'+listing)
+        raise ValueError('Installed app package/version/owner-user UID unavailable or ambiguous')
+    return int(code[1]),int(uids[0])
 
 
 def phase(name):
     result=command('shell','am','instrument','-w','-r','-e','class',CLASS,'-e','dkordUpgradePhase',name,RUNNER)
     print(result)
     if not re.search(r'OK \(1 test\)',result) or 'INSTRUMENTATION_CODE: -1' not in result:
+        diagnostic('Android install-over '+name+' assertions',result)
         raise ValueError('Real Android install-over '+name+' assertions failed; no retries/reset permitted')
 
 
