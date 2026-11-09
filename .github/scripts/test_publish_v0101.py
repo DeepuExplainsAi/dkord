@@ -51,6 +51,33 @@ class PublicationReceiptTest(unittest.TestCase):
             publisher.verify_release(self.folder,self.source,self.baseline,True)
             self.release['target_commitish']='8'*40
             with self.assertRaises(ValueError):publisher.verify_release(self.folder,self.source,self.baseline,True)
+    def test_actual_rest_by_tag_404_uses_unique_authenticated_draft_without_creating_a_tag(self):
+        self.release['draft']=True
+        calls=[]
+        def draft_api(path,optional=False):
+            calls.append(path)
+            if path=='releases/tags/'+publisher.TAG:
+                self.assertTrue(optional);return None
+            if path=='git/ref/tags/'+publisher.TAG:return None
+            if path=='releases?per_page=100&page=1':return [dict(tag_name='unrelated',draft=False),self.release]
+            raise AssertionError('Unexpected draft API '+path)
+        with patch.object(publisher,'api',side_effect=draft_api),patch.object(publisher,'historical_snapshot',return_value=self.baseline):
+            self.assertEqual(self.release,publisher.verify_release(self.folder,self.source,self.baseline,True))
+            self.release['target_commitish']='8'*40
+            with self.assertRaises(ValueError):publisher.verify_release(self.folder,self.source,self.baseline,True)
+        self.assertTrue(all(path.startswith(('releases','git/ref/tags/')) for path in calls))
+    def test_draft_list_fallback_rejects_missing_duplicate_or_published_matches(self):
+        for items in ([],[self.release],[dict(self.release,draft=True),dict(self.release,draft=True)]):
+            def draft_api(path,optional=False):
+                if path=='releases/tags/'+publisher.TAG:return None
+                if path=='releases?per_page=100&page=1':return items
+                raise AssertionError(path)
+            with self.subTest(items=items),patch.object(publisher,'api',side_effect=draft_api),self.assertRaises(ValueError):
+                publisher.release_for_verification(True)
+    def test_public_release_lookup_never_uses_the_draft_fallback(self):
+        with patch.object(publisher,'api',side_effect=RuntimeError('Synthetic REST404')) as api,self.assertRaises(RuntimeError):
+            publisher.release_for_verification(False)
+        api.assert_called_once_with('releases/tags/'+publisher.TAG,optional=False)
     def test_published_draft_prerelease_wrong_latest_or_external_download_are_refused(self):
         for field in ('draft','prerelease'):
             self.release[field]=True

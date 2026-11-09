@@ -74,10 +74,27 @@ def checksums(folder):
     return output
 
 
+def release_for_verification(draft):
+    release=api('releases/tags/'+TAG,optional=draft)
+    if release is not None:return release
+    # GitHub's REST by-tag endpoint returns404 for an unpublished draft whose
+    # tag does not exist yet, even though the authenticated releases list includes
+    # it. Do not create/reset a tag or relax source/asset checks to work around it.
+    matches=[]
+    for page in range(1,4):
+        items=api(f'releases?per_page=100&page={page}')
+        if not isinstance(items,list):raise ValueError('Invalid authenticated releases list')
+        matches.extend(item for item in items if item.get('tag_name')==TAG)
+        if len(items)<100:break
+    if len(matches)!=1 or matches[0].get('draft') is not True:
+        raise ValueError('Exactly one authenticated unpublished 0.10.1 draft is required')
+    return matches[0]
+
+
 def verify_release(folder,source,baseline,draft):
     if not re.fullmatch('[0-9a-f]{40}',source) or int(source,16)==0:raise ValueError('Invalid exact release source')
     if historical_snapshot()!=baseline:raise ValueError('A historical release/tag/asset changed; publication refused')
-    release=api('releases/tags/'+TAG)
+    release=release_for_verification(draft)
     reference=api('git/ref/tags/'+TAG,optional=True) if draft else True
     target=tag_commit(TAG) if reference else release.get('target_commitish')
     if (release['tag_name']!=TAG or release['draft'] is not draft or release['prerelease'] is not False or target!=source):
