@@ -111,6 +111,7 @@ class MainWindow(PhoneExperience, QMainWindow):
         self.statusBar().showMessage(str(text), 12000)
 
     def reset_content(self, title, subtitle=""):
+        self.cancel_youtube_link()
         self.heading.setText(translated(title)); self.subtitle.setText(translated(subtitle)); self.subtitle.setVisible(bool(subtitle))
         while self.content_layout.count():
             item = self.content_layout.takeAt(0)
@@ -815,7 +816,7 @@ class MainWindow(PhoneExperience, QMainWindow):
 
     def closeEvent(self,event):
         self.closing=True;self.timer.stop();self.desired_playing=False;self.cancel_sleep()
-        self.rooms.close();self.artwork_cache.close();self.cancel_home()
+        self.cancel_youtube_link();self.rooms.close();self.artwork_cache.close();self.cancel_home()
         if self.full_player:self.full_player.hide()
         if self.video_window:self.video_window.close()
         self.save_session();self.store.set_setting("volume",self.audio.volume());self.store.set_setting("speed",self.speed.value());self.store.set_setting("repeat",self.repeat.currentIndex());self.store.set_setting("shuffle",self.shuffle.isChecked())

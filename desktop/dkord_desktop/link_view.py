@@ -50,13 +50,6 @@ class YouTubeLinkPanel(QWidget):
         preview.addWidget(self.canonical)
         self.play_button = button(window.tr('play'), self.play, True); self.play_button.setObjectName('youtube-link-play')
         preview.addWidget(self.play_button); layout.addWidget(self.preview); self.preview.hide(); layout.addStretch()
-        # A queued task may outlive a page's native QObject. Cancel via plain Python state, not deleted widgets.
-        work = self.work
-        def destroyed():
-            work['active'] = False
-            if work['task']:
-                work['task'].cancel.set()
-        self.destroyed.connect(destroyed)
 
     def current(self, generation):
         return (not sip.isdeleted(self) and self.work['active'] and not self.window.closing

@@ -143,6 +143,27 @@ class NativeLinkWidgetTest(unittest.TestCase):
             callbacks[1][0]((Track('AbCdEf012_-', 'Stale route', 'Uploader'), None)); self.assertEqual('Home', self.window.page)
         self.assertTrue(self.window.player.source().isEmpty())
 
+    def test_page_clear_cancels_before_cpp_deletion_and_stale_callbacks_never_touch_a_dead_widget(self):
+        from dkord_desktop.qt import QtCore, sip
+        import gc
+        callbacks = []
+        class Work:
+            def __init__(self):
+                self.cancel = threading.Event()
+        def queue(call, done=None, failed=None, **kwargs):
+            task = Work(); callbacks.append((done, failed, task)); return task
+        self.window.navigate('YouTube link'); panel = self.window.youtube_link_panel
+        with patch.object(self.window, 'run', side_effect=queue):
+            panel.input.setText('https://youtu.be/AbCdEf012_-'); panel.resolve_button.click()
+            self.window.reset_content('Other content')
+            self.assertIsNone(self.window.youtube_link_panel); self.assertFalse(panel.work['active'])
+            self.assertTrue(callbacks[0][2].cancel.is_set())
+            QtCore.QCoreApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete); self.app.processEvents()
+            self.assertTrue(sip.isdeleted(panel))
+            callbacks[0][0]((Track('AbCdEf012_-', 'Late result', 'Uploader'), None)); callbacks[0][1]('late failure')
+            gc.collect()
+        self.assertTrue(self.window.player.source().isEmpty()); self.assertEqual([], self.provider.calls)
+
     def test_link_provider_failure_and_wrong_identity_have_no_fake_success_and_retry_stays_exact(self):
         from dkord_desktop.youtube_links import YouTubeLinkError
         def fail(link, cancel):

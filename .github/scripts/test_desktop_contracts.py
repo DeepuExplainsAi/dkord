@@ -71,6 +71,21 @@ class DesktopContractsTest(unittest.TestCase):
                 self.assertIn('native हिन्दी',result.stdout)
                 self.assertEqual(code!=0,'::error title=Desktop tests failed' in result.stdout)
                 self.assertTrue((Path(tmp)/'dkord-desktop-tests.log').is_file())
+    def test_native_fatal_application_frames_survive_long_plugin_tails_without_masking_the_exit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            script=("print('desktop/tests/test_link_ui.py::NativeLinkWidgetTest::test_example')\n"
+                    "print('Fatal Python error: Segmentation fault')\n"
+                    "print('Current thread 0x123')\n"
+                    "print('  File \"/workspace/desktop/dkord_desktop/link_view.py\", line 42 in actual_frame')\n"
+                    "for i in range(100): print('  File /venv/site-packages/plugin.py line '+str(i))\n"
+                    "raise SystemExit(7)")
+            result=subprocess.run([sys.executable,str(ROOT/'desktop/packaging/ci_run.py'),'tests',sys.executable,'-c',script],capture_output=True,text=True,encoding='utf-8',env={**os.environ,'RUNNER_TEMP':tmp,'PYTHONUTF8':'1'})
+            self.assertEqual(7,result.returncode)
+            annotation=next(line for line in result.stdout.splitlines() if line.startswith('::error title=Desktop tests crash application frames::'))
+            self.assertIn('actual_frame',annotation);self.assertIn('test_example',annotation)
+            self.assertIn('Desktop tests failed (exit 7)',result.stdout)
+            self.assertIn('actual_frame',(Path(tmp)/'dkord-desktop-tests.log').read_text(encoding='utf-8'))
+
     def test_native_builder_bundles_pinned_upstream_node_license_without_live_api_dependency(self):
         build=read('desktop/packaging/build.py')
         digest=re.search("NODE_LICENSE_SHA256='([a-f0-9]{64})'",build)[1]

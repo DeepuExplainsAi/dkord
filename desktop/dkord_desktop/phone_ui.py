@@ -178,8 +178,6 @@ class PhoneExperience:
         if page == 'YouTube link' and previous != page:
             # Returning from the separate link form restores a shown search without another search/history write.
             self.youtube_link_search = (list(self.entries), self.query.text(), self.scope.currentText()) if previous == 'Search' and self.table is not None else None
-        if previous == 'YouTube link' and previous != page and getattr(self, 'youtube_link_panel', None):
-            self.youtube_link_panel.deactivate()
         if previous != page and not self._going_back:
             self.back_stack.append(previous)
             self.back_stack = self.back_stack[-30:]
@@ -211,6 +209,14 @@ class PhoneExperience:
             self.settings_page()
         else:
             self._legacy_navigate(page, fetch)
+
+    def cancel_youtube_link(self):
+        # Explicit GUI-thread lifecycle, before deleteLater/close. Never run a
+        # Python closure from QObject.destroyed during cyclic GC/worker activity.
+        panel = getattr(self, 'youtube_link_panel', None)
+        self.youtube_link_panel = None
+        if panel is not None and not sip.isdeleted(panel):
+            panel.deactivate()
 
     def choose_scope(self, value):
         self.scope.setCurrentText(value)
